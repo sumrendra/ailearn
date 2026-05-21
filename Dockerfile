@@ -14,6 +14,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Prisma 7 reads DATABASE_URL from prisma.config.ts at generate time.
+# Provide a dummy value so code generation works without a real DB.
+ARG DATABASE_URL=postgresql://build:build@localhost:5432/build
+ENV DATABASE_URL=${DATABASE_URL}
+
 # Generate Prisma Client for database queries and types during compilation
 RUN npx prisma generate
 
