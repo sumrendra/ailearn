@@ -1,24 +1,6 @@
 version: "3.9"
 
 services:
-  postgres:
-    image: pgvector/pgvector:pg16
-    container_name: ailearn-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USER:-ailearn}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-ailearn_password}
-      POSTGRES_DB: ${DB_NAME:-ailearn}
-    ports:
-      - "${DB_PORT:-5433}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ailearn} -d ${DB_NAME:-ailearn}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   app:
     build:
       context: .
@@ -28,13 +10,11 @@ services:
     ports:
       - "${APP_PORT:-3080}:3000"
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-ailearn}:${DB_PASSWORD:-ailearn_password}@postgres:5432/${DB_NAME:-ailearn}
+      # Connects to your existing pgvector-db instance
+      # default host.docker.internal allows connecting to the database exposed on your host's port 5432
+      DATABASE_URL: postgresql://${DB_USER:-admin}:${DB_PASSWORD:-epaps0991g}@${DB_HOST:-host.docker.internal}:${DB_PORT:-5432}/${DB_NAME:-ailearn}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3080}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-secret-change-in-production}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-volumes:
-  postgres_data:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
