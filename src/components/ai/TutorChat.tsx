@@ -19,7 +19,12 @@ const STARTER_PROMPTS = [
   "Compare pgvector vs Pinecone vs Weaviate for a Java backend",
 ];
 
-export function TutorChat() {
+interface TutorChatProps {
+  lessonContext?: string;
+  compact?: boolean;
+}
+
+export function TutorChat({ lessonContext, compact }: TutorChatProps = {}) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -46,6 +51,7 @@ export function TutorChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })),
+          lessonContext,
         }),
       });
 
@@ -105,7 +111,7 @@ export function TutorChat() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 140px)", gap: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: compact ? "100%" : "calc(100vh - 140px)", gap: 0, padding: compact ? "0 12px 12px" : "0 24px 24px" }}>
       {/* Empty state */}
       {messages.length === 0 && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24 }}>

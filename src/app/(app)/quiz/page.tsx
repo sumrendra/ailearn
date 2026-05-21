@@ -5,10 +5,10 @@ import Link from "next/link";
 import { Trophy, Zap, ArrowRight, Wand2 } from "lucide-react";
 
 const quizSets = [
-  { title: "LLM Fundamentals Quick Check", questions: 10, xp: 100, difficulty: "BEGINNER", tags: ["LLMs", "Transformers"] },
-  { title: "RAG System Design", questions: 8, xp: 120, difficulty: "INTERMEDIATE", tags: ["RAG", "Embeddings"] },
-  { title: "Agents & Tool Use", questions: 10, xp: 150, difficulty: "ADVANCED", tags: ["Agents", "ReAct"] },
-  { title: "Prompt Engineering Mastery", questions: 12, xp: 130, difficulty: "INTERMEDIATE", tags: ["Prompting"] },
+  { title: "LLM Fundamentals Quick Check", questions: 5, xp: 100, difficulty: "BEGINNER", tags: ["LLMs", "Transformers"], topic: "LLM Fundamentals" },
+  { title: "RAG System Design", questions: 5, xp: 120, difficulty: "INTERMEDIATE", tags: ["RAG", "Embeddings"], topic: "RAG & Vector Search" },
+  { title: "Agents & Tool Use", questions: 5, xp: 150, difficulty: "ADVANCED", tags: ["Agents", "ReAct"], topic: "AI Agents" },
+  { title: "Prompt Engineering Mastery", questions: 5, xp: 130, difficulty: "INTERMEDIATE", tags: ["Prompting"], topic: "LLM Fundamentals" },
 ];
 
 const diffColor: Record<string, string> = {
@@ -65,11 +65,12 @@ export default function QuizPage() {
         {/* Quiz sets */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
           {quizSets.map((q, i) => (
-            <div key={i} style={{
+            <Link key={i} href={`/quiz/generate?topic=${encodeURIComponent(q.topic)}&difficulty=${q.difficulty}`} style={{ textDecoration: "none" }}>
+            <div style={{
               background: "var(--bg-card)", borderRadius: "var(--radius-lg)",
               border: "1px solid var(--border-subtle)", padding: "20px",
               boxShadow: "var(--shadow-sm)", cursor: "pointer",
-              transition: "all 0.12s",
+              transition: "all 0.12s", height: "100%",
             }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-md)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-1px)"; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-sm)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"; }}
@@ -107,6 +108,7 @@ export default function QuizPage() {
                 </span>
               </div>
             </div>
+            </Link>
           ))}
         </div>
       </div>
