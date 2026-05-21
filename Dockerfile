@@ -36,15 +36,16 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Include Prisma files for database migrations and seeding
+# Include Prisma schema, config, and seed for database operations
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
-# Install Prisma CLI and tsx globally so they are on PATH for migrate/seed commands
-RUN npm install -g prisma tsx
+# Install Prisma CLI and tsx with full dependency resolution.
+# This is the correct approach — npm resolves the entire transitive
+# dependency tree (prisma → @prisma/config → effect, etc.) automatically.
+# No need to manually copy individual node_modules subdirectories.
+RUN npm install --no-save prisma @prisma/client tsx
 
 USER nextjs
 
