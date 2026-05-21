@@ -5,18 +5,17 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Map, BookOpen, FlipHorizontal,
   Trophy, Mic, Search, StickyNote, Flame,
-  Settings, ChevronRight, Sparkles,
+  Settings, Sparkles, Zap,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard",  label: "Dashboard",      icon: LayoutDashboard },
   { href: "/learn",      label: "Learning paths",  icon: Map },
-  { href: "/lessons",    label: "Lessons",         icon: BookOpen },
+  { href: "/lessons",    label: "All lessons",     icon: BookOpen },
   { href: "/flashcards", label: "Flashcards",      icon: FlipHorizontal },
   { href: "/quiz",       label: "Quizzes",         icon: Trophy },
   { href: "/interview",  label: "Mock interviews", icon: Mic },
-  { href: "/tutor",      label: "AI tutor",        icon: Sparkles },
+  { href: "/tutor",      label: "AI tutor",        icon: Sparkles, badge: "AI" },
   { href: "/search",     label: "Search",          icon: Search },
   { href: "/notes",      label: "My notes",        icon: StickyNote },
 ];
@@ -39,17 +38,12 @@ export function Sidebar() {
         flexDirection: "column",
         padding: "0",
         position: "fixed",
-        top: 0,
-        left: 0,
-        bottom: 0,
+        top: 0, left: 0, bottom: 0,
         zIndex: 40,
       }}
     >
       {/* Logo */}
-      <div style={{
-        padding: "20px 16px 16px",
-        borderBottom: "1px solid var(--border-subtle)",
-      }}>
+      <div style={{ padding: "20px 16px 16px", borderBottom: "1px solid var(--border-subtle)" }}>
         <Link href="/dashboard" style={{ textDecoration: "none" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
@@ -72,22 +66,25 @@ export function Sidebar() {
         </Link>
       </div>
 
-      {/* Daily streak pill */}
+      {/* Today's challenge pill */}
       <div style={{ padding: "12px 12px 0" }}>
-        <div style={{
-          background: "var(--streak-light)",
-          borderRadius: "var(--radius-md)",
-          padding: "8px 12px",
-          display: "flex", alignItems: "center", gap: 8,
-        }}>
-          <Flame size={15} color="var(--streak-orange)" />
-          <span style={{ fontSize: 13, color: "var(--streak-orange)", fontWeight: 500 }}>
-            0 day streak
-          </span>
-          <span style={{ fontSize: 11, color: "var(--text-tertiary)", marginLeft: "auto" }}>
-            Start today
-          </span>
-        </div>
+        <Link href="/challenge" style={{ textDecoration: "none" }}>
+          <div style={{
+            background: "var(--streak-light)",
+            borderRadius: "var(--radius-md)",
+            padding: "8px 12px",
+            display: "flex", alignItems: "center", gap: 8,
+            cursor: "pointer",
+          }}>
+            <Flame size={15} color="var(--streak-orange)" />
+            <span style={{ fontSize: 13, color: "var(--streak-orange)", fontWeight: 500, flex: 1 }}>
+              Daily challenge
+            </span>
+            <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+              +25 XP
+            </span>
+          </div>
+        </Link>
       </div>
 
       {/* Nav */}
@@ -102,17 +99,13 @@ export function Sidebar() {
             <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "8px 10px",
-                  borderRadius: "var(--radius-md)",
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "8px 10px", borderRadius: "var(--radius-md)",
                   marginBottom: 2,
                   background: active ? "var(--accent-light)" : "transparent",
                   color: active ? "var(--accent)" : "var(--text-secondary)",
                   fontWeight: active ? 500 : 400,
-                  fontSize: 14,
-                  cursor: "pointer",
+                  fontSize: 14, cursor: "pointer",
                   transition: "all 0.12s",
                 }}
                 onMouseEnter={(e) => {
@@ -130,11 +123,11 @@ export function Sidebar() {
               >
                 <Icon size={16} />
                 <span style={{ flex: 1 }}>{item.label}</span>
-                {item.href === "/tutor" && (
+                {item.badge && (
                   <span style={{
                     fontSize: 9, fontWeight: 600, background: "var(--accent)", color: "#fff",
-                    padding: "2px 5px", borderRadius: 4, letterSpacing: "0.03em"
-                  }}>AI</span>
+                    padding: "2px 5px", borderRadius: 4, letterSpacing: "0.03em",
+                  }}>{item.badge}</span>
                 )}
               </div>
             </Link>
@@ -146,12 +139,15 @@ export function Sidebar() {
       <div style={{ padding: "8px 8px 16px", borderTop: "1px solid var(--border-subtle)" }}>
         {bottomItems.map((item) => {
           const Icon = item.icon;
+          const active = pathname === item.href;
           return (
             <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
               <div style={{
                 display: "flex", alignItems: "center", gap: 10,
                 padding: "8px 10px", borderRadius: "var(--radius-md)",
-                color: "var(--text-secondary)", fontSize: 14, cursor: "pointer",
+                color: active ? "var(--accent)" : "var(--text-secondary)",
+                background: active ? "var(--accent-light)" : "transparent",
+                fontSize: 14, cursor: "pointer",
               }}>
                 <Icon size={16} />
                 <span>{item.label}</span>
@@ -160,7 +156,7 @@ export function Sidebar() {
           );
         })}
 
-        {/* User card */}
+        {/* XP display */}
         <div style={{
           marginTop: 8, padding: "10px 10px",
           background: "var(--bg-tertiary)",
@@ -173,17 +169,16 @@ export function Sidebar() {
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 13, fontWeight: 600, color: "var(--accent)",
           }}>
-            H
+            <Zap size={14} />
           </div>
           <div style={{ flex: 1, overflow: "hidden" }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Haril
+            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>
+              Start learning
             </div>
             <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
-              Level 1 · 0 XP
+              Earn XP · Build streaks
             </div>
           </div>
-          <ChevronRight size={14} color="var(--text-tertiary)" />
         </div>
       </div>
     </aside>

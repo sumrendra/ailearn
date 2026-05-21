@@ -16,7 +16,7 @@ const actions = [
     href: "/flashcards",
     icon: FlipHorizontal,
     label: "Review flashcards",
-    desc: "12 due today",
+    desc: "Spaced repetition",
     color: "var(--info)",
     bg: "var(--info-light)",
   },
@@ -65,8 +65,14 @@ export function QuickActions() {
                 cursor: "pointer",
                 transition: "all 0.12s",
               }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = action.bg; (e.currentTarget as HTMLDivElement).style.borderColor = action.color + "40"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "var(--bg-secondary)"; (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)"; }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.background = action.bg;
+                  (e.currentTarget as HTMLDivElement).style.borderColor = action.color + "40";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.background = "var(--bg-secondary)";
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)";
+                }}
               >
                 <div style={{
                   width: 32, height: 32, borderRadius: 8,

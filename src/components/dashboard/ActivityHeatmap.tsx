@@ -8,6 +8,7 @@ const DAYS = 7;
 function generateMockData() {
   const cells: { date: string; count: number }[] = [];
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
   for (let w = WEEKS - 1; w >= 0; w--) {
     for (let d = 0; d < DAYS; d++) {
       const date = new Date(now);
@@ -23,7 +24,8 @@ function generateMockData() {
 
 function generateBlankData() {
   const cells: { date: string; count: number }[] = [];
-  const now = new Date("2026-05-21T00:00:00.000Z");
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
   for (let w = WEEKS - 1; w >= 0; w--) {
     for (let d = 0; d < DAYS; d++) {
       const date = new Date(now);

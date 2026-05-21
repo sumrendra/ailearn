@@ -1,27 +1,78 @@
 "use client";
 
-import { Bolt, ArrowRight } from "lucide-react";
+import { Bolt, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-const todayChallenge = {
-  type: "CONCEPT",
-  label: "Concept of the day",
-  title: "Why does temperature = 0 make LLMs deterministic?",
-  preview: "Temperature controls the randomness in token sampling. At 0, the model always picks the highest-probability token — making outputs fully deterministic...",
-  xpReward: 25,
-  tag: "LLM Fundamentals",
+type ChallengeProps = {
+  challenge: {
+    id: string;
+    type: string;
+    title: string;
+    content: string;
+    xpReward: number;
+    tags: string[];
+  } | null;
 };
 
-const typeColors: Record<string, { bg: string; text: string; border: string }> = {
-  CONCEPT:       { bg: "var(--accent-light)",     text: "var(--accent)",       border: "var(--accent)" },
-  PAPER:         { bg: "var(--info-light)",        text: "var(--info)",         border: "var(--info)" },
-  CODE_SNIPPET:  { bg: "var(--success-light)",     text: "var(--success)",      border: "var(--success)" },
-  SCENARIO:      { bg: "var(--warning-light)",     text: "var(--warning)",      border: "var(--warning)" },
-  TOOL_SPOTLIGHT:{ bg: "var(--streak-light)",      text: "var(--streak-orange)",border: "var(--streak-orange)" },
+const typeColors: Record<string, { bg: string; text: string }> = {
+  CONCEPT:        { bg: "var(--accent-light)",   text: "var(--accent)" },
+  PAPER:          { bg: "var(--info-light)",      text: "var(--info)" },
+  CODE_SNIPPET:   { bg: "var(--success-light)",   text: "var(--success)" },
+  SCENARIO:       { bg: "var(--warning-light)",   text: "var(--warning)" },
+  TOOL_SPOTLIGHT: { bg: "var(--streak-light)",    text: "var(--streak-orange)" },
 };
 
-export function DailyChallenge() {
-  const colors = typeColors[todayChallenge.type] ?? typeColors.CONCEPT;
+const typeLabels: Record<string, string> = {
+  CONCEPT: "Concept of the day",
+  PAPER: "Paper of the day",
+  CODE_SNIPPET: "Code challenge",
+  SCENARIO: "Design scenario",
+  TOOL_SPOTLIGHT: "Tool spotlight",
+};
+
+export function DailyChallenge({ challenge }: ChallengeProps) {
+  if (!challenge) {
+    return (
+      <div style={{
+        background: "var(--bg-card)",
+        borderRadius: "var(--radius-lg)",
+        border: "1px solid var(--border-subtle)",
+        padding: "20px",
+        boxShadow: "var(--shadow-sm)",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        textAlign: "center", gap: 12,
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 12,
+          background: "var(--accent-light)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Sparkles size={20} color="var(--accent)" />
+        </div>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>
+            No challenge today
+          </div>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+            Daily challenges will appear here. Keep learning!
+          </div>
+        </div>
+        <Link href="/learn" style={{ textDecoration: "none" }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "var(--accent)", color: "#fff",
+            borderRadius: "var(--radius-md)", padding: "9px 16px",
+            fontSize: 13, fontWeight: 500, cursor: "pointer",
+          }}>
+            Start learning <ArrowRight size={13} />
+          </div>
+        </Link>
+      </div>
+    );
+  }
+
+  const colors = typeColors[challenge.type] ?? typeColors.CONCEPT;
+  const label = typeLabels[challenge.type] ?? "Daily challenge";
 
   return (
     <div style={{
@@ -43,7 +94,7 @@ export function DailyChallenge() {
             <Bolt size={14} color={colors.text} />
           </div>
           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-            {todayChallenge.label}
+            {label}
           </span>
         </div>
         <span style={{
@@ -52,20 +103,22 @@ export function DailyChallenge() {
           padding: "2px 8px", borderRadius: "var(--radius-full)",
           border: "1px solid var(--xp-gold)",
         }}>
-          +{todayChallenge.xpReward} XP
+          +{challenge.xpReward} XP
         </span>
       </div>
 
       {/* Tag */}
-      <div style={{
-        fontSize: 11, fontWeight: 500,
-        background: colors.bg, color: colors.text,
-        padding: "3px 8px", borderRadius: "var(--radius-full)",
-        display: "inline-block", marginBottom: 10,
-        width: "fit-content",
-      }}>
-        {todayChallenge.tag}
-      </div>
+      {challenge.tags.length > 0 && (
+        <div style={{
+          fontSize: 11, fontWeight: 500,
+          background: colors.bg, color: colors.text,
+          padding: "3px 8px", borderRadius: "var(--radius-full)",
+          display: "inline-block", marginBottom: 10,
+          width: "fit-content",
+        }}>
+          {challenge.tags[0]}
+        </div>
+      )}
 
       {/* Title */}
       <h3 style={{
@@ -73,7 +126,7 @@ export function DailyChallenge() {
         color: "var(--text-primary)", lineHeight: 1.4, marginBottom: 10,
         flex: 1,
       }}>
-        {todayChallenge.title}
+        {challenge.title}
       </h3>
 
       {/* Preview */}
@@ -85,7 +138,7 @@ export function DailyChallenge() {
         WebkitBoxOrient: "vertical",
         overflow: "hidden",
       }}>
-        {todayChallenge.preview}
+        {challenge.content}
       </p>
 
       {/* CTA */}

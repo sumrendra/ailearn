@@ -1,11 +1,11 @@
 "use client";
 
-import { Flame, Zap, Shield } from "lucide-react";
+import { Flame, Zap, Target } from "lucide-react";
 import { getLevelFromXP, formatXP } from "@/lib/utils";
 
 const mockUser = {
-  xp: 1250,
-  currentStreak: 7,
+  xp: 0,
+  currentStreak: 0,
   streakFreezes: 2,
 };
 
@@ -36,13 +36,14 @@ export function XPStreakWidget() {
 
         {/* Streak */}
         <div style={{
-          background: "var(--streak-light)",
+          background: mockUser.currentStreak > 0 ? "var(--streak-light)" : "var(--bg-secondary)",
           borderRadius: "var(--radius-md)",
           padding: "8px 12px",
           textAlign: "center",
+          border: "1px solid var(--border-subtle)",
         }}>
-          <Flame size={18} color="var(--streak-orange)" style={{ marginBottom: 2 }} />
-          <div style={{ fontSize: 20, fontWeight: 700, color: "var(--streak-orange)", lineHeight: 1 }}>
+          <Flame size={18} color={mockUser.currentStreak > 0 ? "var(--streak-orange)" : "var(--text-tertiary)"} style={{ marginBottom: 2 }} />
+          <div style={{ fontSize: 20, fontWeight: 700, color: mockUser.currentStreak > 0 ? "var(--streak-orange)" : "var(--text-tertiary)", lineHeight: 1 }}>
             {mockUser.currentStreak}
           </div>
           <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>day streak</div>
@@ -72,18 +73,18 @@ export function XPStreakWidget() {
           }} />
         </div>
         <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4, textAlign: "right" }}>
-          {progress}% to Lv. {level + 1}
+          {progress > 0 ? `${progress}% to Lv. ${level + 1}` : `Complete a lesson to earn XP`}
         </div>
       </div>
 
-      {/* Streak freezes */}
+      {/* Goal nudge */}
       <div style={{
         display: "flex", alignItems: "center", gap: 6,
         background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", padding: "8px 12px",
       }}>
-        <Shield size={14} color="var(--info)" />
+        <Target size={14} color="var(--accent)" />
         <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-          {mockUser.streakFreezes} streak freeze{mockUser.streakFreezes !== 1 ? "s" : ""} available
+          Complete your first lesson to start your streak
         </span>
       </div>
     </div>

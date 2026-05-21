@@ -61,6 +61,10 @@
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.05);
 
+  /* Code blocks */
+  --bg-code: #1e1e2e;
+  --bg-code-border: rgba(255,255,255,0.08);
+
   /* Sidebar */
   --sidebar-width: 240px;
 }
@@ -99,6 +103,8 @@
   --xp-gold-light: #1c1400;
   --streak-orange: #fb923c;
   --streak-light: #1f0f00;
+  --bg-code: #151521;
+  --bg-code-border: rgba(255,255,255,0.06);
 
   --beginner: #4ade80;
   --beginner-light: #052e16;
@@ -245,6 +251,15 @@ code {
 }
 .hover-item:hover {
   background-color: var(--bg-secondary) !important;
+}
+
+/* Card hover with border */
+.hover-card-border {
+  transition: border-color 0.15s ease, background-color 0.12s ease;
+}
+.hover-card-border:hover {
+  border-color: var(--accent) !important;
+  background-color: var(--accent-light) !important;
 }
 
 /* Card hover with border and transition */

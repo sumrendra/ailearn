@@ -94,7 +94,7 @@ export default function SettingsPage() {
         }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12 }}>About AILearn</div>
           <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.7 }}>
-            Personal AI engineering learning platform. Built with Next.js 14, PostgreSQL, Prisma, and Claude/Gemini for AI features.
+            Personal AI engineering learning platform. Built with Next.js 16, PostgreSQL, Prisma, and Claude/Gemini for AI features. Deployed on Portainer with a self-hosted PostgreSQL database.
           </div>
         </div>
       </div>

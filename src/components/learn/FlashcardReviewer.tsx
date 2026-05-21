@@ -1,51 +1,40 @@
 "use client";
 
-import { useState } from "react";
-import { RotateCcw, ThumbsUp, ThumbsDown, Minus, CheckCheck, Trophy, TrendingUp, BookOpen } from "lucide-react";
+import { useState, useEffect } from "react";
+import { RotateCcw, ThumbsUp, ThumbsDown, Minus, CheckCheck, Trophy, TrendingUp, BookOpen, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import Link from "next/link";
 
-const mockCards = [
-  {
-    id: "1",
-    front: "What is the difference between temperature and top-p in LLM sampling?",
-    back: "**Temperature** scales the probability distribution before sampling — higher = more random. **Top-p (nucleus sampling)** dynamically restricts sampling to the smallest set of tokens whose cumulative probability ≥ p. They're complementary: temperature controls overall randomness, top-p prevents low-probability outliers. At temperature 0, the model is fully deterministic (always picks the highest-probability token).",
-    tags: ["LLM Fundamentals", "Sampling"],
-  },
-  {
-    id: "2",
-    front: "In RAG, what is the purpose of a 'reranker'?",
-    back: "A reranker is a cross-encoder model (e.g., Cohere Rerank, BGE reranker) that re-scores retrieved document chunks against the query with much higher accuracy than vector similarity alone. Vector search retrieves fast but imprecisely; the reranker applies pairwise attention between query and each doc to produce a better relevance score. Adds latency but dramatically improves precision.",
-    tags: ["RAG", "Vector Search"],
-  },
-  {
-    id: "3",
-    front: "What does 'function calling' (tool use) mean in the context of LLMs?",
-    back: "Function calling allows the LLM to emit structured JSON specifying which tool to invoke and with what arguments, instead of free-text. The host application calls the actual function, then returns the result to the LLM to continue reasoning. Analogy: it's like a Kafka message where the LLM is the producer, your app is the consumer, and the tool result is the reply topic.",
-    tags: ["Agents", "Tool Use"],
-  },
-  {
-    id: "4",
-    front: "What is 'context length' and why does it matter for building AI applications?",
-    back: "Context length is the maximum number of tokens an LLM can process in a single inference call (prompt + response). It determines how much text you can send at once. Larger context windows cost more and are slower; smaller ones require chunking strategies. GPT-4o: 128K, Claude 3.5 Sonnet: 200K, Gemini 1.5 Pro: 1M tokens. For RAG, context window limits how many retrieved chunks you can include.",
-    tags: ["LLM Fundamentals"],
-  },
-  {
-    id: "5",
-    front: "What is the ReAct framework for AI agents?",
-    back: "ReAct (Reasoning + Acting) is a prompting pattern where the LLM alternates between **Thought** (reasoning about what to do next), **Action** (calling a tool), and **Observation** (processing the tool's output). This loop continues until the agent has enough information to produce a final answer. It's the backbone of most LLM agent frameworks (LangChain, LangGraph).",
-    tags: ["Agents", "ReAct"],
-  },
-];
+type Card = {
+  id: string;
+  front: string;
+  back: string;
+  tags: string[];
+  lessonTitle: string | null;
+  lessonSlug: string | null;
+};
 
 type Rating = "Again" | "Hard" | "Good" | "Easy";
 
-export function FlashcardReviewer() {
-  const [cards, setCards] = useState(mockCards);
+export function FlashcardReviewer({ lessonSlug }: { lessonSlug?: string }) {
+  const [cards, setCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [done, setDone] = useState(false);
   const [stats, setStats] = useState({ again: 0, hard: 0, good: 0, easy: 0 });
+
+  useEffect(() => {
+    const url = lessonSlug ? `/api/flashcards?lesson=${encodeURIComponent(lessonSlug)}` : "/api/flashcards";
+    fetch(url)
+      .then((r) => r.json())
+      .then((data) => {
+        setCards(data.cards ?? []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [lessonSlug]);
 
   const card = cards[currentIdx];
 
@@ -53,7 +42,6 @@ export function FlashcardReviewer() {
     const next = { ...stats };
     next[rating.toLowerCase() as keyof typeof stats]++;
     setStats(next);
-
     if (currentIdx >= cards.length - 1) {
       setDone(true);
     } else {
@@ -68,6 +56,54 @@ export function FlashcardReviewer() {
     setDone(false);
     setStats({ again: 0, hard: 0, good: 0, easy: 0 });
   };
+
+  if (loading) {
+    return (
+      <div style={{
+        background: "var(--bg-card)", borderRadius: "var(--radius-lg)",
+        border: "1px solid var(--border-subtle)", padding: "60px 32px",
+        textAlign: "center", boxShadow: "var(--shadow-sm)",
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 16,
+      }}>
+        <Loader2 size={36} color="var(--accent)" style={{ animation: "spin 1s linear infinite" }} />
+        <p style={{ color: "var(--text-tertiary)", fontSize: 14 }}>Loading flashcards…</p>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (cards.length === 0) {
+    return (
+      <div style={{
+        background: "var(--bg-card)", borderRadius: "var(--radius-lg)",
+        border: "1px solid var(--border-subtle)", padding: "60px 32px",
+        textAlign: "center", boxShadow: "var(--shadow-sm)",
+      }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 16, margin: "0 auto 20px",
+          background: "var(--accent-light)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <BookOpen size={28} color="var(--accent)" />
+        </div>
+        <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text-primary)", marginBottom: 10 }}>
+          No flashcards yet
+        </h3>
+        <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: 380, margin: "0 auto 24px" }}>
+          Flashcards are generated when you complete lessons. Start learning to unlock your deck!
+        </p>
+        <Link href="/learn" style={{ textDecoration: "none" }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "11px 22px", background: "var(--accent)", color: "#fff",
+            borderRadius: "var(--radius-md)", fontSize: 14, fontWeight: 500, cursor: "pointer",
+          }}>
+            <BookOpen size={14} /> Browse learning paths
+          </div>
+        </Link>
+      </div>
+    );
+  }
 
   if (done) {
     const total = stats.again + stats.hard + stats.good + stats.easy;
@@ -85,15 +121,10 @@ export function FlashcardReviewer() {
             border: `2px solid ${pct >= 80 ? "var(--xp-gold)" : pct >= 60 ? "var(--success)" : "var(--accent)"}25`,
             display: "flex", alignItems: "center", justifyContent: "center",
             boxShadow: "0 8px 24px rgba(0,0,0,0.05)",
-            animation: "pulse-soft 2.5s infinite",
           }}>
-            {pct >= 80 ? (
-              <Trophy size={32} color="var(--xp-gold)" />
-            ) : pct >= 60 ? (
-              <TrendingUp size={32} color="var(--success)" />
-            ) : (
-              <BookOpen size={32} color="var(--accent)" />
-            )}
+            {pct >= 80 ? <Trophy size={32} color="var(--xp-gold)" />
+              : pct >= 60 ? <TrendingUp size={32} color="var(--success)" />
+              : <BookOpen size={32} color="var(--accent)" />}
           </div>
         </div>
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
@@ -106,9 +137,9 @@ export function FlashcardReviewer() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 32 }}>
           {[
             { label: "Again", count: stats.again, color: "var(--danger)" },
-            { label: "Hard", count: stats.hard, color: "var(--warning)" },
-            { label: "Good", count: stats.good, color: "var(--info)" },
-            { label: "Easy", count: stats.easy, color: "var(--success)" },
+            { label: "Hard",  count: stats.hard,  color: "var(--warning)" },
+            { label: "Good",  count: stats.good,  color: "var(--info)" },
+            { label: "Easy",  count: stats.easy,  color: "var(--success)" },
           ].map((s) => (
             <div key={s.label} style={{
               padding: "16px 12px", background: "var(--bg-secondary)",
@@ -134,22 +165,22 @@ export function FlashcardReviewer() {
   return (
     <div>
       {/* Progress */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 16 }}>
+        <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500, flexShrink: 0 }}>
           Card {currentIdx + 1} of {cards.length}
         </span>
         <div style={{
           flex: 1, height: 4, background: "var(--bg-tertiary)",
-          borderRadius: "var(--radius-full)", margin: "0 16px", overflow: "hidden",
+          borderRadius: "var(--radius-full)", overflow: "hidden",
         }}>
           <div style={{
-            height: "100%", width: `${((currentIdx) / cards.length) * 100}%`,
+            height: "100%", width: `${(currentIdx / cards.length) * 100}%`,
             background: "var(--accent)", borderRadius: "var(--radius-full)",
             transition: "width 0.4s ease",
           }} />
         </div>
-        <div style={{ display: "flex", gap: 4 }}>
-          {card?.tags.map((tag) => (
+        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+          {card?.tags.slice(0, 2).map((tag) => (
             <span key={tag} style={{
               fontSize: 11, background: "var(--accent-light)", color: "var(--accent)",
               padding: "2px 8px", borderRadius: "var(--radius-full)",
@@ -160,6 +191,13 @@ export function FlashcardReviewer() {
         </div>
       </div>
 
+      {/* Lesson context */}
+      {card?.lessonTitle && (
+        <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 10, textAlign: "center" }}>
+          From: {card.lessonTitle}
+        </div>
+      )}
+
       {/* Card */}
       <div
         onClick={() => setFlipped((f) => !f)}
@@ -169,13 +207,14 @@ export function FlashcardReviewer() {
           minHeight: 280, padding: "36px 32px",
           cursor: "pointer", transition: "all 0.2s",
           display: "flex", flexDirection: "column", justifyContent: "center",
-          marginBottom: 20,
-          position: "relative",
+          marginBottom: 20, position: "relative",
         }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-lg)"; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-md)"; }}
       >
         <div style={{
           fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase",
-          color: "var(--text-tertiary)", marginBottom: 20,
+          color: flipped ? "var(--success)" : "var(--text-tertiary)", marginBottom: 20,
         }}>
           {flipped ? "Answer" : "Question — click to reveal"}
         </div>
@@ -186,9 +225,7 @@ export function FlashcardReviewer() {
           </p>
         ) : (
           <div style={{ fontSize: 15, color: "var(--text-primary)", lineHeight: 1.7 }} className="prose">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {card?.back}
-            </ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{card?.back}</ReactMarkdown>
           </div>
         )}
 
@@ -207,9 +244,9 @@ export function FlashcardReviewer() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
           {[
             { label: "Again", icon: <RotateCcw size={14} />, color: "var(--danger)", bg: "var(--danger-light)", rating: "Again" as Rating },
-            { label: "Hard", icon: <ThumbsDown size={14} />, color: "var(--warning)", bg: "var(--warning-light)", rating: "Hard" as Rating },
-            { label: "Good", icon: <Minus size={14} />, color: "var(--info)", bg: "var(--info-light)", rating: "Good" as Rating },
-            { label: "Easy", icon: <CheckCheck size={14} />, color: "var(--success)", bg: "var(--success-light)", rating: "Easy" as Rating },
+            { label: "Hard",  icon: <ThumbsDown size={14} />, color: "var(--warning)", bg: "var(--warning-light)", rating: "Hard" as Rating },
+            { label: "Good",  icon: <Minus size={14} />, color: "var(--info)", bg: "var(--info-light)", rating: "Good" as Rating },
+            { label: "Easy",  icon: <CheckCheck size={14} />, color: "var(--success)", bg: "var(--success-light)", rating: "Easy" as Rating },
           ].map((btn) => (
             <button
               key={btn.label}
