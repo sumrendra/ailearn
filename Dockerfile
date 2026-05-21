@@ -41,11 +41,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
-# Install Prisma CLI and tsx with full dependency resolution.
-# This is the correct approach — npm resolves the entire transitive
-# dependency tree (prisma → @prisma/config → effect, etc.) automatically.
-# No need to manually copy individual node_modules subdirectories.
-RUN npm install --no-save prisma @prisma/client tsx
+# Install production dependencies and tsx for seeding
+RUN npm install --omit=dev && npm install --no-save tsx
 
 # Make locally-installed CLIs (prisma, tsx) available on PATH
 ENV PATH="/app/node_modules/.bin:$PATH"
