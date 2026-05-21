@@ -43,6 +43,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
+# Install Prisma CLI and tsx globally so they are on PATH for migrate/seed commands
+RUN npm install -g prisma tsx
+
 USER nextjs
 
 EXPOSE 3000
