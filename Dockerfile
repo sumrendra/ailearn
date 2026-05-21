@@ -50,6 +50,9 @@ RUN npm install --no-save prisma @prisma/client tsx
 # Make locally-installed CLIs (prisma, tsx) available on PATH
 ENV PATH="/app/node_modules/.bin:$PATH"
 
+# Generate the Prisma Client in the runner stage so it's fully generated and available for CLI scripts
+RUN prisma generate
+
 USER nextjs
 
 EXPOSE 3000
