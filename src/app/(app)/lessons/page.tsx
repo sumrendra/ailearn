@@ -46,15 +46,11 @@ export default async function LessonsPage() {
             }}>
               {path.lessons.map((lesson, idx) => (
                 <Link key={lesson.id} href={`/lessons/${lesson.slug}`} style={{ textDecoration: "none" }}>
-                  <div style={{
+                  <div className="hover-item" style={{
                     display: "flex", alignItems: "center", gap: 16,
                     padding: "14px 20px",
                     borderBottom: idx < path.lessons.length - 1 ? "1px solid var(--border-subtle)" : "none",
-                    transition: "background 0.12s",
-                  }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "var(--bg-secondary)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
-                  >
+                  }}>
                     <div style={{
                       width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
                       background: "var(--bg-tertiary)", border: "2px solid var(--border-default)",

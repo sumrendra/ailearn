@@ -102,19 +102,11 @@ export default async function LearningPathPage({
           <div>
             {path.lessons.map((lesson, idx) => (
               <Link key={lesson.id} href={`/lessons/${lesson.slug}`} style={{ textDecoration: "none" }}>
-                <div style={{
+                <div className="hover-item" style={{
                   display: "flex", alignItems: "center", gap: 16,
                   padding: "16px 32px",
                   borderBottom: idx < path.lessons.length - 1 ? "1px solid var(--border-subtle)" : "none",
-                  transition: "background 0.12s",
-                }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.background = "var(--bg-secondary)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.background = "transparent";
-                  }}
-                >
+                }}>
                   {/* Number/status circle */}
                   <div style={{
                     width: 32, height: 32, borderRadius: "50%", flexShrink: 0,

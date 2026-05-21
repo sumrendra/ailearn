@@ -239,6 +239,22 @@ code {
   border-radius: var(--radius-md);
 }
 
+/* Interactive list items */
+.hover-item {
+  transition: background-color 0.12s ease;
+}
+.hover-item:hover {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Card hover with border and transition */
+.hover-card-border {
+  transition: border-color 0.12s ease;
+}
+.hover-card-border:hover {
+  border-color: var(--accent) !important;
+}
+
 /* Streaks heatmap */
 .heatmap-cell {
   border-radius: 2px;

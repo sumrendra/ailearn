@@ -56,20 +56,12 @@ export default async function LessonPage({
             const isCurrent = l.slug === slug;
             return (
               <Link key={l.id} href={`/lessons/${l.slug}`} style={{ textDecoration: "none" }}>
-                <div style={{
+                <div className={isCurrent ? "" : "hover-item"} style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "10px 16px",
                   background: isCurrent ? "var(--accent-light)" : "transparent",
                   borderLeft: isCurrent ? "3px solid var(--accent)" : "3px solid transparent",
-                  transition: "background 0.12s",
-                }}
-                  onMouseEnter={(e) => {
-                    if (!isCurrent) (e.currentTarget as HTMLDivElement).style.background = "var(--bg-secondary)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isCurrent) (e.currentTarget as HTMLDivElement).style.background = "transparent";
-                  }}
-                >
+                }}>
                   <div style={{
                     width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
                     background: isCurrent ? "var(--accent)" : "var(--bg-tertiary)",
@@ -148,16 +140,13 @@ export default async function LessonPage({
           }}>
             {prevLesson ? (
               <Link href={`/lessons/${prevLesson.slug}`} style={{ textDecoration: "none" }}>
-                <div style={{
+                <div className="hover-card-border" style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "12px 18px", borderRadius: "var(--radius-md)",
                   border: "1px solid var(--border-default)",
                   background: "var(--bg-secondary)",
-                  cursor: "pointer", transition: "all 0.12s",
-                }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--accent)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-default)"; }}
-                >
+                  cursor: "pointer",
+                }}>
                   <ChevronLeft size={16} color="var(--text-tertiary)" />
                   <div>
                     <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginBottom: 2 }}>Previous</div>
@@ -169,16 +158,13 @@ export default async function LessonPage({
 
             {nextLesson ? (
               <Link href={`/lessons/${nextLesson.slug}`} style={{ textDecoration: "none" }}>
-                <div style={{
+                <div className="hover-card-border" style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "12px 18px", borderRadius: "var(--radius-md)",
                   border: "1px solid var(--border-default)",
                   background: "var(--bg-secondary)",
-                  cursor: "pointer", transition: "all 0.12s",
-                }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--accent)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-default)"; }}
-                >
+                  cursor: "pointer",
+                }}>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginBottom: 2 }}>Next</div>
                     <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{nextLesson.title}</div>
