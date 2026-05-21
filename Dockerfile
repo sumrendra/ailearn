@@ -47,6 +47,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 # No need to manually copy individual node_modules subdirectories.
 RUN npm install --no-save prisma @prisma/client tsx
 
+# Make locally-installed CLIs (prisma, tsx) available on PATH
+ENV PATH="/app/node_modules/.bin:$PATH"
+
 USER nextjs
 
 EXPOSE 3000
