@@ -6,15 +6,15 @@ services:
     container_name: ailearn-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ailearn
-      POSTGRES_PASSWORD: ailearn_password
-      POSTGRES_DB: ailearn
+      POSTGRES_USER: ${DB_USER:-ailearn}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ailearn_password}
+      POSTGRES_DB: ${DB_NAME:-ailearn}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ailearn -d ailearn"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ailearn} -d ${DB_NAME:-ailearn}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -22,24 +22,19 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: ailearn-app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3080}:3000"
     environment:
-      DATABASE_URL: postgresql://ailearn:ailearn_password@postgres:5432/ailearn
-      NEXTAUTH_URL: http://localhost:3000
+      DATABASE_URL: postgresql://${DB_USER:-ailearn}:${DB_PASSWORD:-ailearn_password}@postgres:5432/${DB_NAME:-ailearn}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3080}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-secret-change-in-production}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
     depends_on:
       postgres:
         condition: service_healthy
-    command: npm run dev
 
 volumes:
   postgres_data:
