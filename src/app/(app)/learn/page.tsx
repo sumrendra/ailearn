@@ -1,3 +1,5 @@
+"use client";
+
 import { Topbar } from "@/components/layout/Topbar";
 import Link from "next/link";
 import { BookOpen, Clock, ArrowRight } from "lucide-react";

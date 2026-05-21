@@ -1,3 +1,5 @@
+"use client";
+
 import { Topbar } from "@/components/layout/Topbar";
 import Link from "next/link";
 import { Trophy, Zap, ArrowRight } from "lucide-react";
