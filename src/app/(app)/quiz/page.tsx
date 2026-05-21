@@ -2,7 +2,7 @@
 
 import { Topbar } from "@/components/layout/Topbar";
 import Link from "next/link";
-import { Trophy, Zap, ArrowRight } from "lucide-react";
+import { Trophy, Zap, ArrowRight, Wand2 } from "lucide-react";
 
 const quizSets = [
   { title: "LLM Fundamentals Quick Check", questions: 10, xp: 100, difficulty: "BEGINNER", tags: ["LLMs", "Transformers"] },
@@ -31,7 +31,17 @@ export default function QuizPage() {
           borderRadius: "var(--radius-lg)", padding: "20px 24px",
           marginBottom: 24, display: "flex", alignItems: "center", gap: 16,
         }}>
-          <div style={{ fontSize: 28 }}>⚡</div>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: "var(--bg-card)",
+            border: "1.5px solid var(--accent)25",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "var(--shadow-sm)",
+            flexShrink: 0,
+            animation: "pulse-soft 2.5s infinite",
+          }}>
+            <Wand2 size={20} color="var(--accent)" />
+          </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
               Generate a custom quiz with AI

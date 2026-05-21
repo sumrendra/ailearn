@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { RotateCcw, ThumbsUp, ThumbsDown, Minus, CheckCheck } from "lucide-react";
+import { RotateCcw, ThumbsUp, ThumbsDown, Minus, CheckCheck, Trophy, TrendingUp, BookOpen } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const mockCards = [
   {
@@ -76,8 +78,23 @@ export function FlashcardReviewer() {
         border: "1px solid var(--border-subtle)", padding: "40px 32px",
         textAlign: "center", boxShadow: "var(--shadow-sm)",
       }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>
-          {pct >= 80 ? "🎉" : pct >= 60 ? "💪" : "📖"}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: "50%",
+            background: pct >= 80 ? "var(--xp-gold-light)" : pct >= 60 ? "var(--success-light)" : "var(--accent-light)",
+            border: `2px solid ${pct >= 80 ? "var(--xp-gold)" : pct >= 60 ? "var(--success)" : "var(--accent)"}25`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.05)",
+            animation: "pulse-soft 2.5s infinite",
+          }}>
+            {pct >= 80 ? (
+              <Trophy size={32} color="var(--xp-gold)" />
+            ) : pct >= 60 ? (
+              <TrendingUp size={32} color="var(--success)" />
+            ) : (
+              <BookOpen size={32} color="var(--accent)" />
+            )}
+          </div>
         </div>
         <h2 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
           Session complete!
@@ -168,8 +185,10 @@ export function FlashcardReviewer() {
             {card?.front}
           </p>
         ) : (
-          <div style={{ fontSize: 15, color: "var(--text-primary)", lineHeight: 1.7 }}>
-            {card?.back}
+          <div style={{ fontSize: 15, color: "var(--text-primary)", lineHeight: 1.7 }} className="prose">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {card?.back}
+            </ReactMarkdown>
           </div>
         )}
 

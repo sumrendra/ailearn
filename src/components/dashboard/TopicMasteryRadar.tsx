@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts";
 
 const data = [
@@ -12,6 +13,12 @@ const data = [
 ];
 
 export function TopicMasteryRadar() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <div style={{
       background: "var(--bg-card)",
@@ -27,23 +34,48 @@ export function TopicMasteryRadar() {
         Complete lessons to level up
       </div>
 
-      <ResponsiveContainer width="100%" height={200}>
-        <RadarChart data={data}>
-          <PolarGrid stroke="var(--border-subtle)" />
-          <PolarAngleAxis
-            dataKey="topic"
-            tick={{ fontSize: 11, fill: "var(--text-secondary)" }}
-          />
-          <Radar
-            name="Mastery"
-            dataKey="score"
-            stroke="var(--accent)"
-            fill="var(--accent)"
-            fillOpacity={0.18}
-            strokeWidth={2}
-          />
-        </RadarChart>
-      </ResponsiveContainer>
+      {mounted ? (
+        <ResponsiveContainer width="100%" height={200}>
+          <RadarChart data={data}>
+            <PolarGrid stroke="var(--border-subtle)" />
+            <PolarAngleAxis
+              dataKey="topic"
+              tick={{ fontSize: 11, fill: "var(--text-secondary)" }}
+            />
+            <Radar
+              name="Mastery"
+              dataKey="score"
+              stroke="var(--accent)"
+              fill="var(--accent)"
+              fillOpacity={0.18}
+              strokeWidth={2}
+            />
+          </RadarChart>
+        </ResponsiveContainer>
+      ) : (
+        <div style={{
+          height: 200,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "relative",
+        }}>
+          {/* Pulsing radar circular skeleton */}
+          <div style={{
+            width: 140, height: 140,
+            borderRadius: "50%",
+            border: "1.5px dashed var(--border-subtle)",
+            animation: "pulse-soft 2s ease-in-out infinite",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <div style={{
+              width: 80, height: 80,
+              borderRadius: "50%",
+              border: "1.5px dashed var(--border-subtle)",
+            }} />
+          </div>
+        </div>
+      )}
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
         {data.map((d) => (

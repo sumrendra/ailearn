@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Sparkles, User, RotateCcw, Copy, Check } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   role: "user" | "assistant";
@@ -195,9 +197,15 @@ export function TutorChat() {
               }}>
                 <div style={{
                   fontSize: 14, lineHeight: 1.7,
-                  whiteSpace: "pre-wrap", wordBreak: "break-word",
-                }}>
-                  {msg.content}
+                  wordBreak: "break-word",
+                }} className="prose">
+                  {msg.role === "user" ? (
+                    <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.content}
+                    </ReactMarkdown>
+                  )}
                   {msg.content === "" && loading && (
                     <span style={{ display: "inline-flex", gap: 3, marginLeft: 4, verticalAlign: "middle" }}>
                       {[0, 1, 2].map((i) => (

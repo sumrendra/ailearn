@@ -11,7 +11,7 @@ export default function DashboardPage() {
   return (
     <>
       <Topbar
-        title="Good morning, Haril 👋"
+        title="Welcome back, Haril"
         subtitle="Thursday, 21 May 2026"
       />
       <div style={{ padding: "24px", maxWidth: 1200, width: "100%" }}>

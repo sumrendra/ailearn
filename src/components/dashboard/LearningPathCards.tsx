@@ -1,16 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Clock, BookOpen } from "lucide-react";
+import { ArrowRight, Clock, BookOpen, Brain, Database, Cpu } from "lucide-react";
+
+const pathIcons: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
+  "llm-foundations": Brain,
+  "rag-vector-dbs": Database,
+  "ai-agents": Cpu,
+};
 
 const paths = [
   {
     slug: "llm-foundations",
     title: "LLM Foundations",
     description: "Transformers, attention, tokenization, temperature, context windows — everything you need to work with LLMs confidently.",
-    icon: "🧠",
+    icon: "llm-foundations",
     color: "#6c47ff",
-    colorLight: "#ede9ff",
+    colorLight: "rgba(108, 71, 255, 0.09)",
     difficulty: "BEGINNER",
     estimatedHours: 8,
     lessons: 12,
@@ -21,9 +27,9 @@ const paths = [
     slug: "rag-vector-dbs",
     title: "RAG & Vector Databases",
     description: "Build retrieval-augmented generation systems. pgvector, Chroma, Pinecone, embedding strategies, chunking, and reranking.",
-    icon: "🔍",
+    icon: "rag-vector-dbs",
     color: "#0f766e",
-    colorLight: "#ccfbf1",
+    colorLight: "rgba(15, 118, 110, 0.09)",
     difficulty: "INTERMEDIATE",
     estimatedHours: 10,
     lessons: 14,
@@ -34,9 +40,9 @@ const paths = [
     slug: "ai-agents",
     title: "AI Agents & Tool Use",
     description: "Autonomous agents, tool calling, ReAct loops, LangChain agents, function calling with OpenAI and Claude APIs.",
-    icon: "🤖",
+    icon: "ai-agents",
     color: "#b45309",
-    colorLight: "#fef3c7",
+    colorLight: "rgba(180, 83, 9, 0.09)",
     difficulty: "ADVANCED",
     estimatedHours: 12,
     lessons: 16,
@@ -87,10 +93,13 @@ export function LearningPathCards() {
               <div style={{
                 width: 44, height: 44, borderRadius: 12,
                 background: path.colorLight,
+                border: `1.5px solid ${path.color}25`,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 22,
               }}>
-                {path.icon}
+                {(() => {
+                  const Icon = pathIcons[path.icon];
+                  return Icon ? <Icon size={20} color={path.color} /> : null;
+                })()}
               </div>
               <span style={{
                 fontSize: 11, fontWeight: 500,

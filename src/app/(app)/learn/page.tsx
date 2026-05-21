@@ -2,16 +2,22 @@
 
 import { Topbar } from "@/components/layout/Topbar";
 import Link from "next/link";
-import { BookOpen, Clock, ArrowRight } from "lucide-react";
+import { BookOpen, Clock, ArrowRight, Brain, Database, Cpu } from "lucide-react";
+
+const pathIcons: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
+  "llm-foundations": Brain,
+  "rag-vector-dbs": Database,
+  "ai-agents": Cpu,
+};
 
 const paths = [
   {
     slug: "llm-foundations",
     title: "LLM Foundations",
     description: "Master transformers, attention mechanisms, tokenization, sampling strategies, and how to work with LLMs confidently as an engineer.",
-    icon: "🧠",
+    icon: "llm-foundations",
     color: "#6c47ff",
-    colorLight: "#ede9ff",
+    colorLight: "rgba(108, 71, 255, 0.09)",
     difficulty: "BEGINNER",
     estimatedHours: 8,
     lessons: [
@@ -27,9 +33,9 @@ const paths = [
     slug: "rag-vector-dbs",
     title: "RAG & Vector Databases",
     description: "Build production-grade RAG pipelines. Learn embeddings, chunking strategies, vector search, and reranking.",
-    icon: "🔍",
+    icon: "rag-vector-dbs",
     color: "#0f766e",
-    colorLight: "#ccfbf1",
+    colorLight: "rgba(15, 118, 110, 0.09)",
     difficulty: "INTERMEDIATE",
     estimatedHours: 10,
     lessons: [
@@ -45,9 +51,9 @@ const paths = [
     slug: "ai-agents",
     title: "AI Agents & Tool Use",
     description: "Build autonomous agents, implement tool calling, and design reliable agent loops with LangChain, Claude, and OpenAI.",
-    icon: "🤖",
+    icon: "ai-agents",
     color: "#b45309",
-    colorLight: "#fef3c7",
+    colorLight: "rgba(180, 83, 9, 0.09)",
     difficulty: "ADVANCED",
     estimatedHours: 12,
     lessons: [
@@ -86,7 +92,19 @@ export default function LearnPage() {
                 background: path.colorLight,
                 display: "flex", alignItems: "flex-start", gap: 16,
               }}>
-                <div style={{ fontSize: 36 }}>{path.icon}</div>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 14,
+                  background: "var(--bg-card)",
+                  border: `1.5px solid ${path.color}35`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "var(--shadow-sm)",
+                  flexShrink: 0,
+                }}>
+                  {(() => {
+                    const Icon = pathIcons[path.icon];
+                    return Icon ? <Icon size={24} color={path.color} /> : null;
+                  })()}
+                </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
                     <h2 style={{ fontSize: 18, fontWeight: 700, color: path.color }}>{path.title}</h2>

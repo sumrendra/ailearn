@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Mic, Send, RotateCcw, ChevronDown, Trophy } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const TOPICS = [
   { value: "llm-fundamentals", label: "LLM Fundamentals" },
@@ -271,8 +273,14 @@ export function InterviewMode() {
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8, color: msg.role === "user" ? "var(--accent)" : "var(--text-tertiary)" }}>
               {msg.role === "user" ? "You" : "Interviewer"}
             </div>
-            <div style={{ fontSize: 14, lineHeight: 1.7, color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>
-              {msg.content}
+            <div style={{ fontSize: 14, lineHeight: 1.7, color: "var(--text-primary)" }} className="prose">
+              {msg.role === "user" ? (
+                <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
+              ) : (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {msg.content}
+                </ReactMarkdown>
+              )}
               {msg.content === "" && loading && (
                 <span style={{ color: "var(--text-tertiary)", fontStyle: "italic" }}>Thinking...</span>
               )}

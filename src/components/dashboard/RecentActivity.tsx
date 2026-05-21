@@ -22,8 +22,17 @@ export function RecentActivity() {
       </div>
 
       {emptyState ? (
-        <div style={{ textAlign: "center", padding: "24px 12px" }}>
-          <div style={{ fontSize: 32, marginBottom: 10 }}>🌱</div>
+        <div style={{ textAlign: "center", padding: "20px 12px" }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: "50%",
+            background: "var(--accent-light)",
+            border: "1.5px solid var(--accent)20",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 14px",
+            boxShadow: "0 4px 12px rgba(108, 71, 255, 0.12)",
+          }}>
+            <Sparkles size={20} color="var(--accent)" style={{ animation: "pulse-soft 2.5s infinite" }} />
+          </div>
           <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)", marginBottom: 6 }}>
             Your journey starts here
           </div>

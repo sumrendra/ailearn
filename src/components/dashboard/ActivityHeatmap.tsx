@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 const WEEKS = 26;
 const DAYS = 7;
 
@@ -19,7 +21,18 @@ function generateMockData() {
   return cells;
 }
 
-const data = generateMockData();
+function generateBlankData() {
+  const cells: { date: string; count: number }[] = [];
+  const now = new Date("2026-05-21T00:00:00.000Z");
+  for (let w = WEEKS - 1; w >= 0; w--) {
+    for (let d = 0; d < DAYS; d++) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - (w * 7 + (DAYS - 1 - d)));
+      cells.push({ date: date.toISOString().slice(0, 10), count: 0 });
+    }
+  }
+  return cells;
+}
 
 function cellColor(count: number): string {
   if (count === 0) return "var(--bg-tertiary)";
@@ -33,9 +46,17 @@ const dayLabels = ["Mon", "", "Wed", "", "Fri", "", "Sun"];
 const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export function ActivityHeatmap() {
+  const [data, setData] = useState<{ date: string; count: number }[]>([]);
+
+  useEffect(() => {
+    setData(generateMockData());
+  }, []);
+
+  const activeData = data.length > 0 ? data : generateBlankData();
+
   const weeks: { date: string; count: number }[][] = [];
   for (let i = 0; i < WEEKS; i++) {
-    weeks.push(data.slice(i * DAYS, i * DAYS + DAYS));
+    weeks.push(activeData.slice(i * DAYS, i * DAYS + DAYS));
   }
 
   // Get month labels positions
