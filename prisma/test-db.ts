@@ -1,7 +1,20 @@
-import { prisma } from "../src/lib/prisma";
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error("Error: DATABASE_URL environment variable is not set!");
+  process.exit(1);
+}
+
+console.log("Checking DB connection with URL:", connectionString.replace(/:[^:@]+@/, ":****@")); // Mask password
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log("DATABASE_URL:", process.env.DATABASE_URL);
   try {
     const paths = await prisma.learningPath.findMany({
       include: {
@@ -25,6 +38,9 @@ async function main() {
     console.log("Found daily challenges:", challenges.length);
   } catch (error) {
     console.error("Error querying database:", error);
+  } finally {
+    await prisma.$disconnect();
+    await pool.end();
   }
 }
 
