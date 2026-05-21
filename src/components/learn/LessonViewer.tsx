@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Sparkles, Copy, Check, X, MessageSquare } from "lucide-react";
+import { Sparkles, Copy, Check, X } from "lucide-react";
 import { TutorChat } from "@/components/ai/TutorChat";
 
 interface LessonViewerProps {
@@ -16,6 +16,8 @@ interface LessonViewerProps {
 export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerProps) {
   const [copied, setCopied] = useState(false);
   const [tutorOpen, setTutorOpen] = useState(false);
+  const [readPct, setReadPct] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const copyContent = () => {
     navigator.clipboard.writeText(content);
@@ -23,15 +25,36 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const total = el.scrollHeight - el.clientHeight;
+    setReadPct(total > 0 ? Math.min(100, Math.round((el.scrollTop / total) * 100)) : 0);
+  };
+
   return (
     <div style={{ flex: 1, display: "flex", position: "relative" }}>
-      {/* Content area */}
+      {/* Reading progress bar */}
       <div style={{
-        flex: 1,
-        padding: "40px 48px",
-        maxWidth: 820,
-        overflowY: "auto",
+        position: "fixed", top: 0, left: 0, right: 0, height: 3, zIndex: 50,
+        background: "var(--bg-tertiary)",
       }}>
+        <div style={{
+          height: "100%", width: `${readPct}%`,
+          background: "linear-gradient(90deg, var(--accent), #9b6dff)",
+          transition: "width 0.2s ease",
+        }} />
+      </div>
+
+      {/* Content area */}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        style={{
+          flex: 1,
+          padding: "40px 48px",
+          maxWidth: 820,
+          overflowY: "auto",
+        }}>
         {/* Action bar */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 24 }}>
           <button
