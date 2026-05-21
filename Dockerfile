@@ -1,9 +1,9 @@
 FROM node:22-alpine AS base
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
 
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -46,14 +46,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
-# Install production dependencies and tsx for seeding
-RUN npm install --omit=dev && npm install --no-save tsx
+# Copy pre-installed and pre-generated dependencies (including compiled Prisma Client) from builder stage
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Make locally-installed CLIs (prisma, tsx) available on PATH
 ENV PATH="/app/node_modules/.bin:$PATH"
-
-# Generate the Prisma Client in the runner stage so it's fully generated and available for CLI scripts
-RUN prisma generate
 
 USER nextjs
 
