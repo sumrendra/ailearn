@@ -304,5 +304,54 @@ code {
 
 /* Code blocks background (light mode) */
 :root .lesson-content pre {
-  background: #1e1e2e !important;
+  background: #1a1a2e !important;
+}
+
+/* ── Lesson content rich typography ────────────────────────────────────────── */
+
+/* Custom bullet list */
+.lesson-content .lesson-ul {
+  list-style: none;
+  padding-left: 0;
+}
+.lesson-content .lesson-ul > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.lesson-content .lesson-ul > li::before {
+  content: "";
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  margin-top: 10px;
+}
+
+/* Ordered list */
+.lesson-content .lesson-ol > li {
+  padding-left: 4px;
+}
+.lesson-content .lesson-ol > li::marker {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+/* Table row hover */
+.lesson-content tbody tr:hover td {
+  background: rgba(108,71,255,0.04);
+}
+
+/* Smooth scroll within the content scroller */
+.lesson-content {
+  scroll-behavior: smooth;
+}
+
+/* hljs token colors */
+.lesson-content .hljs {
+  background: transparent;
+  color: #abb2bf;
 }
