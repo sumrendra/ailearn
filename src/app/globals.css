@@ -89,9 +89,6 @@
   --shadow-lg: 0 10px 15px rgba(0,0,0,.08), 0 4px 6px rgba(0,0,0,.05);
   --shadow-xl: 0 20px 25px rgba(0,0,0,.10), 0 8px 10px rgba(0,0,0,.06);
 
-  /* Sidebar */
-  --sidebar-width: 248px;
-
   /* Code */
   --bg-code:   #0d0d1a;
   --bg-code-header: #13132a;
@@ -223,7 +220,22 @@ code, pre {
   to { transform: rotate(360deg); }
 }
 
-.animate-fade { animation: fadeIn 0.25s ease both; }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(108,71,255,0.3); }
+  50%       { box-shadow: 0 0 28px rgba(108,71,255,0.6); }
+}
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade  { animation: fadeIn  0.25s ease both; }
+.animate-float { animation: float   3.5s ease-in-out infinite; }
+.animate-glow  { animation: glow-pulse 2s ease-in-out infinite; }
 
 .skeleton {
   background: linear-gradient(90deg,

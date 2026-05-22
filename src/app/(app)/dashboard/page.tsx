@@ -1,108 +1,106 @@
 export const dynamic = "force-dynamic";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { Topbar } from "@/components/layout/Topbar";
-import { XPStreakWidget } from "@/components/dashboard/XPStreakWidget";
-import { DailyChallenge } from "@/components/dashboard/DailyChallenge";
-import { LearningPathCards } from "@/components/dashboard/LearningPathCards";
-import { TopicMasteryRadar } from "@/components/dashboard/TopicMasteryRadar";
-import { ActivityHeatmap } from "@/components/dashboard/ActivityHeatmap";
-import { QuickActions } from "@/components/dashboard/QuickActions";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
-import Link from "next/link";
+import { DashboardClient } from "./DashboardClient";
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"];
-
-function formatDate(d: Date) {
-  return `${DAY_NAMES[d.getDay()]}, ${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
-}
+const PATH_COLORS: Record<string, string> = {
+  "llm-foundations": "#6c47ff",
+  "rag-vector-dbs":  "#0f766e",
+  "ai-agents":       "#b45309",
+};
 
 export default async function DashboardPage() {
-  const now = new Date();
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
+  const session = await auth();
 
-  const [paths, challenge] = await Promise.all([
-    prisma.learningPath.findMany({
-      orderBy: { order: "asc" },
-      include: { lessons: { orderBy: { order: "asc" }, select: { id: true, slug: true, title: true, xpReward: true, estimatedMins: true } } },
-    }),
-    prisma.dailyChallenge.findFirst({
-      where: { date: { gte: todayStart } },
-      orderBy: { date: "asc" },
-    }),
-  ]);
+  const paths = await prisma.learningPath.findMany({
+    orderBy: { order: "asc" },
+    include: {
+      lessons: {
+        orderBy: { order: "asc" },
+        select: { id: true, slug: true, title: true, estimatedMins: true, xpReward: true },
+      },
+    },
+  });
 
-  const serializedPaths = paths.map((p) => ({
-    id: p.id,
-    slug: p.slug,
-    title: p.title,
-    description: p.description ?? "",
-    icon: p.icon ?? "",
-    color: p.color ?? "#6c47ff",
-    difficulty: p.difficulty as string,
-    estimatedHours: p.estimatedHours ?? 0,
-    tags: (p.tags ?? []) as string[],
-    lessons: p.lessons.map((l) => ({
-      id: l.id,
-      slug: l.slug,
-      title: l.title,
-      xpReward: l.xpReward ?? 0,
-      estimatedMins: l.estimatedMins ?? 0,
-    })),
-    progress: 0,
-  }));
+  const totalLessons = paths.reduce((s, p) => s + p.lessons.length, 0);
+  const totalXP      = paths.reduce((s, p) => s + p.lessons.reduce((a, l) => a + (l.xpReward ?? 0), 0), 0);
 
-  const serializedChallenge = challenge ? {
-    id: challenge.id,
-    type: challenge.type as string,
-    title: challenge.title,
-    content: challenge.content,
-    xpReward: challenge.xpReward,
-    tags: (challenge.tags ?? []) as string[],
-  } : null;
+  let userStats = {
+    name: "Guest",
+    xp: 0, level: 1,
+    currentStreak: 0, longestStreak: 0,
+    completedLessons: 0,
+  };
+
+  let recentLessons: { title: string; slug: string; pathTitle: string; pathSlug: string; pathColor: string }[] = [];
+  let pathProgress: Record<string, number> = {};
+
+  if (session?.user?.id) {
+    const [user, completedCount, progressRows] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true, xp: true, level: true, currentStreak: true, longestStreak: true },
+      }),
+      prisma.lessonProgress.count({
+        where: { userId: session.user.id, status: "COMPLETED" },
+      }),
+      prisma.lessonProgress.findMany({
+        where: { userId: session.user.id, status: "COMPLETED" },
+        include: { lesson: { include: { path: { select: { title: true, slug: true } } } } },
+        orderBy: { completedAt: "desc" },
+        take: 4,
+      }),
+    ]);
+
+    if (user) {
+      userStats = {
+        name: user.name ?? session.user.email?.split("@")[0] ?? "You",
+        xp: user.xp, level: user.level,
+        currentStreak: user.currentStreak, longestStreak: user.longestStreak,
+        completedLessons: completedCount,
+      };
+    }
+
+    recentLessons = progressRows.map(r => ({
+      title: r.lesson.title,
+      slug: r.lesson.slug,
+      pathTitle: r.lesson.path.title,
+      pathSlug: r.lesson.path.slug,
+      pathColor: PATH_COLORS[r.lesson.path.slug] ?? "#6c47ff",
+    }));
+
+    // Compute per-path completion percentage
+    for (const path of paths) {
+      const done = progressRows.filter(r => r.lesson.path.slug === path.slug).length;
+      pathProgress[path.slug] = path.lessons.length > 0 ? Math.round((done / path.lessons.length) * 100) : 0;
+    }
+  }
+
+  const firstPath = paths[0];
+  const firstLesson = firstPath?.lessons[0];
 
   return (
-    <>
-      <Topbar
-        title="Dashboard"
-        subtitle={formatDate(now)}
-      />
-      <div style={{ padding: "24px", maxWidth: 1200, width: "100%" }}>
-
-        {/* Top row: XP/Streak + Daily Challenge + Quick Actions */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
-          <XPStreakWidget />
-          <DailyChallenge challenge={serializedChallenge} />
-          <QuickActions />
-        </div>
-
-        {/* Middle row: Learning paths */}
-        <div style={{ marginBottom: 20 }}>
-          <SectionHeader title="Your learning paths" action="View all" href="/learn" />
-          <LearningPathCards paths={serializedPaths} />
-        </div>
-
-        {/* Bottom row: Radar + Heatmap + Recent */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr 1fr", gap: 16 }}>
-          <TopicMasteryRadar />
-          <ActivityHeatmap />
-          <RecentActivity />
-        </div>
-
-      </div>
-    </>
-  );
-}
-
-function SectionHeader({ title, action, href }: { title: string; action: string; href: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-      <h2 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>{title}</h2>
-      <Link href={href} style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>
-        {action} →
-      </Link>
-    </div>
+    <DashboardClient
+      isLoggedIn={!!session?.user}
+      userStats={userStats}
+      totalLessons={totalLessons}
+      totalXP={totalXP}
+      recentLessons={recentLessons}
+      pathProgress={pathProgress}
+      continuePath={firstPath ? {
+        title: firstPath.title,
+        slug: firstPath.slug,
+        color: PATH_COLORS[firstPath.slug] ?? "#6c47ff",
+        lesson: firstLesson ? { title: firstLesson.title, slug: firstLesson.slug } : null,
+      } : null}
+      paths={paths.map(p => ({
+        title: p.title,
+        slug: p.slug,
+        color: PATH_COLORS[p.slug] ?? "#6c47ff",
+        totalLessons: p.lessons.length,
+        xpAvailable: p.lessons.reduce((s, l) => s + (l.xpReward ?? 0), 0),
+        firstLesson: p.lessons[0] ? { slug: p.lessons[0].slug } : null,
+      }))}
+    />
   );
 }

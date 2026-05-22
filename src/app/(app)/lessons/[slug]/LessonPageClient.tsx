@@ -1,0 +1,331 @@
+"use client";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronLeft, ChevronRight, BookOpen, ListOrdered,
+  CheckCircle2, Clock, X, ArrowLeft,
+} from "lucide-react";
+import { LessonViewer } from "@/components/learn/LessonViewer";
+import dynamic from "next/dynamic";
+
+// Lazy-load diagram components
+const LLMFlowDiagram      = dynamic(() => import("@/components/diagrams/LLMFlowDiagram").then(m => ({ default: m.LLMFlowDiagram })), { ssr: false });
+const TransformerDiagram  = dynamic(() => import("@/components/diagrams/TransformerDiagram").then(m => ({ default: m.TransformerDiagram })), { ssr: false });
+const RAGPipelineDiagram  = dynamic(() => import("@/components/diagrams/RAGPipelineDiagram").then(m => ({ default: m.RAGPipelineDiagram })), { ssr: false });
+const AgentLoopDiagram    = dynamic(() => import("@/components/diagrams/AgentLoopDiagram").then(m => ({ default: m.AgentLoopDiagram })), { ssr: false });
+
+// Slug → diagram map
+const LESSON_DIAGRAMS: Record<string, React.ReactNode> = {
+  "what-is-an-llm":                        <LLMFlowDiagram />,
+  "transformer-architecture":              <TransformerDiagram />,
+  "tokenization-temperature-sampling":     <LLMFlowDiagram />,
+  "attention-mechanism":                   <TransformerDiagram />,
+  "context-windows-kv-cache":              <LLMFlowDiagram />,
+  "prompt-engineering":                    <LLMFlowDiagram />,
+  "rag-fundamentals":                      <RAGPipelineDiagram />,
+  "vector-embeddings":                     <RAGPipelineDiagram />,
+  "vector-databases":                      <RAGPipelineDiagram />,
+  "chunking-strategies":                   <RAGPipelineDiagram />,
+  "retrieval-reranking":                   <RAGPipelineDiagram />,
+  "advanced-rag":                          <RAGPipelineDiagram />,
+  "what-are-ai-agents":                    <AgentLoopDiagram />,
+  "tool-use-function-calling":             <AgentLoopDiagram />,
+  "agent-memory":                          <AgentLoopDiagram />,
+  "multi-agent-systems":                   <AgentLoopDiagram />,
+  "agent-evaluation":                      <AgentLoopDiagram />,
+  "building-production-agents":            <AgentLoopDiagram />,
+};
+
+interface Lesson {
+  id: string; slug: string; title: string; order: number;
+  estimatedMins: number | null; xpReward: number | null;
+}
+
+interface Props {
+  lesson: {
+    id: string; slug: string; title: string;
+    content: string | null; estimatedMins: number | null; xpReward: number | null;
+    tags: string[];
+  };
+  path: { slug: string; title: string };
+  pathColors: { color: string; light: string; label: string };
+  lessons: Lesson[];
+  currentIdx: number;
+  prevLesson: Lesson | null;
+  nextLesson: Lesson | null;
+}
+
+export function LessonPageClient({
+  lesson, path, pathColors, lessons, currentIdx, prevLesson, nextLesson,
+}: Props) {
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const diagram = LESSON_DIAGRAMS[lesson.slug] ?? null;
+
+  useEffect(() => { setMounted(true); }, []);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", position: "relative" }}>
+
+      {/* ── Slim lesson topbar ─────────────────────────────────────────────── */}
+      <div style={{
+        height: 52, flexShrink: 0,
+        display: "flex", alignItems: "center",
+        padding: "0 20px", gap: 12,
+        background: "var(--bg-surface)",
+        borderBottom: "1px solid var(--border-subtle)",
+        zIndex: 20,
+      }}>
+        {/* Back */}
+        <Link href={`/learn/${path.slug}`} style={{ textDecoration: "none" }}>
+          <motion.div whileHover={{ x: -2 }} style={{
+            display: "flex", alignItems: "center", gap: 5,
+            fontSize: 12.5, color: "var(--text-tertiary)", fontWeight: 500,
+          }}>
+            <ArrowLeft size={14} /> <span style={{ display: "flex", alignItems: "center" }}>Paths</span>
+          </motion.div>
+        </Link>
+
+        <span style={{ color: "var(--border-default)", fontSize: 14 }}>/</span>
+
+        {/* Path badge */}
+        <span style={{
+          fontSize: 12, fontWeight: 700, color: "#fff",
+          background: pathColors.color,
+          padding: "3px 10px", borderRadius: 999,
+        }}>
+          {pathColors.label}
+        </span>
+
+        <span style={{ color: "var(--border-default)", fontSize: 14 }}>/</span>
+
+        {/* Current lesson title (truncated) */}
+        <span style={{
+          fontSize: 13, fontWeight: 600, color: "var(--text-primary)",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          flex: 1, minWidth: 0,
+        }}>
+          {lesson.title}
+        </span>
+
+        {/* Lessons toggle button */}
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => setPanelOpen(v => !v)}
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "6px 14px", borderRadius: 8, flexShrink: 0,
+            background: panelOpen ? pathColors.color : "var(--bg-sunken)",
+            border: `1px solid ${panelOpen ? pathColors.color : "var(--border-subtle)"}`,
+            color: panelOpen ? "#fff" : "var(--text-secondary)",
+            fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+            transition: "all 0.15s",
+          }}
+        >
+          <ListOrdered size={14} />
+          <span>{currentIdx + 1}/{lessons.length} lessons</span>
+        </motion.button>
+
+        {/* Prev/next compact */}
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          {prevLesson ? (
+            <Link href={`/lessons/${prevLesson.slug}`} style={{ textDecoration: "none" }}>
+              <motion.div whileHover={{ scale: 1.05 }} style={{
+                width: 32, height: 32, borderRadius: 8,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: "var(--bg-sunken)", border: "1px solid var(--border-subtle)",
+                cursor: "pointer", color: "var(--text-secondary)",
+              }}>
+                <ChevronLeft size={16} />
+              </motion.div>
+            </Link>
+          ) : <div style={{ width: 32 }} />}
+
+          {nextLesson ? (
+            <Link href={`/lessons/${nextLesson.slug}`} style={{ textDecoration: "none" }}>
+              <motion.div whileHover={{ scale: 1.05 }} style={{
+                width: 32, height: 32, borderRadius: 8,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: pathColors.color, color: "#fff",
+                cursor: "pointer",
+                boxShadow: `0 2px 8px ${pathColors.color}50`,
+              }}>
+                <ChevronRight size={16} />
+              </motion.div>
+            </Link>
+          ) : (
+            <Link href={`/learn/${path.slug}`} style={{ textDecoration: "none" }}>
+              <motion.div whileHover={{ scale: 1.05 }} style={{
+                height: 32, padding: "0 12px", borderRadius: 8,
+                display: "flex", alignItems: "center", gap: 5,
+                background: pathColors.color, color: "#fff",
+                cursor: "pointer", fontSize: 12, fontWeight: 600,
+              }}>
+                <BookOpen size={12} /> Done
+              </motion.div>
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* ── Slide-over lesson panel + backdrop (portalled to body) ─────────── */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {panelOpen && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setPanelOpen(false)}
+                style={{
+                  position: "fixed", inset: 0, zIndex: 9990,
+                  background: "rgba(0,0,0,0.45)",
+                  backdropFilter: "blur(4px)",
+                }}
+              />
+
+              {/* Panel */}
+              <motion.div
+                initial={{ x: -320, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -320, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 340, damping: 38 }}
+                style={{
+                  position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 9999,
+                  width: 320,
+                  background: "var(--bg-surface)",
+                  borderRight: "1px solid var(--border-subtle)",
+                  boxShadow: "12px 0 48px rgba(0,0,0,0.25)",
+                  display: "flex", flexDirection: "column",
+                  overflowY: "auto",
+                }}
+              >
+                {/* Panel header */}
+                <div style={{
+                  padding: "16px 16px 12px",
+                  background: pathColors.light,
+                  borderBottom: "1px solid var(--border-subtle)",
+                  flexShrink: 0,
+                }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: pathColors.color, marginBottom: 4 }}>
+                        Learning path
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.25 }}>
+                        {path.title}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setPanelOpen(false)}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4, borderRadius: 6 }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "var(--text-tertiary)", marginBottom: 5 }}>
+                      <span>{currentIdx} of {lessons.length} done</span>
+                      <span style={{ fontWeight: 600, color: pathColors.color }}>
+                        {Math.round((currentIdx / lessons.length) * 100)}%
+                      </span>
+                    </div>
+                    <div style={{ height: 5, background: "rgba(0,0,0,0.08)", borderRadius: 99, overflow: "hidden" }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.round((currentIdx / lessons.length) * 100)}%` }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                        style={{ height: "100%", background: pathColors.color, borderRadius: 99 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lesson list */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+                  {lessons.map((l, idx) => {
+                    const isCurrent = l.slug === lesson.slug;
+                    const isPast    = idx < currentIdx;
+                    const isFuture  = idx > currentIdx;
+                    return (
+                      <Link key={l.id} href={`/lessons/${l.slug}`} style={{ textDecoration: "none" }}
+                        onClick={() => setPanelOpen(false)}>
+                        <motion.div
+                          whileHover={{ x: 2 }}
+                          style={{
+                            display: "flex", alignItems: "flex-start", gap: 10,
+                            padding: "10px 14px",
+                            background: isCurrent ? pathColors.light : "transparent",
+                            borderLeft: isCurrent ? `3px solid ${pathColors.color}` : "3px solid transparent",
+                            opacity: isFuture ? 0.5 : 1,
+                            transition: "background 0.12s",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <div style={{
+                            width: 24, height: 24, borderRadius: "50%", flexShrink: 0, marginTop: 1,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            background: isPast ? "var(--success)" : isCurrent ? pathColors.color : "transparent",
+                            border: `2px solid ${isPast ? "var(--success)" : isCurrent ? pathColors.color : "var(--border-default)"}`,
+                            fontSize: 10, fontWeight: 700,
+                            color: (isPast || isCurrent) ? "#fff" : "var(--text-tertiary)",
+                          }}>
+                            {isPast ? <CheckCircle2 size={13} strokeWidth={2.5} /> : <span>{idx + 1}</span>}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: 12.5, lineHeight: 1.4,
+                              color: isCurrent ? pathColors.color : isPast ? "var(--text-secondary)" : "var(--text-tertiary)",
+                              fontWeight: isCurrent ? 600 : 400,
+                              overflow: "hidden", textOverflow: "ellipsis",
+                              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                            }}>
+                              {l.title}
+                            </div>
+                            {l.estimatedMins && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10.5, color: "var(--text-tertiary)", marginTop: 3 }}>
+                                <Clock size={9} /> {l.estimatedMins} min
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* ── Main content ──────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <LessonViewer
+          content={lesson.content ?? "No content available for this lesson yet."}
+          lessonTitle={lesson.title}
+          lessonSlug={lesson.slug}
+          pathName={path.title}
+          pathSlug={path.slug}
+          pathColor={pathColors.color}
+          estimatedMins={lesson.estimatedMins}
+          xpReward={lesson.xpReward}
+          lessonIndex={currentIdx}
+          totalLessons={lessons.length}
+          tags={lesson.tags}
+          diagramComponent={diagram}
+          prevLesson={prevLesson ? { title: prevLesson.title, slug: prevLesson.slug } : null}
+          nextLesson={nextLesson ? { title: nextLesson.title, slug: nextLesson.slug } : null}
+        />
+      </div>
+    </div>
+  );
+}

@@ -7,7 +7,7 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import {
   Sparkles, Copy, Check, X, BookOpen, Trophy,
-  Clock, Zap, ChevronLeft,
+  Clock, Zap, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { TutorChat } from "@/components/ai/TutorChat";
 import Link from "next/link";
@@ -132,6 +132,9 @@ interface LessonViewerProps {
   lessonIndex?: number;
   totalLessons?: number;
   tags?: string[];
+  diagramComponent?: React.ReactNode;
+  prevLesson?: { title: string; slug: string } | null;
+  nextLesson?: { title: string; slug: string } | null;
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -148,6 +151,9 @@ export function LessonViewer({
   lessonIndex,
   totalLessons,
   tags,
+  diagramComponent,
+  prevLesson,
+  nextLesson,
 }: LessonViewerProps) {
   const [tutorOpen, setTutorOpen]   = useState(false);
   const [readPct,   setReadPct]     = useState(0);
@@ -320,7 +326,7 @@ export function LessonViewer({
         {/* ── Action bar ────────────────────────────────────────────────── */}
         <div style={{
           display: "flex", justifyContent: "flex-end",
-          marginBottom: 36, maxWidth: 740,
+          marginBottom: diagramComponent ? 28 : 36, maxWidth: 740,
         }}>
           <button
             onClick={() => setTutorOpen((v) => !v)}
@@ -339,6 +345,13 @@ export function LessonViewer({
             {tutorOpen ? "Close tutor" : "Ask AI Tutor"}
           </button>
         </div>
+
+        {/* ── Visual diagram ────────────────────────────────────────────── */}
+        {diagramComponent && (
+          <div style={{ maxWidth: 740, marginBottom: 8 }}>
+            {diagramComponent}
+          </div>
+        )}
 
         {/* ── Markdown content ──────────────────────────────────────────── */}
         <div className="lesson-content">
@@ -498,34 +511,26 @@ export function LessonViewer({
         <div style={{
           maxWidth: 740,
           marginTop: 72, padding: "36px 40px",
-          background: "linear-gradient(135deg, rgba(108,71,255,0.07), rgba(155,109,255,0.03))",
+          background: `linear-gradient(135deg, ${pathColor}10, ${pathColor}04)`,
           borderRadius: "var(--radius-xl)",
-          border: "1px solid rgba(108,71,255,0.15)",
+          border: `1px solid ${pathColor}20`,
           textAlign: "center",
-          boxShadow: "0 4px 24px rgba(108,71,255,0.06)",
+          boxShadow: `0 8px 32px ${pathColor}10`,
         }}>
-          <div style={{ fontSize: 36, marginBottom: 12, lineHeight: 1 }}>🎉</div>
-          <h3 style={{
-            fontSize: 20, fontWeight: 700,
-            color: "var(--text-primary)", marginBottom: 8,
-          }}>
+          <div style={{ fontSize: 40, marginBottom: 12, lineHeight: 1 }}>🎉</div>
+          <h3 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", marginBottom: 8, letterSpacing: "-0.02em" }}>
             Lesson complete!
           </h3>
-          <p style={{
-            fontSize: 14, color: "var(--text-secondary)",
-            lineHeight: 1.65, maxWidth: 380, margin: "0 auto 28px",
-          }}>
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.65, maxWidth: 380, margin: "0 auto 28px" }}>
             Reinforce what you learned — practice with flashcards or test yourself with a quick quiz.
           </p>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: prevLesson || nextLesson ? 24 : 0 }}>
             <Link href={`/flashcards?lesson=${lessonSlug}`} style={{ textDecoration: "none" }}>
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 7,
-                padding: "11px 22px",
-                background: "var(--accent)", color: "#fff",
+                padding: "11px 22px", background: pathColor, color: "#fff",
                 borderRadius: "var(--radius-md)", fontSize: 13.5, fontWeight: 600,
-                boxShadow: "0 4px 14px rgba(108,71,255,0.4)",
-                cursor: "pointer",
+                boxShadow: `0 4px 14px ${pathColor}40`, cursor: "pointer",
               }}>
                 <BookOpen size={15} /> Review flashcards
               </div>
@@ -533,17 +538,71 @@ export function LessonViewer({
             <Link href="/quiz" style={{ textDecoration: "none" }}>
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 7,
-                padding: "11px 22px",
-                border: "1px solid var(--border-default)",
-                background: "var(--bg-card)",
-                borderRadius: "var(--radius-md)", fontSize: 13.5,
-                color: "var(--text-primary)", fontWeight: 500,
-                cursor: "pointer",
+                padding: "11px 22px", border: "1px solid var(--border-default)",
+                background: "var(--bg-card)", borderRadius: "var(--radius-md)",
+                fontSize: 13.5, color: "var(--text-primary)", fontWeight: 500, cursor: "pointer",
               }}>
                 <Trophy size={15} /> Take a quiz
               </div>
             </Link>
           </div>
+
+          {/* Prev / next inside the CTA */}
+          {(prevLesson || nextLesson) && (
+            <div style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              borderTop: `1px solid ${pathColor}15`, paddingTop: 20, gap: 12,
+            }}>
+              {prevLesson ? (
+                <Link href={`/lessons/${prevLesson.slug}`} style={{ textDecoration: "none" }}>
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "9px 16px", borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border-default)",
+                    background: "var(--bg-secondary)", cursor: "pointer",
+                  }}>
+                    <ChevronLeft size={14} color="var(--text-tertiary)" />
+                    <div style={{ textAlign: "left" }}>
+                      <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginBottom: 1 }}>Previous</div>
+                      <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--text-primary)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {prevLesson.title}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ) : <div />}
+
+              {nextLesson ? (
+                <Link href={`/lessons/${nextLesson.slug}`} style={{ textDecoration: "none" }}>
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "9px 16px", borderRadius: "var(--radius-md)",
+                    background: pathColor, color: "#fff", cursor: "pointer",
+                    boxShadow: `0 4px 14px ${pathColor}40`,
+                  }}>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", marginBottom: 1 }}>Next lesson</div>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {nextLesson.title}
+                      </div>
+                    </div>
+                    <ChevronRight size={14} />
+                  </div>
+                </Link>
+              ) : (
+                <Link href={pathSlug ? `/learn/${pathSlug}` : "/learn"} style={{ textDecoration: "none" }}>
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "9px 18px", borderRadius: "var(--radius-md)",
+                    background: pathColor, color: "#fff", fontSize: 12.5, fontWeight: 600,
+                    cursor: "pointer", boxShadow: `0 4px 14px ${pathColor}40`,
+                  }}>
+                    <BookOpen size={13} /> Path complete — view overview
+                  </div>
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
