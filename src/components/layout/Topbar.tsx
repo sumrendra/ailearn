@@ -3,7 +3,6 @@
 import { Sun, Moon, Search } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 interface TopbarProps {
   title?: string;
@@ -12,14 +11,13 @@ interface TopbarProps {
 
 export function Topbar({ title, subtitle }: TopbarProps) {
   const { theme, toggle } = useTheme();
-  const router = useRouter();
 
   return (
     <header style={{
-      height: 60,
+      height: 56,
       display: "flex",
       alignItems: "center",
-      padding: "0 24px",
+      padding: "0 28px",
       background: "var(--bg-primary)",
       borderBottom: "1px solid var(--border-subtle)",
       gap: 16,
@@ -27,49 +25,61 @@ export function Topbar({ title, subtitle }: TopbarProps) {
       top: 0,
       zIndex: 30,
     }}>
-      {/* Page title */}
+      {/* Page title + breadcrumb */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        {title && (
-          <h1 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {title}
-          </h1>
-        )}
         {subtitle && (
-          <p style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <p style={{
+            fontSize: 11, color: "var(--text-tertiary)",
+            fontWeight: 500, marginBottom: 1,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+          }}>
             {subtitle}
           </p>
         )}
+        {title && (
+          <h1 style={{
+            fontSize: 15, fontWeight: 600,
+            color: "var(--text-primary)", lineHeight: 1.2,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            letterSpacing: "-0.01em",
+          }}>
+            {title}
+          </h1>
+        )}
       </div>
 
-      {/* Search bar — links to /search */}
+      {/* Search */}
       <Link href="/search" style={{ textDecoration: "none" }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 8,
           background: "var(--bg-secondary)",
           border: "1px solid var(--border-subtle)",
           borderRadius: "var(--radius-full)",
-          padding: "6px 14px",
+          padding: "6px 16px",
           cursor: "pointer",
-          minWidth: 220,
-          transition: "border-color 0.12s, background 0.12s",
+          minWidth: 200,
+          transition: "border-color 0.12s, box-shadow 0.12s",
         }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--accent)50";
-            (e.currentTarget as HTMLDivElement).style.background = "var(--accent-light)";
+            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--accent)";
+            (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px rgba(108,71,255,0.1)";
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)";
-            (e.currentTarget as HTMLDivElement).style.background = "var(--bg-secondary)";
+            (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
           }}
         >
-          <Search size={14} color="var(--text-tertiary)" />
+          <Search size={13} color="var(--text-tertiary)" />
           <span style={{ fontSize: 13, color: "var(--text-tertiary)", flex: 1 }}>
-            Search lessons, concepts...
+            Search lessons...
           </span>
           <kbd style={{
             fontSize: 10,
-            background: "var(--bg-tertiary)", border: "1px solid var(--border-default)",
-            borderRadius: 4, padding: "1px 5px", color: "var(--text-tertiary)",
+            background: "var(--bg-tertiary)",
+            border: "1px solid var(--border-default)",
+            borderRadius: 4, padding: "1px 5px",
+            color: "var(--text-tertiary)",
+            fontFamily: "inherit",
           }}>⌘K</kbd>
         </div>
       </Link>
@@ -78,18 +88,27 @@ export function Topbar({ title, subtitle }: TopbarProps) {
       <button
         onClick={toggle}
         style={{
-          width: 36, height: 36,
+          width: 34, height: 34,
           display: "flex", alignItems: "center", justifyContent: "center",
-          borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)",
-          background: "var(--bg-secondary)", cursor: "pointer",
+          borderRadius: "var(--radius-md)",
+          border: "1px solid var(--border-subtle)",
+          background: "var(--bg-secondary)",
+          cursor: "pointer",
           color: "var(--text-secondary)",
           transition: "all 0.12s",
+          flexShrink: 0,
         }}
-        title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-tertiary)"; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-secondary)"; }}
+        title={theme === "dark" ? "Light mode" : "Dark mode"}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-tertiary)";
+          (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-default)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-secondary)";
+          (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-subtle)";
+        }}
       >
-        {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+        {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
       </button>
     </header>
   );
