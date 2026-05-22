@@ -5,7 +5,10 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Sparkles, Copy, Check, X, BookOpen, Trophy } from "lucide-react";
+import {
+  Sparkles, Copy, Check, X, BookOpen, Trophy,
+  Clock, Zap, ChevronLeft,
+} from "lucide-react";
 import { TutorChat } from "@/components/ai/TutorChat";
 import Link from "next/link";
 
@@ -20,11 +23,12 @@ function slugify(text: string): string {
     .replace(/-+/g, "-");
 }
 
-/** Recursively pull text from React nodes (works on hljs-highlighted trees) */
+/** Recursively pull plain text from React nodes (for copy). */
 function extractText(node: React.ReactNode): string {
   if (node == null) return "";
   if (typeof node === "string" || typeof node === "number") return String(node);
   if (Array.isArray(node)) return node.map(extractText).join("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (typeof node === "object" && "props" in (node as object)) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return extractText((node as any).props?.children);
@@ -35,7 +39,7 @@ function extractText(node: React.ReactNode): string {
 function parseHeadings(content: string) {
   return content
     .split("\n")
-    .filter((l) => /^#{1,3} /.test(l))
+    .filter((l) => /^#{2,3} /.test(l))   // skip h1 — shown in chapter header
     .map((l) => {
       const level = (l.match(/^(#+)/)?.[1] ?? "").length;
       const text = l.replace(/^#+\s+/, "").trim();
@@ -61,22 +65,26 @@ function CodeBlock({
   };
 
   return (
-    <div style={{ marginBottom: 28, marginTop: 4, borderRadius: 12, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.22)" }}>
-      {/* Header bar */}
+    <div style={{
+      margin: "6px 0 28px",
+      borderRadius: 10,
+      overflow: "hidden",
+      border: "1px solid rgba(255,255,255,0.06)",
+      boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+    }}>
+      {/* Header: language + copy button */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        background: "#161b2e", padding: "9px 16px",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
+        background: "var(--bg-code-header)",
+        padding: "8px 16px",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
       }}>
-        {/* macOS traffic lights */}
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <div style={{ width: 11, height: 11, borderRadius: "50%", background: "#ff5f56" }} />
-          <div style={{ width: 11, height: 11, borderRadius: "50%", background: "#ffbd2e" }} />
-          <div style={{ width: 11, height: 11, borderRadius: "50%", background: "#27c93f" }} />
-        </div>
         <span style={{
-          fontSize: 11, fontWeight: 600, color: "#5b6a8a",
-          letterSpacing: "0.07em", textTransform: "uppercase",
+          fontSize: 11, fontWeight: 600,
+          color: "#5b6a8a",
+          letterSpacing: "0.07em",
+          textTransform: "uppercase",
+          userSelect: "none",
         }}>
           {language || "code"}
         </span>
@@ -84,7 +92,8 @@ function CodeBlock({
           onClick={copy}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)",
+            background: copied ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.06)",
+            border: `1px solid ${copied ? "rgba(52,211,153,0.3)" : "rgba(255,255,255,0.1)"}`,
             borderRadius: 6, padding: "3px 10px", cursor: "pointer",
             fontSize: 11, color: copied ? "#34d399" : "#7b8eaa", fontWeight: 500,
             transition: "all 0.15s",
@@ -94,12 +103,13 @@ function CodeBlock({
           {copied ? "Copied!" : "Copy"}
         </button>
       </div>
+
       {/* Code body */}
       <pre style={{
-        background: "#1a1a2e", margin: 0,
+        background: "var(--bg-code)", margin: 0,
         padding: "22px 26px", overflowX: "auto",
         fontSize: 13.5, lineHeight: 1.75,
-        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+        fontFamily: "var(--font-mono)",
         color: "#abb2bf",
       }}>
         {children}
@@ -108,28 +118,44 @@ function CodeBlock({
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface LessonViewerProps {
   content: string;
   lessonTitle: string;
   lessonSlug: string;
+  pathName?: string;
+  pathSlug?: string;
+  pathColor?: string;
+  estimatedMins?: number | null;
+  xpReward?: number | null;
+  lessonIndex?: number;
+  totalLessons?: number;
+  tags?: string[];
 }
 
-export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerProps) {
-  const [copied, setCopied] = useState(false);
-  const [tutorOpen, setTutorOpen] = useState(false);
-  const [readPct, setReadPct] = useState(0);
-  const [activeId, setActiveId] = useState("");
+// ── Main component ─────────────────────────────────────────────────────────────
+
+export function LessonViewer({
+  content,
+  lessonTitle,
+  lessonSlug,
+  pathName,
+  pathSlug,
+  pathColor = "#6c47ff",
+  estimatedMins,
+  xpReward,
+  lessonIndex,
+  totalLessons,
+  tags,
+}: LessonViewerProps) {
+  const [tutorOpen, setTutorOpen]   = useState(false);
+  const [readPct,   setReadPct]     = useState(0);
+  const [activeId,  setActiveId]    = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Only parse h2/h3 for TOC (h1 is in chapter header)
   const headings = useMemo(() => parseHeadings(content), [content]);
-
-  const copyContent = () => {
-    navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
@@ -137,7 +163,7 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
     setReadPct(total > 0 ? Math.min(100, Math.round((el.scrollTop / total) * 100)) : 0);
   };
 
-  // Track active heading
+  // Track active heading via IntersectionObserver
   useEffect(() => {
     const container = scrollRef.current;
     if (!container || headings.length === 0) return;
@@ -170,86 +196,165 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
   return (
     <div style={{ flex: 1, display: "flex", position: "relative", overflow: "hidden" }}>
 
-      {/* ── Reading progress bar (top of viewport) ─────────────────────────── */}
+      {/* ── Reading progress bar ──────────────────────────────────────────── */}
       <div style={{
         position: "fixed", top: 0, left: 0, right: 0, height: 3, zIndex: 100,
         background: "var(--bg-tertiary)",
       }}>
         <div style={{
           height: "100%", width: `${readPct}%`,
-          background: "linear-gradient(90deg, #6c47ff, #c084fc)",
+          background: `linear-gradient(90deg, ${pathColor}, #c084fc)`,
           transition: "width 0.25s ease",
         }} />
       </div>
 
-      {/* ── Content scroll area ─────────────────────────────────────────────── */}
+      {/* ── Content scroll area ──────────────────────────────────────────── */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
         style={{
           flex: 1, overflowY: "auto", overflowX: "hidden",
-          padding: "44px 56px 100px",
+          padding: "48px 64px 120px",
         }}
       >
-        {/* Action bar */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 36 }}>
+
+        {/* ── Chapter header ────────────────────────────────────────────── */}
+        <div style={{ marginBottom: 52, maxWidth: 740 }}>
+
+          {/* Breadcrumb row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
+            {pathSlug && (
+              <Link href={`/learn/${pathSlug}`} style={{ textDecoration: "none" }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  fontSize: 11, color: "var(--text-tertiary)", fontWeight: 500,
+                  transition: "color 0.12s",
+                }}>
+                  <ChevronLeft size={12} /> Paths
+                </div>
+              </Link>
+            )}
+
+            {pathName && (
+              <>
+                <span style={{ color: "var(--border-default)", fontSize: 11 }}>/</span>
+                <span style={{
+                  display: "inline-flex", alignItems: "center",
+                  fontSize: 11.5, fontWeight: 600, color: "#fff",
+                  background: pathColor,
+                  padding: "3px 10px", borderRadius: 999,
+                  letterSpacing: "0.02em",
+                }}>
+                  {pathName}
+                </span>
+              </>
+            )}
+
+            {lessonIndex !== undefined && totalLessons !== undefined && (
+              <span style={{
+                fontSize: 11.5, color: "var(--text-tertiary)", fontWeight: 500,
+              }}>
+                Lesson {lessonIndex + 1} of {totalLessons}
+              </span>
+            )}
+          </div>
+
+          {/* Lesson title */}
+          <h1 style={{
+            fontSize: 36,
+            fontWeight: 800,
+            color: "var(--text-primary)",
+            lineHeight: 1.15,
+            letterSpacing: "-0.03em",
+            marginBottom: 20,
+          }}>
+            {lessonTitle}
+          </h1>
+
+          {/* Meta badges row */}
+          {(estimatedMins || xpReward || (tags && tags.length > 0)) && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              {estimatedMins && (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  fontSize: 12.5, color: "var(--text-secondary)",
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--border-subtle)",
+                  padding: "4px 11px", borderRadius: 999,
+                }}>
+                  <Clock size={12} color="var(--text-tertiary)" /> {estimatedMins} min read
+                </span>
+              )}
+              {xpReward && (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  fontSize: 12.5, fontWeight: 600, color: "var(--xp-gold)",
+                  background: "var(--xp-gold-light)",
+                  border: "1px solid rgba(245,158,11,0.25)",
+                  padding: "4px 11px", borderRadius: 999,
+                }}>
+                  <Zap size={12} /> +{xpReward} XP
+                </span>
+              )}
+              {tags?.map((tag) => (
+                <span key={tag} style={{
+                  fontSize: 11.5, color: "var(--text-tertiary)",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  padding: "3px 9px", borderRadius: 4, fontWeight: 500,
+                }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Divider */}
+          <div style={{
+            height: 1,
+            background: "var(--border-subtle)",
+            marginTop: 28,
+          }} />
+        </div>
+
+        {/* ── Action bar ────────────────────────────────────────────────── */}
+        <div style={{
+          display: "flex", justifyContent: "flex-end",
+          marginBottom: 36, maxWidth: 740,
+        }}>
           <button
-            onClick={copyContent}
+            onClick={() => setTutorOpen((v) => !v)}
             style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "7px 12px", border: "1px solid var(--border-subtle)",
-              borderRadius: "var(--radius-md)", background: "var(--bg-secondary)",
-              fontSize: 12, color: "var(--text-tertiary)", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 7,
+              padding: "8px 16px", border: "none",
+              borderRadius: "var(--radius-md)",
+              background: tutorOpen ? "var(--bg-tertiary)" : "var(--accent)",
+              color: tutorOpen ? "var(--text-secondary)" : "#fff",
+              fontSize: 13, fontWeight: 500, cursor: "pointer",
+              boxShadow: tutorOpen ? "none" : "0 2px 10px rgba(108,71,255,0.4)",
+              transition: "all 0.15s",
             }}
           >
-            {copied ? <Check size={12} color="var(--success)" /> : <Copy size={12} />}
-            {copied ? "Copied!" : "Copy lesson"}
-          </button>
-          <button
-            onClick={() => setTutorOpen(true)}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "7px 14px", border: "none",
-              borderRadius: "var(--radius-md)", background: "var(--accent)",
-              fontSize: 12, color: "#fff", fontWeight: 500, cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(108,71,255,0.4)",
-            }}
-          >
-            <Sparkles size={12} /> Ask AI Tutor
+            <Sparkles size={13} />
+            {tutorOpen ? "Close tutor" : "Ask AI Tutor"}
           </button>
         </div>
 
-        {/* Markdown */}
+        {/* ── Markdown content ──────────────────────────────────────────── */}
         <div className="lesson-content">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight]}
             components={{
-              // ── Headings ─────────────────────────────────────────────────
-              h1: ({ children }) => (
-                <h1
-                  id={headingId(children)}
-                  style={{
-                    fontSize: 32, fontWeight: 800, color: "var(--text-primary)",
-                    margin: "0 0 20px", lineHeight: 1.2, scrollMarginTop: 20,
-                    paddingBottom: 18,
-                    borderBottom: "2px solid var(--border-subtle)",
-                  }}
-                >
-                  {children}
-                </h1>
-              ),
+
+              // h1 is shown in chapter header — suppress the in-content one
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              h1: (_props) => null,
 
               h2: ({ children }) => (
                 <h2
                   id={headingId(children)}
-                  style={{
-                    fontSize: 22, fontWeight: 700, color: "var(--text-primary)",
-                    margin: "52px 0 16px", lineHeight: 1.3,
-                    paddingLeft: 14,
-                    borderLeft: "3px solid var(--accent)",
-                    scrollMarginTop: 20,
-                  }}
+                  style={{ scrollMarginTop: 24 }}
                 >
                   {children}
                 </h2>
@@ -258,100 +363,54 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
               h3: ({ children }) => (
                 <h3
                   id={headingId(children)}
-                  style={{
-                    fontSize: 17, fontWeight: 600, color: "var(--text-primary)",
-                    margin: "32px 0 10px", lineHeight: 1.4,
-                    scrollMarginTop: 20,
-                  }}
+                  style={{ scrollMarginTop: 24 }}
                 >
                   {children}
                 </h3>
               ),
 
-              // ── Body text ────────────────────────────────────────────────
+              // Paragraph — let globals.css handle sizing/spacing, just add margin reset
               p: ({ children }) => (
-                <p style={{
-                  fontSize: 16, lineHeight: 1.9, color: "var(--text-secondary)",
-                  marginBottom: 20, marginTop: 0,
-                }}>
-                  {children}
-                </p>
+                <p>{children}</p>
               ),
 
+              // Bold — highlighted background
               strong: ({ children }) => (
-                <strong style={{
-                  color: "var(--text-primary)", fontWeight: 600,
-                  background: "rgba(108,71,255,0.09)",
-                  padding: "1px 4px", borderRadius: 4,
-                }}>
-                  {children}
-                </strong>
+                <strong>{children}</strong>
               ),
 
-              // ── Lists ────────────────────────────────────────────────────
-              ul: ({ children }) => (
-                <ul style={{
-                  listStyle: "none", padding: 0, marginBottom: 20, marginTop: 8,
-                }} className="lesson-ul">
-                  {children}
-                </ul>
-              ),
+              // ul, ol, li → NOT overridden — globals.css handles all styling
 
-              ol: ({ children }) => (
-                <ol style={{
-                  paddingLeft: 24, marginBottom: 20, marginTop: 8,
-                  color: "var(--text-secondary)",
-                }} className="lesson-ol">
-                  {children}
-                </ol>
-              ),
-
-              li: ({ children }) => (
-                <li style={{
-                  fontSize: 16, lineHeight: 1.8, marginBottom: 8,
-                  color: "var(--text-secondary)",
-                }}>
-                  {children}
-                </li>
-              ),
-
-              // ── Inline code ──────────────────────────────────────────────
-              code: ({ className, children, ...props }) => {
+              // Inline code
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              code: ({ className, children, ...props }: any) => {
                 if (!className) {
                   return (
-                    <code style={{
-                      fontSize: 13.5, fontFamily: "'JetBrains Mono', monospace",
-                      background: "rgba(108,71,255,0.1)", color: "var(--accent-text)",
-                      padding: "2px 7px", borderRadius: 5,
-                      border: "1px solid rgba(108,71,255,0.15)",
-                      fontWeight: 500,
-                    }}>
-                      {children}
-                    </code>
+                    <code {...props}>{children}</code>
                   );
                 }
                 return <code className={className} {...props}>{children}</code>;
               },
 
-              // ── Code blocks ──────────────────────────────────────────────
-              pre: ({ children }) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const lang = ((children as any)?.props?.className ?? "").replace("language-", "") || "code";
+              // Code block → CodeBlock component
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              pre: ({ children }: any) => {
+                const lang =
+                  (children?.props?.className ?? "").replace("language-", "") || "code";
                 return (
                   <CodeBlock language={lang}>{children}</CodeBlock>
                 );
               },
 
-              // ── Blockquote → callout ─────────────────────────────────────
+              // Blockquote → styled callout card
               blockquote: ({ children }) => (
-                <div style={{
-                  margin: "28px 0",
-                  padding: "20px 22px 16px",
-                  background: "linear-gradient(135deg, rgba(108,71,255,0.07), rgba(108,71,255,0.02))",
-                  borderLeft: "4px solid var(--accent)",
-                  borderRadius: "0 var(--radius-md) var(--radius-md) 0",
-                  boxShadow: "0 2px 12px rgba(108,71,255,0.08)",
+                <blockquote style={{
                   position: "relative",
+                  margin: "28px 0",
+                  padding: "20px 20px 16px 20px",
+                  background: "rgba(108,71,255,0.05)",
+                  borderLeft: "4px solid var(--accent)",
+                  borderRadius: `0 var(--radius-md) var(--radius-md) 0`,
                 }}>
                   <div style={{
                     position: "absolute", top: -11, left: 14,
@@ -363,40 +422,33 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
                   }}>
                     💡 Note
                   </div>
-                  <div style={{ color: "var(--text-secondary)", fontSize: 15, lineHeight: 1.75, marginTop: 6 }}>
+                  <div style={{ marginTop: 6 }}>
                     {children}
                   </div>
-                </div>
+                </blockquote>
               ),
 
-              // ── Tables ───────────────────────────────────────────────────
+              // Table — overflow wrapper only; CSS handles border/radius/shadow
               table: ({ children }) => (
-                <div style={{
-                  overflowX: "auto", marginBottom: 28,
-                  borderRadius: "var(--radius-lg)",
-                  border: "1px solid var(--border-subtle)",
-                  boxShadow: "var(--shadow-md)",
-                }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14.5 }}>
+                <div style={{ overflowX: "auto", marginBottom: 28 }}>
+                  <table style={{ margin: 0 }}>
                     {children}
                   </table>
                 </div>
               ),
 
               thead: ({ children }) => (
-                <thead style={{
-                  background: "linear-gradient(90deg, rgba(108,71,255,0.1), rgba(108,71,255,0.04))",
-                }}>
+                <thead style={{ background: "var(--accent-light)" }}>
                   {children}
                 </thead>
               ),
 
               th: ({ children }) => (
                 <th style={{
-                  padding: "12px 18px", textAlign: "left",
-                  fontSize: 11, fontWeight: 700, color: "var(--accent)",
-                  textTransform: "uppercase", letterSpacing: "0.08em",
-                  borderBottom: "2px solid rgba(108,71,255,0.18)",
+                  padding: "11px 16px", textAlign: "left",
+                  fontSize: 11, fontWeight: 700, color: "var(--accent-text)",
+                  textTransform: "uppercase", letterSpacing: "0.07em",
+                  borderBottom: "1px solid rgba(108,71,255,0.2)",
                 }}>
                   {children}
                 </th>
@@ -404,7 +456,7 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
 
               td: ({ children }) => (
                 <td style={{
-                  padding: "11px 18px",
+                  padding: "11px 16px",
                   borderBottom: "1px solid var(--border-subtle)",
                   color: "var(--text-secondary)", fontSize: 14.5, lineHeight: 1.6,
                 }}>
@@ -412,13 +464,29 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
                 </td>
               ),
 
-              // ── Divider ──────────────────────────────────────────────────
+              // Divider
               hr: () => (
                 <div style={{
                   margin: "44px 0", height: 1,
-                  background: "linear-gradient(90deg, var(--accent) 0%, transparent 100%)",
-                  opacity: 0.25,
+                  background: "linear-gradient(90deg, var(--accent), transparent)",
+                  opacity: 0.2,
                 }} />
+              ),
+
+              // Links
+              a: ({ children, href }) => (
+                <a
+                  href={href}
+                  target={href?.startsWith("http") ? "_blank" : undefined}
+                  rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
+                  style={{
+                    color: "var(--accent)", textDecoration: "underline",
+                    textDecorationColor: "rgba(108,71,255,0.3)",
+                    textUnderlineOffset: 3,
+                  }}
+                >
+                  {children}
+                </a>
               ),
             }}
           >
@@ -426,39 +494,51 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
           </ReactMarkdown>
         </div>
 
-        {/* ── Lesson complete CTA ──────────────────────────────────────────── */}
+        {/* ── Lesson complete CTA ───────────────────────────────────────── */}
         <div style={{
-          marginTop: 64, padding: "32px 36px",
-          background: "linear-gradient(135deg, rgba(108,71,255,0.08), rgba(155,109,255,0.04))",
-          borderRadius: "var(--radius-lg)",
-          border: "1px solid rgba(108,71,255,0.18)",
+          maxWidth: 740,
+          marginTop: 72, padding: "36px 40px",
+          background: "linear-gradient(135deg, rgba(108,71,255,0.07), rgba(155,109,255,0.03))",
+          borderRadius: "var(--radius-xl)",
+          border: "1px solid rgba(108,71,255,0.15)",
           textAlign: "center",
-          boxShadow: "0 4px 24px rgba(108,71,255,0.08)",
+          boxShadow: "0 4px 24px rgba(108,71,255,0.06)",
         }}>
-          <div style={{ fontSize: 32, marginBottom: 10 }}>🎉</div>
-          <h3 style={{ fontSize: 19, fontWeight: 700, color: "var(--text-primary)", marginBottom: 6 }}>
-            You've finished this lesson!
+          <div style={{ fontSize: 36, marginBottom: 12, lineHeight: 1 }}>🎉</div>
+          <h3 style={{
+            fontSize: 20, fontWeight: 700,
+            color: "var(--text-primary)", marginBottom: 8,
+          }}>
+            Lesson complete!
           </h3>
-          <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 24, lineHeight: 1.6, maxWidth: 380, margin: "0 auto 24px" }}>
-            Reinforce what you just learned — review flashcards or challenge yourself with a quiz.
+          <p style={{
+            fontSize: 14, color: "var(--text-secondary)",
+            lineHeight: 1.65, maxWidth: 380, margin: "0 auto 28px",
+          }}>
+            Reinforce what you learned — practice with flashcards or test yourself with a quick quiz.
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href={`/flashcards?lesson=${lessonSlug}`} style={{ textDecoration: "none" }}>
               <div style={{
-                display: "flex", alignItems: "center", gap: 7,
-                padding: "12px 22px", background: "var(--accent)", color: "#fff",
-                borderRadius: "var(--radius-md)", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                display: "inline-flex", alignItems: "center", gap: 7,
+                padding: "11px 22px",
+                background: "var(--accent)", color: "#fff",
+                borderRadius: "var(--radius-md)", fontSize: 13.5, fontWeight: 600,
                 boxShadow: "0 4px 14px rgba(108,71,255,0.4)",
+                cursor: "pointer",
               }}>
                 <BookOpen size={15} /> Review flashcards
               </div>
             </Link>
             <Link href="/quiz" style={{ textDecoration: "none" }}>
               <div style={{
-                display: "flex", alignItems: "center", gap: 7,
-                padding: "12px 22px",
-                border: "1px solid var(--border-default)", background: "var(--bg-card)",
-                borderRadius: "var(--radius-md)", fontSize: 13, color: "var(--text-primary)", fontWeight: 500, cursor: "pointer",
+                display: "inline-flex", alignItems: "center", gap: 7,
+                padding: "11px 22px",
+                border: "1px solid var(--border-default)",
+                background: "var(--bg-card)",
+                borderRadius: "var(--radius-md)", fontSize: 13.5,
+                color: "var(--text-primary)", fontWeight: 500,
+                cursor: "pointer",
               }}>
                 <Trophy size={15} /> Take a quiz
               </div>
@@ -467,21 +547,21 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
         </div>
       </div>
 
-      {/* ── Floating TOC (only when tutor is closed) ─────────────────────── */}
-      {!tutorOpen && headings.filter((h) => h.level <= 3).length > 2 && (
+      {/* ── Table of Contents (when tutor is closed) ─────────────────────── */}
+      {!tutorOpen && headings.length > 2 && (
         <div style={{
-          width: 210, flexShrink: 0,
+          width: 216, flexShrink: 0,
           borderLeft: "1px solid var(--border-subtle)",
           background: "var(--bg-card)",
-          padding: "32px 0 32px 18px",
+          padding: "36px 0 36px 0",
           position: "sticky", top: 0,
           height: "calc(100vh - 115px)",
           overflowY: "auto",
         }}>
           <div style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+            fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
             textTransform: "uppercase", color: "var(--text-tertiary)",
-            marginBottom: 16, paddingRight: 18,
+            marginBottom: 14, padding: "0 20px",
           }}>
             On this page
           </div>
@@ -492,35 +572,41 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
               onClick={() => scrollTo(id)}
               style={{
                 display: "block", width: "100%", textAlign: "left",
-                background: activeId === id ? "rgba(108,71,255,0.06)" : "none",
+                background: activeId === id ? "rgba(108,71,255,0.06)" : "transparent",
                 border: "none",
                 borderLeft: activeId === id ? "2px solid var(--accent)" : "2px solid transparent",
                 cursor: "pointer",
-                padding: `5px 10px 5px ${level === 3 ? 14 : 6}px`,
+                padding: `5px 18px 5px ${level === 3 ? 28 : 18}px`,
                 fontSize: level === 2 ? 12 : 11,
                 fontWeight: activeId === id ? 600 : 400,
                 color: activeId === id ? "var(--accent)" : "var(--text-tertiary)",
-                lineHeight: 1.45,
+                lineHeight: 1.5,
                 transition: "all 0.12s",
                 marginBottom: 2,
-                borderRadius: "0 var(--radius-sm) var(--radius-sm) 0",
               }}
             >
               {text}
             </button>
           ))}
 
-          {/* Progress in TOC */}
+          {/* Reading progress */}
           <div style={{
-            marginTop: 24, paddingTop: 16, paddingRight: 18,
+            marginTop: 24, padding: "16px 20px 0",
             borderTop: "1px solid var(--border-subtle)",
           }}>
             <div style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              marginBottom: 8,
+              display: "flex", justifyContent: "space-between",
+              alignItems: "center", marginBottom: 8,
             }}>
-              <span style={{ fontSize: 10, color: "var(--text-tertiary)", fontWeight: 500 }}>Read</span>
-              <span style={{ fontSize: 10, color: "var(--accent)", fontWeight: 600 }}>{readPct}%</span>
+              <span style={{ fontSize: 10, color: "var(--text-tertiary)", fontWeight: 500 }}>
+                Progress
+              </span>
+              <span style={{
+                fontSize: 10, fontWeight: 700,
+                color: readPct === 100 ? "var(--success)" : "var(--accent)",
+              }}>
+                {readPct}%
+              </span>
             </div>
             <div style={{
               height: 4, background: "var(--bg-tertiary)",
@@ -528,8 +614,11 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
             }}>
               <div style={{
                 height: "100%", width: `${readPct}%`,
-                background: "linear-gradient(90deg, var(--accent), #c084fc)",
+                background: readPct === 100
+                  ? "var(--success)"
+                  : `linear-gradient(90deg, ${pathColor}, #c084fc)`,
                 transition: "width 0.3s ease",
+                borderRadius: "var(--radius-full)",
               }} />
             </div>
           </div>
@@ -546,37 +635,54 @@ export function LessonViewer({ content, lessonTitle, lessonSlug }: LessonViewerP
           height: "calc(100vh - 115px)",
           position: "sticky", top: 0,
         }}>
+          {/* Panel header */}
           <div style={{
             padding: "14px 16px",
             borderBottom: "1px solid var(--border-subtle)",
             display: "flex", alignItems: "center", justifyContent: "space-between",
             background: "var(--bg-secondary)",
+            flexShrink: 0,
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
               <div style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center",
+                width: 30, height: 30, borderRadius: 8,
+                background: "linear-gradient(135deg, var(--accent), #9b6dff)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0,
               }}>
                 <Sparkles size={14} color="#fff" />
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1 }}>AI Tutor</div>
-                <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 1 }}>{lessonTitle}</div>
+                <div style={{
+                  fontSize: 13, fontWeight: 600,
+                  color: "var(--text-primary)", lineHeight: 1.1,
+                }}>
+                  AI Tutor
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>
+                  {lessonTitle}
+                </div>
               </div>
             </div>
             <button
               onClick={() => setTutorOpen(false)}
               style={{
                 background: "var(--bg-tertiary)", border: "none", cursor: "pointer",
-                padding: "5px", borderRadius: 6, color: "var(--text-tertiary)",
+                padding: 6, borderRadius: 6, color: "var(--text-tertiary)",
                 display: "flex", alignItems: "center",
+                transition: "background 0.12s",
               }}
             >
-              <X size={15} />
+              <X size={14} />
             </button>
           </div>
+
+          {/* Chat */}
           <div style={{ flex: 1, overflow: "hidden" }}>
-            <TutorChat lessonContext={`Current lesson: ${lessonTitle}\n\n${content.slice(0, 2000)}`} compact />
+            <TutorChat
+              lessonContext={`Lesson: ${lessonTitle}\n\n${content.slice(0, 2500)}`}
+              compact
+            />
           </div>
         </div>
       )}
