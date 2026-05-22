@@ -1,3 +1,5 @@
+"use client";
+
 import { Topbar } from "@/components/layout/Topbar";
 import { InterviewMode } from "@/components/ai/InterviewMode";
 
