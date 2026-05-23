@@ -13,6 +13,9 @@ import { TutorChat } from "@/components/ai/TutorChat";
 import { SqlPlayground } from "@/components/playground/SqlPlayground";
 import { AttentionVisualizer } from "@/components/diagrams/AttentionVisualizer";
 import { EmbeddingExplorer } from "@/components/diagrams/EmbeddingExplorer";
+import { TokenizationVisualizer } from "@/components/diagrams/TokenizationVisualizer";
+import { RAGFlowExplorer } from "@/components/diagrams/RAGFlowExplorer";
+import { AgentLoopInteractive } from "@/components/diagrams/AgentLoopInteractive";
 import { VocabList } from "@/components/french/VocabList";
 import { SentenceBuilder } from "@/components/french/SentenceBuilder";
 import { ConversationScene } from "@/components/french/ConversationScene";
@@ -468,6 +471,15 @@ export function LessonViewer({
                 }
                 if (lang === "diagram-embeddings") {
                   return <EmbeddingExplorer />;
+                }
+                if (lang === "diagram-tokenization") {
+                  return <TokenizationVisualizer />;
+                }
+                if (lang === "diagram-rag") {
+                  return <RAGFlowExplorer />;
+                }
+                if (lang === "diagram-agent-loop") {
+                  return <AgentLoopInteractive />;
                 }
 
                 // French course interactive blocks

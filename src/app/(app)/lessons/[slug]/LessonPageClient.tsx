@@ -10,32 +10,38 @@ import {
 import { LessonViewer } from "@/components/learn/LessonViewer";
 import dynamic from "next/dynamic";
 
-// Lazy-load diagram components
-const LLMFlowDiagram      = dynamic(() => import("@/components/diagrams/LLMFlowDiagram").then(m => ({ default: m.LLMFlowDiagram })), { ssr: false });
-const TransformerDiagram  = dynamic(() => import("@/components/diagrams/TransformerDiagram").then(m => ({ default: m.TransformerDiagram })), { ssr: false });
-const RAGPipelineDiagram  = dynamic(() => import("@/components/diagrams/RAGPipelineDiagram").then(m => ({ default: m.RAGPipelineDiagram })), { ssr: false });
-const AgentLoopDiagram    = dynamic(() => import("@/components/diagrams/AgentLoopDiagram").then(m => ({ default: m.AgentLoopDiagram })), { ssr: false });
+// Lazy-load the new clean diagrams (replace the old emoji-based ones)
+const AttentionVisualizer   = dynamic(() => import("@/components/diagrams/AttentionVisualizer").then(m => ({ default: m.AttentionVisualizer })), { ssr: false });
+const EmbeddingExplorer     = dynamic(() => import("@/components/diagrams/EmbeddingExplorer").then(m => ({ default: m.EmbeddingExplorer })), { ssr: false });
+const TokenizationVisualizer= dynamic(() => import("@/components/diagrams/TokenizationVisualizer").then(m => ({ default: m.TokenizationVisualizer })), { ssr: false });
+const RAGFlowExplorer       = dynamic(() => import("@/components/diagrams/RAGFlowExplorer").then(m => ({ default: m.RAGFlowExplorer })), { ssr: false });
+const AgentLoopInteractive  = dynamic(() => import("@/components/diagrams/AgentLoopInteractive").then(m => ({ default: m.AgentLoopInteractive })), { ssr: false });
 
-// Slug → diagram map
+// Slug → diagram map. Each slug gets the diagram that best matches its concept.
+// LLM lessons mostly inline diagrams via ```diagram-tokenization etc. fences in
+// the lesson content; this map provides the *default* sidebar diagram per lesson.
 const LESSON_DIAGRAMS: Record<string, React.ReactNode> = {
-  "what-is-an-llm":                        <LLMFlowDiagram />,
-  "transformer-architecture":              <TransformerDiagram />,
-  "tokenization-temperature-sampling":     <LLMFlowDiagram />,
-  "attention-mechanism":                   <TransformerDiagram />,
-  "context-windows-kv-cache":              <LLMFlowDiagram />,
-  "prompt-engineering":                    <LLMFlowDiagram />,
-  "rag-fundamentals":                      <RAGPipelineDiagram />,
-  "vector-embeddings":                     <RAGPipelineDiagram />,
-  "vector-databases":                      <RAGPipelineDiagram />,
-  "chunking-strategies":                   <RAGPipelineDiagram />,
-  "retrieval-reranking":                   <RAGPipelineDiagram />,
-  "advanced-rag":                          <RAGPipelineDiagram />,
-  "what-are-ai-agents":                    <AgentLoopDiagram />,
-  "tool-use-function-calling":             <AgentLoopDiagram />,
-  "agent-memory":                          <AgentLoopDiagram />,
-  "multi-agent-systems":                   <AgentLoopDiagram />,
-  "agent-evaluation":                      <AgentLoopDiagram />,
-  "building-production-agents":            <AgentLoopDiagram />,
+  // LLM Foundations
+  "what-is-an-llm":                        <TokenizationVisualizer />,
+  "transformer-architecture":              <AttentionVisualizer />,
+  "tokenization-sampling-temperature":     <TokenizationVisualizer />,
+  "attention-mechanism":                   <AttentionVisualizer />,
+  "context-windows":                       <TokenizationVisualizer />,
+  "prompt-engineering":                    <TokenizationVisualizer />,
+  // RAG & Vector DBs
+  "why-rag":                               <RAGFlowExplorer />,
+  "embeddings-vector-search":              <EmbeddingExplorer />,
+  "production-rag-pipeline":               <RAGFlowExplorer />,
+  "chunking-strategies":                   <RAGFlowExplorer />,
+  "vector-database-choices":               <EmbeddingExplorer />,
+  "rag-evaluation":                        <RAGFlowExplorer />,
+  // AI Agents
+  "what-are-agents":                       <AgentLoopInteractive />,
+  "tool-use-function-calling":             <AgentLoopInteractive />,
+  "react-framework":                       <AgentLoopInteractive />,
+  "agent-memory":                          <AgentLoopInteractive />,
+  "multi-agent-systems":                   <AgentLoopInteractive />,
+  "agent-reliability":                     <AgentLoopInteractive />,
 };
 
 interface Lesson {
