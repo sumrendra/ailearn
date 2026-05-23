@@ -9,7 +9,7 @@
  * Pure module: no React imports, safe in server components.
  */
 import {
-  Brain, Database, Cpu, Table2, Server, Cloud, Code2, Box,
+  Brain, Database, Cpu, Table2, Server, Cloud, Code2, Box, Languages,
   type LucideIcon,
 } from "lucide-react";
 
@@ -67,6 +67,15 @@ const META: Record<string, PathMeta> = {
     ring: "rgba(29,78,216,0.22)",
     gradient: "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 55%, #3b82f6 100%)",
     glow: "rgba(29,78,216,0.30)",
+    tier: "foundation",
+  },
+  "french-fundamentals": {
+    Icon: Languages,
+    color: "#be185d",
+    tint: "rgba(190,24,93,0.08)",
+    ring: "rgba(190,24,93,0.22)",
+    gradient: "linear-gradient(135deg, #831843 0%, #be185d 55%, #ec4899 100%)",
+    glow: "rgba(190,24,93,0.30)",
     tier: "foundation",
   },
 };

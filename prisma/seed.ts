@@ -1,6 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
+import {
+  FR_L1, FR_L2, FR_L3, FR_L4, FR_L5, FR_L6,
+} from "./french-content";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -3399,6 +3402,122 @@ async function main() {
     },
   });
 
+  const frenchPath = await prisma.learningPath.upsert({
+    where: { slug: "french-fundamentals" },
+    update: {
+      description: "Go from zero to ordering coffee in Paris. Interactive vocabulary, real dialogues, and click-to-hear pronunciation — no audio files, all in your browser.",
+    },
+    create: {
+      slug: "french-fundamentals",
+      title: "French Fundamentals",
+      description: "Go from zero to ordering coffee in Paris. Interactive vocabulary, real dialogues, and click-to-hear pronunciation — no audio files, all in your browser.",
+      icon: "languages",
+      color: "#be185d",
+      difficulty: "BEGINNER",
+      estimatedHours: 6,
+      tags: ["French", "Languages", "A1", "Beginner", "Conversation"],
+      order: 5,
+    },
+  });
+
+  // ── PATH 5: FRENCH FUNDAMENTALS ─────────────────────────────────────────────
+
+  const frL1 = await prisma.lesson.upsert({
+    where: { slug: "french-bonjour-first-words" },
+    update: { content: FR_L1 },
+    create: {
+      slug: "french-bonjour-first-words",
+      title: "Bonjour! Your first words in French",
+      description: "Say hello, introduce yourself, and politely say goodbye. The first conversation you'll ever have in French.",
+      pathId: frenchPath.id,
+      order: 1,
+      estimatedMins: 15,
+      xpReward: 50,
+      tags: ["French", "Greetings", "Introductions"],
+      content: FR_L1,
+    },
+  });
+
+  const frL2 = await prisma.lesson.upsert({
+    where: { slug: "french-numbers" },
+    update: { content: FR_L2 },
+    create: {
+      slug: "french-numbers",
+      title: "Numbers — count like a Parisian",
+      description: "Count 0–69, give your phone number, share your age, and order two coffees.",
+      pathId: frenchPath.id,
+      order: 2,
+      estimatedMins: 18,
+      xpReward: 60,
+      tags: ["French", "Numbers", "Counting"],
+      content: FR_L2,
+    },
+  });
+
+  const frL3 = await prisma.lesson.upsert({
+    where: { slug: "french-questions-greetings" },
+    update: { content: FR_L3 },
+    create: {
+      slug: "french-questions-greetings",
+      title: "Asking questions like a local",
+      description: "How are you? Where are you from? The three question words that unlock most of daily French.",
+      pathId: frenchPath.id,
+      order: 3,
+      estimatedMins: 20,
+      xpReward: 70,
+      tags: ["French", "Questions", "tu vs vous"],
+      content: FR_L3,
+    },
+  });
+
+  const frL4 = await prisma.lesson.upsert({
+    where: { slug: "french-restaurant" },
+    update: { content: FR_L4 },
+    create: {
+      slug: "french-restaurant",
+      title: "At the restaurant — order anything",
+      description: "Read a menu, order a starter and main, ask for wine, get the bill — politely and confidently.",
+      pathId: frenchPath.id,
+      order: 4,
+      estimatedMins: 22,
+      xpReward: 75,
+      tags: ["French", "Restaurant", "Articles", "Le/La"],
+      content: FR_L4,
+    },
+  });
+
+  const frL5 = await prisma.lesson.upsert({
+    where: { slug: "french-directions" },
+    update: { content: FR_L5 },
+    create: {
+      slug: "french-directions",
+      title: "Getting around — directions and transport",
+      description: "Find the metro, ask where the bathroom is, understand the directions a stranger gives you.",
+      pathId: frenchPath.id,
+      order: 5,
+      estimatedMins: 18,
+      xpReward: 70,
+      tags: ["French", "Directions", "Transport"],
+      content: FR_L5,
+    },
+  });
+
+  const frL6 = await prisma.lesson.upsert({
+    where: { slug: "french-time-plans" },
+    update: { content: FR_L6 },
+    create: {
+      slug: "french-time-plans",
+      title: "Time, days, and making plans",
+      description: "Tell time, name the days, talk about today/tomorrow, and arrange to meet a friend.",
+      pathId: frenchPath.id,
+      order: 6,
+      estimatedMins: 18,
+      xpReward: 75,
+      tags: ["French", "Time", "Days", "Plans"],
+      content: FR_L6,
+    },
+  });
+
   // ── PATH 4: SQL MASTERY ─────────────────────────────────────────────────────
 
   const sqlL1 = await prisma.lesson.upsert({
@@ -4300,6 +4419,97 @@ async function main() {
         front: "How does pgvector let you do RAG retrieval inside Postgres, and which distance operator should you use for text embeddings?",
         back: "pgvector adds a `VECTOR(n)` column type and ANN indexes (HNSW, IVFFlat). Store embeddings alongside your documents: `CREATE TABLE documents (id BIGSERIAL, content TEXT, embedding VECTOR(1536))`. Create an HNSW index: `CREATE INDEX ON documents USING hnsw (embedding vector_cosine_ops)`. Query for nearest neighbours: `SELECT * FROM documents ORDER BY embedding <=> $query LIMIT 5`. Use `<=>` (cosine distance) for modern text embeddings — the embedding models are trained to encode meaning in vector direction, not magnitude. Use `<->` (L2/Euclidean) only when the model was trained for it (rare for text).",
         tags: ["SQL", "pgvector", "RAG", "AI"],
+      },
+    ],
+  });
+
+  // Flashcards — French Fundamentals
+  await prisma.flashcard.createMany({
+    skipDuplicates: true,
+    data: [
+      // L1: Greetings
+      {
+        lessonId: frL1.id,
+        front: "When should you use 'Bonjour' vs 'Salut'?",
+        back: "Bonjour = formal/safe (strangers, shopkeepers, older people, work). Salut = casual (friends, family). When in doubt, always Bonjour — it's never wrong. After 6pm, switch to Bonsoir for either register.",
+        tags: ["French", "Greetings"],
+      },
+      {
+        lessonId: frL1.id,
+        front: "How do you say 'My name is [name]' in French?",
+        back: "Je m'appelle [name] — pronounced 'zhuh mah-pell'. Literally 'I call myself [name]'. Don't forget the apostrophe in m'appelle. Alternative: Je suis [name] (I am [name]).",
+        tags: ["French", "Introductions"],
+      },
+      {
+        lessonId: frL1.id,
+        front: "Why do some French speakers write 'Enchanté' and others 'Enchantée'?",
+        back: "Both mean 'Nice to meet you' and sound identical. Women add the extra -e (Enchantée) because adjectives agree with the speaker's gender. Men write Enchanté. You'll see this -e pattern across many adjectives.",
+        tags: ["French", "Grammar"],
+      },
+      // L2: Numbers
+      {
+        lessonId: frL2.id,
+        front: "How do you say 21, 31, 41 in French — and why is it special?",
+        back: "vingt et un (21), trente et un (31), quarante et un (41). For X1 only, you insert 'et' (and). For all other compound numbers in the 20s–60s, just hyphenate: vingt-deux, trente-cinq, etc.",
+        tags: ["French", "Numbers"],
+      },
+      {
+        lessonId: frL2.id,
+        front: "How would you order 'two coffees, please' in French?",
+        back: "Deux cafés, s'il vous plaît. Pronounced 'duh kah-fay, seel voo pleh'. Note the silent x in 'deux' before a consonant, and the cafés gets an 's' to be plural (silent in speech).",
+        tags: ["French", "Ordering"],
+      },
+      // L3: Questions
+      {
+        lessonId: frL3.id,
+        front: "What's the difference between 'tu' and 'vous'?",
+        back: "Both mean 'you'. 'Tu' is informal singular (one friend, family, child). 'Vous' is either formal singular (any stranger, older person, work context) OR plural (more than one person, any register). Using tu with a stranger is rude — default to vous.",
+        tags: ["French", "Pronouns"],
+      },
+      {
+        lessonId: frL3.id,
+        front: "How do you ask 'How are you?' formally and casually?",
+        back: "Formal: Comment allez-vous? Casual: Comment ça va? (or just 'Ça va?'). Polite reply: Ça va bien, merci. Et vous? (Casual: Et toi?)",
+        tags: ["French", "Greetings"],
+      },
+      // L4: Restaurant
+      {
+        lessonId: frL4.id,
+        front: "What's the difference between 'menu' and 'carte' in a French restaurant?",
+        back: "Counterintuitive: 'menu' usually means the fixed-price meal (e.g. 3 courses for 25€). 'La carte' is the full list of dishes you can order individually. Ask for 'la carte' if you want to choose freely.",
+        tags: ["French", "Restaurant"],
+      },
+      {
+        lessonId: frL4.id,
+        front: "How do you say 'I would like a coffee'? When do you use 'un' vs 'une' vs 'du'?",
+        back: "Je voudrais un café (a coffee — masculine: un). Une for feminine: Je voudrais une baguette. 'Du / de la' means 'some' (uncountable): Je voudrais du pain (some bread). Every French noun is gendered — memorize the article with each new word.",
+        tags: ["French", "Articles", "Restaurant"],
+      },
+      // L5: Directions
+      {
+        lessonId: frL5.id,
+        front: "How do you ask 'Where is the bathroom, please?' in French?",
+        back: "Où sont les toilettes, s'il vous plaît? Note: 'toilettes' is plural in French, so you use 'sont' (are) not 'est' (is). One of the most useful sentences in the language.",
+        tags: ["French", "Directions"],
+      },
+      {
+        lessonId: frL5.id,
+        front: "What's the difference between 'à droite' and 'tout droit'?",
+        back: "Easy to confuse — they sound alike but mean different things. à droite = on the right. tout droit = straight ahead. à gauche = on the left. Listen for the difference in vowels.",
+        tags: ["French", "Directions"],
+      },
+      // L6: Time
+      {
+        lessonId: frL6.id,
+        front: "What's the pattern for telling time in French?",
+        back: "Il est + [number] + heures. 'Il est trois heures' = It's three o'clock. For half past: + 'et demie'. For quarter past: + 'et quart'. For quarter to: + 'moins le quart'. Noon = midi, midnight = minuit.",
+        tags: ["French", "Time"],
+      },
+      {
+        lessonId: frL6.id,
+        front: "What are the days of the week in French, and what's the capitalization rule?",
+        back: "lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche. Unlike English, French days are NOT capitalized unless they start a sentence. Same goes for months: janvier, février, mars, etc.",
+        tags: ["French", "Days"],
       },
     ],
   });

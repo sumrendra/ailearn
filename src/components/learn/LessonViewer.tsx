@@ -13,7 +13,16 @@ import { TutorChat } from "@/components/ai/TutorChat";
 import { SqlPlayground } from "@/components/playground/SqlPlayground";
 import { AttentionVisualizer } from "@/components/diagrams/AttentionVisualizer";
 import { EmbeddingExplorer } from "@/components/diagrams/EmbeddingExplorer";
+import { VocabList } from "@/components/french/VocabList";
+import { SentenceBuilder } from "@/components/french/SentenceBuilder";
+import { ConversationScene } from "@/components/french/ConversationScene";
+import { MatchQuiz } from "@/components/french/MatchQuiz";
+import { GrammarTable } from "@/components/french/GrammarTable";
 import { parseLessonBlock } from "@/lib/lesson-blocks";
+import {
+  parseFrenchVocab, parseFrenchSentence, parseFrenchDialogue,
+  parseFrenchMatch, parseFrenchGrammar,
+} from "@/lib/french-blocks";
 import { type FixtureKey } from "@/lib/sql-fixtures";
 import Link from "next/link";
 
@@ -459,6 +468,50 @@ export function LessonViewer({
                 }
                 if (lang === "diagram-embeddings") {
                   return <EmbeddingExplorer />;
+                }
+
+                // French course interactive blocks
+                if (lang === "french-vocab") {
+                  const items = parseFrenchVocab(extractTextContent(children));
+                  return items.length ? <VocabList items={items} /> : null;
+                }
+                if (lang === "french-sentence") {
+                  const data = parseFrenchSentence(extractTextContent(children));
+                  return data ? (
+                    <SentenceBuilder
+                      prompt={data.prompt}
+                      answer={data.answer}
+                      distractors={data.distractors}
+                      hint={data.hint}
+                    />
+                  ) : null;
+                }
+                if (lang === "french-dialogue") {
+                  const data = parseFrenchDialogue(extractTextContent(children));
+                  return data.lines.length ? (
+                    <ConversationScene
+                      title={data.title}
+                      scene={data.scene}
+                      lines={data.lines}
+                    />
+                  ) : null;
+                }
+                if (lang === "french-match") {
+                  const data = parseFrenchMatch(extractTextContent(children));
+                  return data.pairs.length ? (
+                    <MatchQuiz title={data.title} pairs={data.pairs} />
+                  ) : null;
+                }
+                if (lang === "french-grammar") {
+                  const data = parseFrenchGrammar(extractTextContent(children));
+                  return data ? (
+                    <GrammarTable
+                      title={data.title}
+                      note={data.note}
+                      headers={data.headers}
+                      rows={data.rows}
+                    />
+                  ) : null;
                 }
 
                 return (
