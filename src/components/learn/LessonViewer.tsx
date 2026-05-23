@@ -430,8 +430,13 @@ export function LessonViewer({
               // Code block → either an interactive block or the CodeBlock component
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               pre: ({ children }: any) => {
-                const lang =
-                  (children?.props?.className ?? "").replace("language-", "") || "code";
+                // rehype-highlight runs before this and prepends "hljs " to the
+                // className, so we must extract the language token via regex rather
+                // than a naive `.replace("language-", "")` — which leaves "hljs " in
+                // place and breaks our equality checks below.
+                const className = children?.props?.className ?? "";
+                const langMatch = /language-([\w-]+)/.exec(className);
+                const lang = langMatch ? langMatch[1] : "code";
 
                 // Interactive SQL playground — fenced as ```sql-playground
                 if (lang === "sql-playground") {
