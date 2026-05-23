@@ -134,61 +134,6 @@ That's actually a pretty important distinction. Worth knowing.
 Next lesson we'll open the hood — what's *inside* a transformer? What makes "attention" the breakthrough that made all of this possible? We'll use interactive diagrams, not just diagrams of diagrams.
 `;
 
-## The training recipe
-
-1. Collect a massive text corpus — the web, books, code, scientific papers
-2. Tokenize it into subword units (BPE or SentencePiece)
-3. Train a transformer to predict the next token, adjusting billions of weights via backpropagation
-4. Apply RLHF (Reinforcement Learning from Human Feedback) to align outputs with human preferences
-
-## Why they "feel" intelligent
-
-LLMs don't reason the way humans do. They compress statistical patterns from their training data into weights. When you ask "What is the capital of France?", the model has seen "capital of France is Paris" enough times that \`Paris\` dominates the probability distribution. At scale, these patterns produce behaviour indistinguishable from understanding.
-
-## The Java developer analogy
-
-Think of an LLM like a massively overfit autocomplete trained on the entire internet — similar to IntelliJ's code completion, but for all human knowledge. The model isn't "thinking"; it's doing very fast, very sophisticated pattern matching over a compressed representation of its training data.
-
-## Key terminology
-
-| Term | Meaning |
-|------|---------|
-| **Parameters** | Learnable weights in the network (GPT-4: ~1.8T, Llama 3 8B: 8B) |
-| **Pre-training** | Self-supervised training on raw text — predict next token |
-| **Fine-tuning** | Supervised training on labelled examples after pre-training |
-| **RLHF** | Post-training alignment — humans rate outputs, model learns preferences |
-| **Inference** | Running the model to generate text — this is what API calls cost |
-| **Context window** | Maximum tokens the model can process in one call |
-
-## Model landscape (2025)
-
-| Model | Maker | Context | Notable for |
-|-------|-------|---------|------------|
-| Claude 3.5 Sonnet | Anthropic | 200K | Coding, reasoning, safety |
-| GPT-4o | OpenAI | 128K | Multimodal, broad capability |
-| Llama 3.3 70B | Meta | 128K | Open-source, self-hostable |
-| Gemini 1.5 Pro | Google | 1M | Longest context window |
-| Mistral Large 2 | Mistral | 128K | European, fast, efficient |
-
-## What pre-training actually learns
-
-The model never sees a labelled dataset. It learns:
-- **Syntax and grammar** — because well-formed sentences are more likely
-- **Facts** — because the same facts appear in millions of documents
-- **Reasoning patterns** — because logical chains appear consistently in text
-- **Code** — because billions of lines of source code were in the corpus
-
-## Practical implications for engineers
-
-- LLMs have a **knowledge cutoff** — they don't know about events after training
-- They **hallucinate** — they generate plausible-sounding text even when wrong
-- Longer context = more cost + slower latency
-- The same model at temperature=0 is deterministic; at temperature=1 it's creative
-
-## What's next
-
-The next lesson covers *how* the transformer architecture actually implements all of this — specifically the attention mechanism that made modern LLMs possible.
-`;
 
 const LLM_L2_CONTENT = `# Attention — the trick that made modern AI work
 
