@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Mic, Send, RotateCcw, ChevronDown, Trophy } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { genId } from "@/lib/utils";
 
 const TOPICS = [
   { value: "llm-fundamentals", label: "LLM Fundamentals" },
@@ -44,7 +45,7 @@ export function InterviewMode() {
     setStarted(true);
     setLoading(true);
 
-    const initMsg = { role: "user" as const, content: `Start the interview. Topic: ${topic}, Difficulty: ${difficulty}`, id: crypto.randomUUID() };
+    const initMsg = { role: "user" as const, content: `Start the interview. Topic: ${topic}, Difficulty: ${difficulty}`, id: genId() };
     await sendToAPI([initMsg], true);
   };
 
@@ -68,11 +69,11 @@ export function InterviewMode() {
       setMessages((prev) => [...(isInit ? [] : prev), {
         role: "assistant",
         content: fullContent,
-        id: crypto.randomUUID(),
+        id: genId(),
       }]);
     } catch (err) {
       setMessages((prev) => [...prev, {
-        role: "assistant", content: "Something went wrong. Please try again.", id: crypto.randomUUID(),
+        role: "assistant", content: "Something went wrong. Please try again.", id: genId(),
       }]);
     } finally {
       setLoading(false);
@@ -81,7 +82,7 @@ export function InterviewMode() {
 
   const handleAnswer = async () => {
     if (!input.trim() || loading) return;
-    const userMsg: Message = { role: "user", content: input, id: crypto.randomUUID() };
+    const userMsg: Message = { role: "user", content: input, id: genId() };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     await sendToAPI([...messages, userMsg]);

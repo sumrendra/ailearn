@@ -5,6 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Generates a unique ID safe for both secure (HTTPS/localhost) and non-secure
+ * (plain HTTP, IP-based) contexts. `crypto.randomUUID()` throws on the latter,
+ * which silently kills any onClick handler that calls it before state updates —
+ * leaving send buttons "disabled" and starter prompts inert.
+ */
+export function genId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    try { return crypto.randomUUID(); } catch { /* fall through */ }
+  }
+  return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
 export function formatXP(xp: number): string {
   if (xp >= 1000) return `${(xp / 1000).toFixed(1)}k`;
   return xp.toString();

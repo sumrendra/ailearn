@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Sparkles, User, RotateCcw, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { genId } from "@/lib/utils";
 
 interface Message {
   role: "user" | "assistant";
@@ -40,7 +41,7 @@ export function TutorChat({ lessonContext, compact }: TutorChatProps = {}) {
     const userText = (text ?? input).trim();
     if (!userText || loading) return;
 
-    const userMsg: Message = { role: "user", content: userText, id: crypto.randomUUID() };
+    const userMsg: Message = { role: "user", content: userText, id: genId() };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
@@ -62,13 +63,13 @@ export function TutorChat({ lessonContext, compact }: TutorChatProps = {}) {
       setMessages((prev) => [...prev, {
         role: "assistant",
         content: fullContent,
-        id: crypto.randomUUID(),
+        id: genId(),
       }]);
     } catch (err) {
       setMessages((prev) => [...prev, {
         role: "assistant",
         content: "Sorry, something went wrong. Please try again.",
-        id: crypto.randomUUID(),
+        id: genId(),
       }]);
     } finally {
       setLoading(false);
