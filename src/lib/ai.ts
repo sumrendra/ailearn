@@ -35,7 +35,7 @@ async function chatOpenAICompatible(
         { role: "system", content: systemPrompt },
         ...formattedMessages,
       ],
-      stream: false,
+      stream: true, // Use streaming to avoid server-side hang in Docker with Gemini
       temperature: 0.7,
     }),
   });
@@ -45,8 +45,42 @@ async function chatOpenAICompatible(
     throw new Error(`OpenAI-compatible API returned error code ${response.status}: ${errorText}`);
   }
 
-  const resJson = await response.json();
-  return resJson.choices?.[0]?.message?.content || "";
+  // Accumulate full text from SSE stream server-side, then return as a plain string
+  const decoder = new TextDecoder();
+  const reader = response.body?.getReader();
+  let accumulated = "";
+  let buffer = "";
+
+  if (!reader) return accumulated;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const cleanLine = line.trim();
+        if (!cleanLine.startsWith("data: ")) continue;
+        const dataContent = cleanLine.slice(6);
+        if (dataContent === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(dataContent);
+          const text = parsed.choices?.[0]?.delta?.content || "";
+          if (text) accumulated += text;
+        } catch {
+          // Ignore parsing errors from partial chunks
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return accumulated;
 }
 
 /**
