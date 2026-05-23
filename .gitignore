@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Local Claude Code launch config — contains DB credentials, never commit
+.claude/
