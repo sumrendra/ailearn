@@ -30,15 +30,53 @@ interface QueryResult {
   elapsedMs: number;
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * Module-level PGlite singleton (one instance per fixture)
+ *
+ * A page with three playgrounds previously instantiated three full PGlite
+ * runtimes (~100MB each = ~300MB total + Next.js + React + Tailwind = OOM
+ * territory on consumer browsers). Sharing a single instance per fixture
+ * across every <SqlPlayground> on the page cuts that to ~100MB regardless
+ * of how many playgrounds the lesson embeds.
+ *
+ * Two trade-offs to be aware of:
+ *  1. Playgrounds that share a fixture share *state* — running INSERT in one
+ *     is visible in the next. Acceptable for a teaching tool; arguably a
+ *     feature ("see, your data persisted between blocks").
+ *  2. "Reset data" re-runs the fixture SQL on the shared instance, so it
+ *     resets *all* playgrounds for that fixture simultaneously. Fine — the
+ *     fixtures are short and idempotent.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+const pgCache = new Map<FixtureKey, Promise<PGliteType>>();
+
+function getSharedPGlite(fixture: FixtureKey): Promise<PGliteType> {
+  let promise = pgCache.get(fixture);
+  if (!promise) {
+    promise = (async () => {
+      const mod = await import("@electric-sql/pglite");
+      const db = new mod.PGlite();
+      await db.waitReady;
+      await db.exec(FIXTURES[fixture].sql);
+      return db;
+    })();
+    // If init fails, drop the cache entry so a remount can retry.
+    promise.catch(() => pgCache.delete(fixture));
+    pgCache.set(fixture, promise);
+  }
+  return promise;
+}
+
 /**
  * In-browser SQL playground powered by PGlite (Postgres compiled to WASM).
  *
- * Why PGlite: it's real Postgres syntax and semantics — same parser, same
+ * Why PGlite: real Postgres syntax and semantics — same parser, same
  * optimiser, same NULL three-valued logic — running entirely in the user's
- * browser. No server round-trip, no rate limits, no data leaving the device.
+ * browser. No server round-trip, no rate limits, no data leaves the device.
  *
- * The component loads PGlite lazily on first mount (~3MB), seeds the chosen
- * fixture, then lets the user run arbitrary queries against it.
+ * Initialization is *lazy*: the WASM runtime only loads when this component
+ * scrolls into the viewport. That means a lesson with 5 playgrounds doesn't
+ * eagerly download or run anything until the user actually scrolls to one.
  */
 export function SqlPlayground({
   fixture = "ecommerce",
@@ -48,28 +86,44 @@ export function SqlPlayground({
 }: SqlPlaygroundProps) {
   const fixtureMeta = FIXTURES[fixture];
   const editorRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const dbRef = useRef<PGliteType | null>(null);
 
-  const [status, setStatus] = useState<"loading" | "ready" | "running" | "error">("loading");
-  const [statusMsg, setStatusMsg] = useState("Initializing in-browser Postgres…");
+  const [inView, setInView] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "running" | "error">("idle");
+  const [statusMsg, setStatusMsg] = useState("Tap Run to load Postgres");
   const [query, setQuery] = useState(initial.trim() || `SELECT * FROM ${fixtureMeta.tables[0]} LIMIT 5;`);
   const [result, setResult] = useState<QueryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Boot PGlite once on mount.
+  // IntersectionObserver: flip `inView` to true the first time the playground
+  // enters the viewport. After that we keep it true — once initialized, the
+  // shared singleton stays loaded regardless of scroll position.
   useEffect(() => {
+    if (!containerRef.current || inView) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          obs.disconnect();
+        }
+      },
+      { rootMargin: "200px" }, // pre-load just before scroll reaches it
+    );
+    obs.observe(containerRef.current);
+    return () => obs.disconnect();
+  }, [inView]);
+
+  // Once in view, attach to the shared PGlite instance for this fixture.
+  useEffect(() => {
+    if (!inView || status !== "idle") return;
     let cancelled = false;
+    setStatus("loading");
+    setStatusMsg("Initializing in-browser Postgres…");
     (async () => {
       try {
-        const mod = await import("@electric-sql/pglite");
-        const db = new mod.PGlite();
-        await db.waitReady;
+        const db = await getSharedPGlite(fixture);
         if (cancelled) return;
-
-        setStatusMsg("Seeding sample data…");
-        await db.exec(fixtureMeta.sql);
-        if (cancelled) return;
-
         dbRef.current = db;
         setStatus("ready");
         setStatusMsg("Ready");
@@ -82,9 +136,9 @@ export function SqlPlayground({
     })();
     return () => {
       cancelled = true;
-      dbRef.current?.close().catch(() => {});
+      // Don't close the shared DB on unmount — other playgrounds may still need it.
     };
-  }, [fixtureMeta.sql]);
+  }, [inView, fixture, status]);
 
   const runQuery = async () => {
     if (!dbRef.current || status === "running") return;
@@ -146,6 +200,7 @@ export function SqlPlayground({
 
   return (
     <div
+      ref={containerRef}
       style={{
         background: "var(--bg-card)",
         border: "1px solid var(--border-default)",
@@ -455,6 +510,7 @@ export function SqlPlayground({
 
 function StatusPill({ status, message }: { status: string; message: string }) {
   const palette: Record<string, { bg: string; fg: string; Icon: React.ComponentType<{ size?: number }> }> = {
+    idle:    { bg: "var(--bg-tertiary)", fg: "var(--text-tertiary)", Icon: Database },
     loading: { bg: "var(--bg-tertiary)", fg: "var(--text-tertiary)", Icon: Loader2 },
     ready:   { bg: "color-mix(in srgb, var(--success) 10%, transparent)", fg: "var(--success)", Icon: CheckCircle2 },
     running: { bg: "var(--bg-tertiary)", fg: "var(--text-secondary)", Icon: Loader2 },

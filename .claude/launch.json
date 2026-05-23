@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ailearn-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3001,
+      "autoPort": true,
+      "env": {
+        "DATABASE_URL": "postgresql://admin:epaps0991g@192.168.1.4:5432/ailearn?sslmode=disable",
+        "NEXTAUTH_SECRET": "dev-secret-local",
+        "NEXTAUTH_URL": "http://localhost:3001"
+      }
+    }
+  ]
+}
