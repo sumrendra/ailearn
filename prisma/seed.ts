@@ -5528,13 +5528,22 @@ At higher temperatures (0.7–1.0), the probability distribution is "flatter" �
 
   // ── SUMMARY ──────────────────────────────────────────────────────────────────
 
+  // Pull live counts so the summary reflects reality instead of stale numbers.
+  const [pathCount, lessonCount, cardCount, qCount, achCount] = await Promise.all([
+    prisma.learningPath.count(),
+    prisma.lesson.count(),
+    prisma.flashcard.count(),
+    prisma.quizQuestion.count(),
+    prisma.achievement.count(),
+  ]);
+
   console.log("✅ Seed complete!\n");
-  console.log("  Learning paths:  3 (LLM Foundations, RAG & Vector DBs, AI Agents)");
-  console.log("  Lessons:         18 (6 per path, ~20–30 min each)");
-  console.log("  Flashcards:      54 (3 per lesson)");
-  console.log("  Quiz questions:  90 (5 per lesson, mix of MCQ / Scenario / True-False)");
-  console.log("  Achievements:    15");
-  console.log("  Daily challenge: 1 (today)\n");
+  console.log(`  Learning paths:  ${pathCount}`);
+  console.log(`  Lessons:         ${lessonCount}`);
+  console.log(`  Flashcards:      ${cardCount}`);
+  console.log(`  Quiz questions:  ${qCount}`);
+  console.log(`  Achievements:    ${achCount}`);
+  console.log(`  Daily challenge: 1 (today)\n`);
 }
 
 main()
