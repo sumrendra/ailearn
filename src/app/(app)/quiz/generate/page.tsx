@@ -285,8 +285,8 @@ export default function QuizGeneratePage() {
                 {q.question}
               </p>
 
-              {/* MCQ options */}
-              {q.type === "MCQ" && q.options && (
+              {/* MCQ + SCENARIO options (SCENARIO questions also have 4-option choices) */}
+              {(q.type === "MCQ" || q.type === "SCENARIO") && q.options && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {q.options.map((opt, idx) => {
                     let bg = "var(--bg-secondary)";
@@ -359,6 +359,78 @@ export default function QuizGeneratePage() {
                 </div>
               )}
 
+              {/* SHORT_ANSWER — reveal & self-grade */}
+              {q.type === "SHORT_ANSWER" && selected === null && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{
+                    padding: "14px 16px",
+                    background: "var(--bg-secondary)",
+                    border: "1.5px dashed var(--border-default)",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: 13, color: "var(--text-tertiary)", fontStyle: "italic",
+                  }}>
+                    Think about your answer, then reveal the model answer below.
+                  </div>
+                  <button
+                    onClick={() => { setSelected(0); setShowExplanation(true); }}
+                    style={{
+                      padding: "12px 16px",
+                      background: "var(--accent-light)",
+                      border: "1.5px solid var(--accent)",
+                      borderRadius: "var(--radius-md)",
+                      fontSize: 14, fontWeight: 600, color: "var(--accent)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Reveal answer
+                  </button>
+                </div>
+              )}
+              {q.type === "SHORT_ANSWER" && selected !== null && (
+                <div style={{
+                  padding: "14px 16px",
+                  background: "var(--bg-secondary)",
+                  border: "1.5px solid var(--border-default)",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: 14, lineHeight: 1.6,
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    Model answer
+                  </div>
+                  <div style={{ color: "var(--text-primary)" }}>{q.correctAnswer}</div>
+                  <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                    <button
+                      onClick={() => setAnswers((prev) => [...prev, true])}
+                      disabled={answers.length > current}
+                      style={{
+                        flex: 1, padding: "10px",
+                        background: answers[current] === true ? "var(--success-light)" : "var(--bg-tertiary)",
+                        border: `1.5px solid ${answers[current] === true ? "var(--success)" : "var(--border-subtle)"}`,
+                        borderRadius: "var(--radius-md)", fontSize: 13, fontWeight: 600,
+                        color: answers[current] === true ? "var(--success)" : "var(--text-secondary)",
+                        cursor: answers.length > current ? "default" : "pointer",
+                      }}
+                    >
+                      ✓ Got it right
+                    </button>
+                    <button
+                      onClick={() => setAnswers((prev) => [...prev, false])}
+                      disabled={answers.length > current}
+                      style={{
+                        flex: 1, padding: "10px",
+                        background: answers[current] === false ? "var(--danger-light)" : "var(--bg-tertiary)",
+                        border: `1.5px solid ${answers[current] === false ? "var(--danger)" : "var(--border-subtle)"}`,
+                        borderRadius: "var(--radius-md)", fontSize: 13, fontWeight: 600,
+                        color: answers[current] === false ? "var(--danger)" : "var(--text-secondary)",
+                        cursor: answers.length > current ? "default" : "pointer",
+                      }}
+                    >
+                      ✗ Missed it
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Explanation */}
               {showExplanation && (
                 <div style={{
@@ -377,8 +449,8 @@ export default function QuizGeneratePage() {
                 </div>
               )}
 
-              {/* Next button */}
-              {showExplanation && (
+              {/* Next button — for SHORT_ANSWER wait for self-grade; others show immediately */}
+              {showExplanation && answers.length > current && (
                 <button
                   onClick={next}
                   style={{
