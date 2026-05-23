@@ -9,7 +9,7 @@
  * Pure module: no React imports, safe in server components.
  */
 import {
-  Brain, Database, Cpu, Table2, Server, Cloud, Code2, Box, Languages,
+  Brain, Database, Cpu, Table2, Server, Cloud, Code2, Box, Languages, FileSpreadsheet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -76,6 +76,15 @@ const META: Record<string, PathMeta> = {
     ring: "rgba(190,24,93,0.22)",
     gradient: "linear-gradient(135deg, #831843 0%, #be185d 55%, #ec4899 100%)",
     glow: "rgba(190,24,93,0.30)",
+    tier: "foundation",
+  },
+  "excel-mastery": {
+    Icon: FileSpreadsheet,
+    color: "#047857",
+    tint: "rgba(4,120,87,0.08)",
+    ring: "rgba(4,120,87,0.22)",
+    gradient: "linear-gradient(135deg, #064e3b 0%, #047857 55%, #10b981 100%)",
+    glow: "rgba(4,120,87,0.30)",
     tier: "foundation",
   },
 };

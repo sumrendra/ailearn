@@ -21,11 +21,17 @@ import { SentenceBuilder } from "@/components/french/SentenceBuilder";
 import { ConversationScene } from "@/components/french/ConversationScene";
 import { MatchQuiz } from "@/components/french/MatchQuiz";
 import { GrammarTable } from "@/components/french/GrammarTable";
+import { FormulaPlayground } from "@/components/excel/FormulaPlayground";
+import { PivotSimulator } from "@/components/excel/PivotSimulator";
+import { FormulaQuiz } from "@/components/excel/FormulaQuiz";
 import { parseLessonBlock } from "@/lib/lesson-blocks";
 import {
   parseFrenchVocab, parseFrenchSentence, parseFrenchDialogue,
   parseFrenchMatch, parseFrenchGrammar,
 } from "@/lib/french-blocks";
+import {
+  parseExcelFormula, parseExcelPivot, parseExcelQuiz,
+} from "@/lib/excel-blocks";
 import { type FixtureKey } from "@/lib/sql-fixtures";
 import Link from "next/link";
 
@@ -522,6 +528,40 @@ export function LessonViewer({
                       note={data.note}
                       headers={data.headers}
                       rows={data.rows}
+                    />
+                  ) : null;
+                }
+
+                // Excel course interactive blocks
+                if (lang === "excel-formula") {
+                  const data = parseExcelFormula(extractTextContent(children));
+                  return (
+                    <FormulaPlayground
+                      fixture={data.fixture}
+                      initial={data.formula ?? ""}
+                      hint={data.hint}
+                    />
+                  );
+                }
+                if (lang === "excel-pivot") {
+                  const data = parseExcelPivot(extractTextContent(children));
+                  return (
+                    <PivotSimulator
+                      fixture={data.fixture}
+                      initialRows={data.rows}
+                      initialCols={data.cols}
+                      initialValues={data.values}
+                    />
+                  );
+                }
+                if (lang === "excel-quiz") {
+                  const data = parseExcelQuiz(extractTextContent(children));
+                  return data ? (
+                    <FormulaQuiz
+                      question={data.question}
+                      options={data.options}
+                      correct={data.correct}
+                      explanation={data.explanation}
                     />
                   ) : null;
                 }

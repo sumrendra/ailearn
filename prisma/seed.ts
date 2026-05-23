@@ -7,6 +7,9 @@ import {
 import {
   SQL_L2, SQL_L3, SQL_L4, SQL_L5, SQL_L6,
 } from "./sql-content";
+import {
+  XL_L1, XL_L2, XL_L3, XL_L4, XL_L5, XL_L6,
+} from "./excel-content";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -2826,6 +2829,122 @@ async function main() {
     },
   });
 
+  const excelPath = await prisma.learningPath.upsert({
+    where: { slug: "excel-mastery" },
+    update: {
+      description: "From cells to dashboards — the working Excel toolkit for Business Analysts, QA engineers, and Customer Success Managers. Live formula playgrounds run real Excel formulas in your browser.",
+    },
+    create: {
+      slug: "excel-mastery",
+      title: "Excel Mastery",
+      description: "From cells to dashboards — the working Excel toolkit for Business Analysts, QA engineers, and Customer Success Managers. Live formula playgrounds run real Excel formulas in your browser.",
+      icon: "file-spreadsheet",
+      color: "#047857",
+      difficulty: "BEGINNER",
+      estimatedHours: 7,
+      tags: ["Excel", "Business Analyst", "Pivot Tables", "VLOOKUP", "Formulas"],
+      order: 6,
+    },
+  });
+
+  // ── PATH 6: EXCEL MASTERY ───────────────────────────────────────────────────
+
+  const xlL1 = await prisma.lesson.upsert({
+    where: { slug: "excel-cells-formulas-references" },
+    update: { content: XL_L1 },
+    create: {
+      slug: "excel-cells-formulas-references",
+      title: "How Excel actually works — cells, formulas, references",
+      description: "The foundation: cell addresses, the formula bar, and the $ trick that fixes 90% of broken spreadsheets.",
+      pathId: excelPath.id,
+      order: 1,
+      estimatedMins: 18,
+      xpReward: 50,
+      tags: ["Excel", "Foundations", "References"],
+      content: XL_L1,
+    },
+  });
+
+  const xlL2 = await prisma.lesson.upsert({
+    where: { slug: "excel-conditional-logic" },
+    update: { content: XL_L2 },
+    create: {
+      slug: "excel-conditional-logic",
+      title: "Conditional logic — IF, COUNTIF, SUMIFS",
+      description: "Count and sum things that match a condition. The workhorse formulas every BA / QA / CSM lives in.",
+      pathId: excelPath.id,
+      order: 2,
+      estimatedMins: 20,
+      xpReward: 65,
+      tags: ["Excel", "IF", "COUNTIF", "SUMIFS"],
+      content: XL_L2,
+    },
+  });
+
+  const xlL3 = await prisma.lesson.upsert({
+    where: { slug: "excel-lookups-vlookup-xlookup" },
+    update: { content: XL_L3 },
+    create: {
+      slug: "excel-lookups-vlookup-xlookup",
+      title: "Joining data — VLOOKUP, XLOOKUP, INDEX/MATCH",
+      description: "The most-asked Excel job-interview question. Lookups that don't break, and when to use which.",
+      pathId: excelPath.id,
+      order: 3,
+      estimatedMins: 25,
+      xpReward: 80,
+      tags: ["Excel", "VLOOKUP", "XLOOKUP", "INDEX MATCH"],
+      content: XL_L3,
+    },
+  });
+
+  const xlL4 = await prisma.lesson.upsert({
+    where: { slug: "excel-cleaning-text-functions" },
+    update: { content: XL_L4 },
+    create: {
+      slug: "excel-cleaning-text-functions",
+      title: "Cleaning messy data — text functions",
+      description: "TRIM, SUBSTITUTE, splitting names, extracting domains. The work that fills 60% of an analyst's day.",
+      pathId: excelPath.id,
+      order: 4,
+      estimatedMins: 20,
+      xpReward: 65,
+      tags: ["Excel", "Text Functions", "Data Cleaning"],
+      content: XL_L4,
+    },
+  });
+
+  const xlL5 = await prisma.lesson.upsert({
+    where: { slug: "excel-pivot-tables" },
+    update: { content: XL_L5 },
+    create: {
+      slug: "excel-pivot-tables",
+      title: "Pivot tables — the analyst's superpower",
+      description: "Drag, drop, get answer. The single most important Excel skill for any BA — and the most-tested in interviews.",
+      pathId: excelPath.id,
+      order: 5,
+      estimatedMins: 24,
+      xpReward: 85,
+      tags: ["Excel", "Pivot Tables", "Aggregation"],
+      content: XL_L5,
+    },
+  });
+
+  const xlL6 = await prisma.lesson.upsert({
+    where: { slug: "excel-dashboards-formatting" },
+    update: { content: XL_L6 },
+    create: {
+      slug: "excel-dashboards-formatting",
+      title: "Visualizing — conditional formatting, charts, dashboards",
+      description: "Picking the right chart, building a one-page dashboard, and knowing when to leave Excel.",
+      pathId: excelPath.id,
+      order: 6,
+      estimatedMins: 22,
+      xpReward: 75,
+      tags: ["Excel", "Charts", "Dashboards", "Conditional Formatting"],
+      content: XL_L6,
+    },
+  });
+
   // ── PATH 5: FRENCH FUNDAMENTALS ─────────────────────────────────────────────
 
   const frL1 = await prisma.lesson.upsert({
@@ -3940,6 +4059,127 @@ async function main() {
         front: "What are the days of the week in French, and what's the capitalization rule?",
         back: "lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche. Unlike English, French days are NOT capitalized unless they start a sentence. Same goes for months: janvier, février, mars, etc.",
         tags: ["French", "Days"],
+      },
+    ],
+  });
+
+  // Flashcards — Excel Mastery
+  await prisma.flashcard.createMany({
+    skipDuplicates: true,
+    data: [
+      // L1: Foundations
+      {
+        lessonId: xlL1.id,
+        front: "What's the difference between A1, $A1, A$1, and $A$1 in an Excel formula?",
+        back: "The $ locks the part of the reference that comes after it. A1 = fully relative (both move when copied). $A1 = column locked, row moves. A$1 = column moves, row locked. $A$1 = fully absolute, never moves. Tip: press F4 to cycle through these while typing.",
+        tags: ["Excel", "References"],
+      },
+      {
+        lessonId: xlL1.id,
+        front: "Why does =D2/D20 break when you copy it down?",
+        back: "Both D2 and D20 are relative — when you copy down, D20 slides to D21, D22, etc. You wanted D20 to stay fixed (it's the total). Fix: write =D2/$D$20. The $D$20 is locked and won't shift.",
+        tags: ["Excel", "References", "Bugs"],
+      },
+      {
+        lessonId: xlL1.id,
+        front: "What does the range A1:C10 represent?",
+        back: "A 3-column × 10-row rectangle: columns A, B, C and rows 1 through 10. Used as input to aggregate functions like SUM, AVERAGE, COUNT. You can also write A:A to mean the entire column A, or 1:1 for the entire row 1.",
+        tags: ["Excel", "Ranges"],
+      },
+      // L2: Conditional logic
+      {
+        lessonId: xlL2.id,
+        front: "What's the difference between COUNTIF and COUNTIFS?",
+        back: "COUNTIF takes ONE condition: =COUNTIF(range, criterion). COUNTIFS takes MULTIPLE conditions (in pairs): =COUNTIFS(range1, crit1, range2, crit2, ...). Same for SUMIF / SUMIFS. The plural-S version is what you use for real BA questions like 'open P1 bugs assigned to Alice'.",
+        tags: ["Excel", "COUNTIF"],
+      },
+      {
+        lessonId: xlL2.id,
+        front: "What's the argument-order gotcha between SUMIF and SUMIFS?",
+        back: "SUMIF: criterion_range, criterion, sum_range. SUMIFS: sum_range FIRST, then (criterion_range, criterion) pairs. The order is intentionally different and trips up every Excel user once. Mnemonic: in SUMIFS, the thing you're summing comes first because you might have many conditions after.",
+        tags: ["Excel", "SUMIFS"],
+      },
+      {
+        lessonId: xlL2.id,
+        front: "How do you count cells GREATER than 1000 in a range?",
+        back: 'Use a comparison string as the criterion: =COUNTIF(range, ">1000"). The whole comparison goes in quotes. Same pattern works for <, >=, <=, <>. Examples: ">=100" (at least 100), "<>Pending" (anything but Pending).',
+        tags: ["Excel", "COUNTIF", "Criteria"],
+      },
+      // L3: Lookups
+      {
+        lessonId: xlL3.id,
+        front: "What's the biggest constraint of VLOOKUP that XLOOKUP removes?",
+        back: "VLOOKUP requires the lookup value to be in the FIRST column of the table_array — you can only look UP and return RIGHT. XLOOKUP takes separate lookup_array and return_array, so you can look up by any column and return any column (left, right, doesn't matter). XLOOKUP also lets you set a default for 'not found' as the 4th argument, avoiding ugly #N/A errors.",
+        tags: ["Excel", "VLOOKUP", "XLOOKUP"],
+      },
+      {
+        lessonId: xlL3.id,
+        front: "Why should you ALWAYS pass FALSE as the 4th argument to VLOOKUP?",
+        back: "The 4th argument controls match mode: FALSE = exact match, TRUE (or omitted!) = approximate match. Approximate match only works on sorted data and returns wrong results on unsorted data. Always use FALSE (or 0) unless you specifically want bucketing/binning logic with sorted lookup tables.",
+        tags: ["Excel", "VLOOKUP", "Bugs"],
+      },
+      {
+        lessonId: xlL3.id,
+        front: "What does INDEX/MATCH do, and why use it over VLOOKUP?",
+        back: "INDEX(return_array, MATCH(lookup_value, lookup_array, 0)) — MATCH finds the position, INDEX returns the value at that position. Works on every Excel version (XLOOKUP needs 2021+), can look up in any direction (no 'first column' restriction), and doesn't break when columns are inserted/moved (VLOOKUP's hardcoded column index breaks). Slightly more verbose; same functionality.",
+        tags: ["Excel", "INDEX MATCH"],
+      },
+      // L4: Cleaning
+      {
+        lessonId: xlL4.id,
+        front: "Why does TRIM matter and when should you use it?",
+        back: "Imported data often has leading/trailing spaces or double internal spaces. 'London ' is NOT equal to 'London' in Excel — so your VLOOKUPs silently fail. ALWAYS TRIM imported text before comparing or looking up. =TRIM(A2) removes leading, trailing, and reduces internal multi-spaces to single spaces.",
+        tags: ["Excel", "TRIM", "Data Cleaning"],
+      },
+      {
+        lessonId: xlL4.id,
+        front: "How do you extract the username portion of an email (the part before @)?",
+        back: '=LEFT(A2, SEARCH("@", A2) - 1). SEARCH finds the position of @, and LEFT takes everything before it (minus 1 because we don\'t want the @ itself). SEARCH is case-insensitive; use FIND for case-sensitive. Always handle the case where @ might not exist by wrapping in IFERROR.',
+        tags: ["Excel", "Text Functions", "LEFT", "SEARCH"],
+      },
+      {
+        lessonId: xlL4.id,
+        front: "What's the difference between FIND and SEARCH in Excel?",
+        back: "Both return the position of a substring inside another string. FIND is CASE-SENSITIVE; SEARCH is CASE-INSENSITIVE. Both error (#VALUE!) if not found. SEARCH also supports wildcards (* and ?), FIND does not. Use SEARCH 95% of the time unless you specifically need case-sensitivity.",
+        tags: ["Excel", "FIND", "SEARCH"],
+      },
+      // L5: Pivots
+      {
+        lessonId: xlL5.id,
+        front: "What are the four axes of a pivot table?",
+        back: "ROWS (categories down the side), COLUMNS (categories across the top), VALUES (the numbers being aggregated in each cell), and FILTERS (narrow the whole pivot to a subset). You drag any field of your source data into any of these four buckets to build your summary view.",
+        tags: ["Excel", "Pivot Tables"],
+      },
+      {
+        lessonId: xlL5.id,
+        front: "What's the #1 pivot table bug and how do you fix it?",
+        back: "You changed the source data but the pivot didn't update. Pivots cache their source — they don't auto-refresh. Fix: right-click the pivot → Refresh, or click PivotTable Analyze → Refresh. To make this automatic, use a Table (Ctrl-T) as your source, then the pivot will recognize new rows added.",
+        tags: ["Excel", "Pivot Tables", "Bugs"],
+      },
+      {
+        lessonId: xlL5.id,
+        front: "How do you summarize daily transaction data by Month in a pivot table?",
+        back: "Put the date column in Rows. Then right-click any date → Group → check Months (and optionally Quarter, Year). Excel collapses thousands of daily rows into a clean monthly view. This is one of the killer pivot features — no formula does it as cleanly.",
+        tags: ["Excel", "Pivot Tables", "Date Grouping"],
+      },
+      // L6: Dashboards
+      {
+        lessonId: xlL6.id,
+        front: "What's the right chart type for 'how did X change over time'?",
+        back: "Line chart. Always. Bar charts are for category comparisons (City A vs City B), line charts are for trends across continuous data (revenue per month). Never use a pie chart for time series. Never use a 3D chart for anything.",
+        tags: ["Excel", "Charts"],
+      },
+      {
+        lessonId: xlL6.id,
+        front: "What's the recommended 3-sheet dashboard structure?",
+        back: "Sheet 1: raw data, never edited by hand. Sheet 2: pivots and helper formulas, the calculation layer. Sheet 3: the dashboard — charts, big numbers, slicers, all linked to Sheet 2. This separation means data refresh → calculations re-flow → dashboard updates automatically, no manual rebuild.",
+        tags: ["Excel", "Dashboards"],
+      },
+      {
+        lessonId: xlL6.id,
+        front: "Conditional formatting: when should you use a color scale vs data bars vs icon sets?",
+        back: "Color scale (red→yellow→green): magnitude across a range — e.g. MRR rankings, health scores. Data bars (in-cell bars): visual comparison within a column — 'who's biggest at a glance'. Icon sets (▲/▬/▼): trend or status — e.g. up/flat/down YoY change. Rule of thumb: pick the one that the eye decodes fastest for your specific question.",
+        tags: ["Excel", "Conditional Formatting"],
       },
     ],
   });
