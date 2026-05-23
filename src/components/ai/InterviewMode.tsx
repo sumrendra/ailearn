@@ -61,34 +61,18 @@ export function InterviewMode() {
         }),
       });
 
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = "";
-      const assistantId = crypto.randomUUID();
+      if (!res.ok) throw new Error(`API error ${res.status}`);
 
-      setMessages((prev) => [...(isInit ? [] : prev), { role: "assistant", content: "", id: assistantId }]);
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          for (const line of chunk.split("\n")) {
-            if (line.startsWith("data: ") && line.slice(6) !== "[DONE]") {
-              try {
-                const delta = JSON.parse(line.slice(6)).delta?.text ?? "";
-                fullContent += delta;
-                setMessages((prev) =>
-                  prev.map((m) => m.id === assistantId ? { ...m, content: fullContent } : m)
-                );
-              } catch {}
-            }
-          }
-        }
-      }
-    } catch {
+      const data = await res.json();
+      const fullContent = data.text ?? "";
+      setMessages((prev) => [...(isInit ? [] : prev), {
+        role: "assistant",
+        content: fullContent,
+        id: crypto.randomUUID(),
+      }]);
+    } catch (err) {
       setMessages((prev) => [...prev, {
-        role: "assistant", content: "Connection error. Check your API key.", id: crypto.randomUUID(),
+        role: "assistant", content: "Something went wrong. Please try again.", id: crypto.randomUUID(),
       }]);
     } finally {
       setLoading(false);

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { streamAIChat } from "@/lib/ai";
+import { generateAIChat } from "@/lib/ai";
 
 const SYSTEM_PROMPT = `You are an expert AI engineering tutor inside AILearn, a personal learning platform.
 
@@ -36,7 +36,11 @@ export async function POST(req: NextRequest) {
       ? `${SYSTEM_PROMPT}\n\nCurrent lesson context:\n${lessonContext}`
       : SYSTEM_PROMPT;
 
-    return await streamAIChat(messages, systemPrompt, "tutor");
+    const text = await generateAIChat(messages, systemPrompt, "tutor");
+    return new Response(JSON.stringify({ text }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("Tutor chat error:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {

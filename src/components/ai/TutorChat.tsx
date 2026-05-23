@@ -55,41 +55,19 @@ export function TutorChat({ lessonContext, compact }: TutorChatProps = {}) {
         }),
       });
 
-      if (!res.ok) throw new Error("API error");
+      if (!res.ok) throw new Error(`API error ${res.status}`);
 
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = "";
-      const assistantId = crypto.randomUUID();
-
-      setMessages((prev) => [...prev, { role: "assistant", content: "", id: assistantId }]);
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-              if (data === "[DONE]") continue;
-              try {
-                const parsed = JSON.parse(data);
-                const delta = parsed.delta?.text ?? "";
-                fullContent += delta;
-                setMessages((prev) =>
-                  prev.map((m) => m.id === assistantId ? { ...m, content: fullContent } : m)
-                );
-              } catch {}
-            }
-          }
-        }
-      }
+      const data = await res.json();
+      const fullContent = data.text ?? "";
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: fullContent,
+        id: crypto.randomUUID(),
+      }]);
     } catch (err) {
       setMessages((prev) => [...prev, {
         role: "assistant",
-        content: "Sorry, I hit an error. Make sure your ANTHROPIC_API_KEY is set in .env.local.",
+        content: "Sorry, something went wrong. Please try again.",
         id: crypto.randomUUID(),
       }]);
     } finally {

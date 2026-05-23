@@ -8,6 +8,125 @@ const getAnthropicClient = () => {
 };
 
 /**
+ * Non-streaming helper using OpenAI-compatible endpoint.
+ * Returns the full response text at once (more reliable than SSE streaming).
+ */
+async function chatOpenAICompatible(
+  url: string,
+  apiKey: string,
+  model: string,
+  messages: { role: string; content: string }[],
+  systemPrompt: string
+): Promise<string> {
+  const formattedMessages = messages.slice(-20).map((m) => ({
+    role: m.role,
+    content: m.content,
+  }));
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...formattedMessages,
+      ],
+      stream: false,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI-compatible API returned error code ${response.status}: ${errorText}`);
+  }
+
+  const resJson = await response.json();
+  return resJson.choices?.[0]?.message?.content || "";
+}
+
+/**
+ * Non-streaming chat: returns full response text.
+ * 3-tier fallback: Gemini → OpenRouter → Anthropic.
+ */
+export async function generateAIChat(
+  messages: { role: string; content: string }[],
+  systemPrompt: string,
+  modelType: "tutor" | "interview"
+): Promise<string> {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const openrouterKey = process.env.OPENROUTER_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!geminiKey && !openrouterKey && !anthropicKey) {
+    throw new Error("No AI API keys configured.");
+  }
+
+  // 1. PRIMARY: Gemini
+  if (geminiKey) {
+    try {
+      console.log(`[AI Chat] Attempting Gemini for ${modelType}...`);
+      const model = modelType === "tutor" ? "gemini-3.5-flash" : "gemini-3.1-flash-lite";
+      return await chatOpenAICompatible(
+        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        geminiKey,
+        model,
+        messages,
+        systemPrompt
+      );
+    } catch (err) {
+      console.error("[AI Chat] Gemini failed:", err);
+    }
+  }
+
+  // 2. SECONDARY: OpenRouter
+  if (openrouterKey) {
+    try {
+      console.log(`[AI Chat] Attempting OpenRouter for ${modelType}...`);
+      const model = modelType === "tutor"
+        ? "meta-llama/llama-3.3-70b-instruct:free"
+        : "deepseek/deepseek-v4-flash:free";
+      return await chatOpenAICompatible(
+        "https://openrouter.ai/api/v1/chat/completions",
+        openrouterKey,
+        model,
+        messages,
+        systemPrompt
+      );
+    } catch (err) {
+      console.error("[AI Chat] OpenRouter failed:", err);
+    }
+  }
+
+  // 3. TERTIARY: Anthropic
+  if (anthropicKey) {
+    try {
+      console.log(`[AI Chat] Attempting Anthropic for ${modelType}...`);
+      const anthropic = getAnthropicClient();
+      if (!anthropic) throw new Error("Anthropic client failed to initialize.");
+      const response = await anthropic.messages.create({
+        model: "claude-3-5-sonnet-latest",
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: messages.slice(-20) as any,
+      });
+      const block = response.content[0];
+      if (block.type !== "text") throw new Error("Unexpected response type");
+      return block.text;
+    } catch (err) {
+      console.error("[AI Chat] Anthropic failed:", err);
+      throw err;
+    }
+  }
+
+  throw new Error("All configured AI providers failed.");
+}
+
+/**
  * Helper to stream completion from an OpenAI-compatible endpoint.
  */
 async function streamOpenAICompatible(

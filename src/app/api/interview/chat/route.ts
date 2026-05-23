@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { streamAIChat } from "@/lib/ai";
+import { generateAIChat } from "@/lib/ai";
 
 const INTERVIEWER_SYSTEM = `You are a senior AI engineering interviewer at a top tech company (think Google DeepMind, Anthropic, OpenAI, or a FAANG AI team).
 
@@ -33,7 +33,11 @@ export async function POST(req: NextRequest) {
 Interview topic: ${topic ?? "General AI Engineering"}
 Difficulty: ${difficulty ?? "INTERMEDIATE"}`;
 
-    return await streamAIChat(messages, systemWithContext, "interview");
+    const text = await generateAIChat(messages, systemWithContext, "interview");
+    return new Response(JSON.stringify({ text }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("Interview chat error:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
