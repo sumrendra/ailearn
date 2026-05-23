@@ -2928,16 +2928,20 @@ async function main() {
 
   const sqlL1 = await prisma.lesson.upsert({
     where: { slug: "sql-relational-model-fundamentals" },
-    update: { content: SQL_L1_CONTENT },
+    update: {
+      content: SQL_L1_CONTENT,
+      title: "Your first SQL query — how databases think",
+      description: "Stop thinking in loops, start thinking in sets. Three-valued logic, why SELECT * is a smell, and your first real query against a live Postgres database in the browser.",
+    },
     create: {
       slug: "sql-relational-model-fundamentals",
-      title: "The Relational Model & SELECT Fundamentals",
-      description: "Shift from imperative iteration to set-based thinking. Logical clause order, three-valued logic, and why SELECT * is a smell.",
+      title: "Your first SQL query — how databases think",
+      description: "Stop thinking in loops, start thinking in sets. Three-valued logic, why SELECT * is a smell, and your first real query against a live Postgres database in the browser.",
       pathId: sqlPath.id,
       order: 1,
       estimatedMins: 20,
       xpReward: 60,
-      tags: ["SQL", "Relational Model", "NULL"],
+      tags: ["SQL", "SELECT", "Relational Model"],
       content: SQL_L1_CONTENT,
     },
   });
