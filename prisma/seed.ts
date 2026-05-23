@@ -12,9 +12,127 @@ const prisma = new PrismaClient({ adapter });
 
 // ─── LESSON CONTENT ───────────────────────────────────────────────────────────
 
-const LLM_L1_CONTENT = `# What is a Large Language Model?
+const LLM_L1_CONTENT = `# What's actually happening when you talk to ChatGPT?
 
-A **Large Language Model (LLM)** is a neural network trained on one task: predict the next token in a sequence. That single objective, applied at massive scale across trillions of tokens, causes reasoning, coding, translation, and conversation to emerge as side effects.
+You type "What's the capital of France?" and it says "Paris." It feels like the AI *knows* things. Like there's a librarian inside the machine, looking up facts.
+
+There isn't.
+
+What's actually happening is much weirder — and once you see it, modern AI starts to make sense.
+
+## It's predicting the next word. That's it.
+
+A **Large Language Model** (or LLM — that's what models like ChatGPT, Claude, and Gemini are) only does one thing: it takes some text and guesses what word comes next.
+
+Type "Once upon a" → it predicts "time."
+Type "Roses are red, violets are" → it predicts "blue."
+Type "The capital of France is" → it predicts "Paris."
+
+That's the *entire mechanism*. It's autocomplete. Just **extremely good** autocomplete, trained on basically everything ever written on the internet.
+
+When you "chat" with an LLM, this is what's happening behind the scenes:
+
+1. The whole conversation so far gets turned into one long block of text
+2. The model predicts the most likely next word — say, "Paris"
+3. That word gets added to the text
+4. The model predicts the *next* next word — say, "is"
+5. That gets added too
+6. And again — "the", "capital", "of", "France"
+7. Eventually it predicts a "stop" signal and the response ends
+
+You see this stream of words, one at a time, and it feels like a thoughtful answer. Underneath, it's just word-by-word guessing — millions of these guesses per minute, on top of a brain made of math.
+
+## So how does it know things?
+
+Here's the surprising part. **It doesn't, really.** Not the way a human knows things.
+
+When the model was trained, it read trillions of words — Wikipedia, books, code, news articles, Reddit, scientific papers, everything. During training, it adjusted billions of internal numbers (called *weights*) until it got really good at the next-word game on all of that text.
+
+Along the way, something strange happened:
+
+> To predict the next word *accurately* across all of human knowledge, it had to learn the patterns of how the world works.
+
+It learned that countries have capitals. That code has syntax. That stories have beginnings, middles, and ends. That arguments follow logic.
+
+**It didn't memorize facts. It learned the shape of facts.**
+
+That's why it can answer questions it has never seen before — and also why it sometimes confidently makes things up. (That's called *hallucinating*, and we'll cover it.)
+
+## Words become numbers
+
+Here's a thing that surprises everyone. Computers can't actually read English. So before an LLM can do anything, it has to turn your text into numbers.
+
+It does this by splitting your input into pieces called **tokens** — usually somewhere between a whole word and a single letter — and then assigning each token a list of hundreds of numbers. That list is called an **embedding**.
+
+What's wild is that *similar words get similar embeddings*. The numbers for "cat" and "dog" are close together. The numbers for "cat" and "database" are far apart. The model literally measures distances between these number-lists to figure out which words "mean" similar things.
+
+Here's a tiny version of an embedding space you can play with — click any word to see what's near it:
+
+\`\`\`diagram-embeddings
+\`\`\`
+
+This is just a flat 2D version for the demo. Real embeddings live in spaces with 768 to 1536 dimensions — way more than your brain can picture. But the principle is the same: **closeness = similarity of meaning**.
+
+## How it actually picks the next word
+
+When you give the model a prompt, here's what happens (skip this section if you want to keep it conceptual, come back later when you're curious):
+
+1. Your prompt gets split into tokens
+2. Each token becomes an embedding (those big lists of numbers)
+3. The model runs them through a stack of layers (called a *transformer* — next lesson)
+4. The output is a *probability distribution* over its entire vocabulary
+
+That last bit is important. The model doesn't pick *one* answer. It outputs something like:
+
+\`\`\`
+"Paris"      → 87%
+"London"     →  3%
+"the"        →  2%
+"a"          →  1%
+... (49,996 other tokens with tiny probabilities)
+\`\`\`
+
+Then it picks one — usually the highest-probability one, but you can tune that. Higher randomness gives more creative output; lower randomness gives more predictable output. (We'll cover this in lesson 3 — it's called *temperature* and it's how you make a model "creative" or "factual.")
+
+## Two things this implies that you should remember
+
+### 1. The model has a "memory" of training, but no live knowledge
+
+If you trained the model in 2024, it has no idea what happened in 2025. It doesn't know who won yesterday's game. It will sometimes *make up plausible-sounding answers* about recent events — confidently, in beautiful prose, completely wrong. This is called **hallucination** and it's the single biggest gotcha for people building with LLMs.
+
+### 2. It costs money to ask, not to train
+
+There's two phases:
+- **Training** — the multi-million-dollar process of teaching the model in the first place. Done once per model version.
+- **Inference** — running the trained model to answer your question. This is what you pay for when you call an API. Charged per *token* (roughly: per word) of input + output.
+
+When you hear about the "cost" of using an LLM, almost always it's the inference cost.
+
+## A look at the landscape (mid-2025)
+
+The "big four" model families you'll hear about most:
+
+| Family | Maker | Famous for |
+|--------|-------|-----------|
+| **Claude** (3.5 Sonnet, Opus) | Anthropic | Long context, coding, careful reasoning |
+| **GPT** (4o, o1) | OpenAI | Broad capability, the original ChatGPT |
+| **Gemini** (1.5 Pro) | Google | Million-token context window (huge inputs) |
+| **Llama** (3.3) | Meta | Open source — you can self-host it |
+
+They all work on the same basic recipe: huge transformer, trained on trillions of tokens, polished with human feedback (RLHF — covered later). They differ in size, training data, and the specific tricks each lab uses.
+
+## What you now know
+
+After this lesson, when someone says "ChatGPT understood my question," you can correct them:
+
+> "It didn't *understand* — it pattern-matched against a compressed representation of every text it's ever seen, and predicted the most likely sequence of next-words that would be a helpful response. That's not the same thing as understanding, but in practice it's close enough to be useful for a lot of work — and also dangerous in specific ways."
+
+That's actually a pretty important distinction. Worth knowing.
+
+## What's next
+
+Next lesson we'll open the hood — what's *inside* a transformer? What makes "attention" the breakthrough that made all of this possible? We'll use interactive diagrams, not just diagrams of diagrams.
+`;
 
 ## The training recipe
 
@@ -72,103 +190,106 @@ The model never sees a labelled dataset. It learns:
 The next lesson covers *how* the transformer architecture actually implements all of this — specifically the attention mechanism that made modern LLMs possible.
 `;
 
-const LLM_L2_CONTENT = `# The Transformer Architecture: Attention Explained
+const LLM_L2_CONTENT = `# Attention — the trick that made modern AI work
 
-The 2017 paper "Attention Is All You Need" (Vaswani et al.) replaced recurrent networks with a purely attention-based architecture and enabled the LLM era. Understanding it gives you the vocabulary to reason about context limits, latency, and model behaviour.
+In 2017, a small team of researchers at Google published a paper with a brilliant title: **"Attention Is All You Need."** That paper described a new kind of neural network called a **transformer**, and it's the architecture behind every modern LLM — ChatGPT, Claude, Gemini, Llama, all of them.
 
-## The problem with RNNs
+The breakthrough at the heart of it is something called *attention*. It sounds abstract, but the idea is surprisingly simple — and once you see it, transformers stop being mysterious.
 
-Before transformers, sequence models were recurrent (RNNs, LSTMs). They processed tokens one at a time, left to right. Two fatal flaws:
-1. **Sequential** — can't be parallelised during training → slow
-2. **Vanishing gradients** — information from early tokens fades over long sequences
+## The problem attention solved
 
-Transformers solve both by processing all tokens in parallel and using attention to directly connect any two positions.
+Before transformers, language models processed text one word at a time, left to right. Imagine reading a book but only being allowed to look at one word at a time, and remembering everything in a tiny notepad that overflows after a few pages. That's roughly what older models (RNNs and LSTMs) did.
 
-## High-level architecture
+Two big problems:
+1. **It's slow.** You have to wait for word 99 before you can process word 100.
+2. **The model forgets.** By the time it's read paragraph 5, it has barely any memory of paragraph 1.
 
-A decoder-only transformer (GPT, Claude, Llama) stacks N identical blocks, each containing:
+Attention fixes both. Instead of reading sequentially, the model looks at **every word at once** and decides — for each word — which other words are most relevant to it.
 
-\`\`\`
-Input tokens
-  → Token Embedding + Positional Encoding
-  → [Block × N]:
-      → Multi-Head Self-Attention (with causal mask)
-      → Add & Norm (residual connection)
-      → Feed-Forward Network (2 linear layers + activation)
-      → Add & Norm
-  → Linear projection → Softmax → Token probabilities
-\`\`\`
+## What "attention" actually means
 
-## The attention mechanism
+Imagine you're reading this sentence:
 
-Attention answers: *"for each token, which other tokens are most relevant?"*
+> *"The hungry cat chased the mouse quickly."*
 
-For each token, the model produces three vectors:
-- **Query (Q)** — "what am I looking for?"
-- **Key (K)** — "what do I contain?"
-- **Value (V)** — "what do I return if selected?"
+To understand the word "chased," your brain probably did something like this without you noticing: it looked at "cat" (who chased?) and "mouse" (chased what?), and it mostly ignored "the" (not useful) and "hungry" (less directly related).
 
-The attention score between position i and j is:
+That weighting — *which words matter for understanding this word* — is exactly what attention computes.
 
-\`\`\`
-score(i, j) = softmax( Q_i · K_j / √d_k ) × V_j
+Click around in this diagram. Click any word and watch where its attention goes:
+
+\`\`\`diagram-attention
 \`\`\`
 
-### Java HashMap analogy
+Look at what happens:
+- Click **"chased"** — it attends strongly to **cat** (the subject) and **mouse** (the object). It barely cares about "the."
+- Click **"hungry"** — it attends to **cat** (the thing it's describing).
+- Click **"quickly"** — it attends to **chased** (the verb it modifies).
 
-Attention is like a soft HashMap. In a normal HashMap, a key either matches or it doesn't. In attention, every query partially matches every key — the softmax produces a weighted average. The "lookup" returns a blend of all values, weighted by relevance.
+This isn't programmed. **The model learned this from reading billions of sentences.** It figured out, all by itself, that adjectives bind to nouns, that verbs bind to subjects and objects, and that "the" is mostly decoration.
 
-\`\`\`java
-// Hard lookup (HashMap)
-String value = map.get(query); // exact match only
+## Q, K, V — the three pieces of every attention "lookup"
 
-// Soft lookup (Attention)
-// Compute similarity to ALL keys, return weighted blend of ALL values
-// — this is what attention does at every layer
-\`\`\`
+OK, slightly more technical now — but only slightly.
 
-## Causal masking (decoder-only models)
+For every word, the model produces three little vectors:
 
-During training, the model must not see future tokens. A causal mask sets attention scores for future positions to -∞ before softmax, so they become 0 after softmax. This is why LLMs generate left-to-right — each token can only attend to tokens before it.
+| Vector | Role | Plain English |
+|--------|------|--------------|
+| **Query** (Q) | "What am I looking for?" | The word's question about the rest of the sentence |
+| **Key** (K) | "What do I have to offer?" | A description of what this word is |
+| **Value** (V) | "Here's what I'll give you if you pick me" | The actual information the word carries |
 
-## Multi-head attention
+To compute attention for one word:
+1. Take that word's **Query**
+2. Compare it to every other word's **Key** — by computing how similar the two vectors are (a dot product)
+3. The result is a *relevance score* for every word
+4. Pass those scores through a softmax (which makes them add up to 1)
+5. Multiply each **Value** by its score, add them all up — that's the output
 
-Instead of one attention computation, the model runs H parallel "heads" with different Q/K/V projections, then concatenates results. Each head learns to attend to different aspects:
-- Head 1 might capture syntactic relationships
-- Head 2 might capture semantic similarity
-- Head 3 might capture positional proximity
+If a Query strongly matches a Key, you get most of that word's Value. If it weakly matches, you get a little. Every word ends up as a *blend* of everything else in the sentence, weighted by relevance.
 
-## Positional encoding
+It's like a very fancy weighted average — but the model learns *which* things to weight high for which contexts.
 
-Attention has no inherent sense of order — "cat sat mat" and "mat sat cat" would produce identical attention patterns without positional encoding. The original transformer added sinusoidal positional signals; modern models use **RoPE** (Rotary Position Embedding), which scales better to long contexts.
+## A trick that makes it more powerful
 
-## Feed-forward network (FFN)
+In practice, transformers don't run attention once. They run it **dozens of times in parallel**, in different "heads" — each head can specialize.
 
-Each block's FFN is two linear transformations with a non-linearity (GELU):
+One head might learn to focus on grammatical relationships ("which word is the subject?"). Another might focus on meaning ("which words are about food?"). Another on proximity ("which words are nearby?"). The model combines all of them.
 
-\`\`\`
-FFN(x) = GELU(x · W1 + b1) · W2 + b2
-\`\`\`
+This is called **multi-head attention**. The exact number varies — GPT-4 has around 96 attention heads per layer, across 120 layers. That's *thousands* of these little attention operations every time you ask it a question.
 
-The FFN has 4× the hidden dimension of attention — it's where most parameters live and is believed to store factual knowledge.
+## Stacking layers — why depth matters
 
-## Encoder vs decoder vs encoder-decoder
+A single attention layer can only look one step deep. To understand more complex relationships, you need to stack many layers. Each layer can re-attend over the previous layer's enriched representations.
 
-| Architecture | Examples | Used for |
-|-------------|---------|---------|
-| Decoder-only | GPT, Claude, Llama | Text generation, chat |
-| Encoder-only | BERT, RoBERTa | Classification, embeddings |
-| Encoder-decoder | T5, BART | Translation, summarization |
+After 1 layer: each word knows about its direct neighbours.
+After 5 layers: each word knows about its sentence.
+After 30 layers: each word knows about the whole paragraph and how it fits.
+After 100 layers (GPT-4): each word knows about subtle multi-step relationships across the entire input.
 
-Modern chat models are almost exclusively decoder-only.
+That's why bigger transformers are smarter. More layers = deeper understanding.
 
-## Why context windows are limited
+## The catch: it's expensive
 
-Self-attention is O(n²) in sequence length — doubling the context quadruples the compute. A 128K context window requires ~16× the attention compute of 32K. This is why longer contexts cost more and have higher latency. Techniques like **FlashAttention** and **sliding window attention** reduce this, but the quadratic relationship is a fundamental constraint.
+Attention has a problem. For a sentence of length *N*, the model has to compute attention between every pair of words. That's *N × N* computations.
 
-## Key insight for engineers
+If you double the sentence length, you don't double the work — you **quadruple** it.
 
-The transformer's power comes from its ability to route information *directly* between any two tokens in the context, regardless of distance. This is why LLMs can "remember" something mentioned at the start of a 100K-token document. RNNs couldn't do this reliably.
+This is why "context windows" (the max input length) are finite. A model with a 128,000-token context window is doing roughly 16× the attention work of a 32,000-token one. That's why bigger contexts cost more and run slower — and why models advertise their context size like it's a feature (it is).
+
+## What you now know
+
+- Attention is just: "for each word, compute weighted relevance to every other word, blend their information"
+- Multi-head attention runs many of these in parallel, each specializing
+- Stacking layers lets the model learn deeper, more abstract patterns
+- The quadratic cost (N²) is the fundamental limit on context window size
+
+If you understand attention, you understand the engine of every modern LLM. The rest is engineering — bigger, faster, better-trained, but the same core idea.
+
+## What's next
+
+Next we'll cover **tokenization** (how your text actually gets converted into the model's input) and **sampling** (the knobs that make models "creative" vs "factual"). These are the levers you'll actually touch when building with LLMs.
 `;
 
 const LLM_L3_CONTENT = `# Tokenization, Temperature & Sampling
@@ -2518,77 +2639,148 @@ The goal isn't perfection — agents will sometimes fail. The goal is **graceful
 
 // ─── SQL MASTERY PATH ─────────────────────────────────────────────────────────
 
-const SQL_L1_CONTENT = `# The Relational Model & SELECT Fundamentals
+const SQL_L1_CONTENT = `# Your First SQL Query — How Databases Think
 
-You already think in events and streams from Kafka. SQL asks you to think in **sets** instead — a query doesn't loop over rows, it describes the *result set* you want and lets the optimiser pick how to get there.
+Imagine you have a spreadsheet with 10 million rows of customer orders. You want to find every order from "Alice" that's over $100. How would you do it in your head? You'd flip through the rows one by one, checking each.
 
-## The mental shift
+A database can do exactly that. But it would be *slow*. So instead, SQL asks you to do something a little weird: **describe what you want, not how to find it**.
 
-| Java / Kafka | SQL |
-|--------------|-----|
-| Imperative \`for (Order o : orders)\` | Declarative \`SELECT … FROM orders WHERE …\` |
-| You decide *how* to iterate | The optimiser decides *how* to retrieve |
-| One record at a time | A *relation* (a multiset of tuples) at a time |
-| Consumer offsets, partitions | Indexes, statistics, query plans |
+That's the whole game.
 
-Stop thinking *rows*. Start thinking **sets**.
+## A query is a sentence
 
-## The clause order vs. the execution order
+Here's what a SQL query looks like:
 
-The order you *write* a query is not the order the database *runs* it.
-
-\`\`\`sql
--- Written order
-SELECT   col1, col2
-FROM     table_a a
-JOIN     table_b b ON a.id = b.a_id
-WHERE    a.status = 'active'
-GROUP BY col1
-HAVING   COUNT(*) > 3
-ORDER BY col1
-LIMIT    10;
+\`\`\`
+SELECT name, total
+FROM orders
+WHERE customer_id = 1
 \`\`\`
 
-**Logical execution order**: \`FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT\`.
+Read it like English:
 
-Two consequences:
-1. Column aliases defined in \`SELECT\` aren't visible in \`WHERE\` (because \`WHERE\` runs first).
-2. \`HAVING\` filters groups; \`WHERE\` filters rows *before* grouping.
+> "**Select** the *name* and *total* columns, **from** the *orders* table, **where** the *customer_id* equals 1."
 
-## Predicate logic, not boolean logic
+That's it. You're describing the result you want. The database figures out how to get there.
 
-SQL uses **three-valued logic**: \`TRUE\`, \`FALSE\`, and \`UNKNOWN\` (\`NULL\`).
+## Let's try it — for real
 
-\`\`\`sql
-SELECT * FROM users WHERE deleted_at = NULL;    -- always returns 0 rows
-SELECT * FROM users WHERE deleted_at IS NULL;   -- correct
+Below is a real Postgres database running in your browser (no kidding — it's literally Postgres compiled to WebAssembly). It has some sample tables. Click **Run** and you'll see Alice's orders:
+
+\`\`\`sql-playground
+-- @fixture: ecommerce
+-- @hint: Click "Run" or press Cmd/Ctrl + Enter. Then try changing the WHERE clause — what happens with customer_id = 2?
+SELECT id, status, total, created_at
+FROM orders
+WHERE customer_id = 1;
 \`\`\`
 
-\`NULL = NULL\` is \`UNKNOWN\`, not \`TRUE\`. Always use \`IS NULL\` / \`IS NOT NULL\`. This burns every Java engineer's first SQL bug.
+You should see three rows pop out. That's the query result. **No installation, no setup, no server.** You just talked to a database.
 
-## Projection vs. selection
+> Try changing \`customer_id = 1\` to \`customer_id = 2\` and run again. See how the rows change? That's it. That's SQL.
 
-- **Projection** (\`SELECT col1, col2\`) = pick columns.
-- **Selection** (\`WHERE …\`) = pick rows.
+## The four words you'll write the most
 
-Together they slice a relation into a smaller relation. Everything else is built on top.
+Almost every query you ever write will use these four keywords:
 
-## Why \`SELECT *\` is a smell in production code
+| Word | What it does | Example |
+|------|--------------|---------|
+| \`SELECT\` | Pick which columns to return | \`SELECT name, email\` |
+| \`FROM\` | Pick which table to read | \`FROM customers\` |
+| \`WHERE\` | Filter — only keep rows that match | \`WHERE city = 'Austin'\` |
+| \`ORDER BY\` | Sort the results | \`ORDER BY total DESC\` |
 
-1. Network: you transfer columns you don't need
-2. Indexes: prevents *covering-index* optimisations (the DB has to read the heap)
-3. Schema drift: a new column silently changes payload shape, breaking JSON parsers
-4. PII: easy to accidentally exfiltrate sensitive columns
+That's the whole foundation. Let's use them.
 
-In ad-hoc queries, \`*\` is fine. In application code, **enumerate the columns**.
+\`\`\`sql-playground
+-- @fixture: ecommerce
+-- @hint: Customers from Austin, sorted alphabetically. Try changing 'Austin' to 'San Francisco'.
+-- @challenge: Customers who signed up in 2024-04 or later | SELECT name, signed_up FROM customers WHERE signed_up >= '2024-04-01' ORDER BY signed_up;
+-- @challenge: Top 3 most expensive products | SELECT name, price FROM products ORDER BY price DESC LIMIT 3;
+SELECT name, city, signed_up
+FROM customers
+WHERE city = 'Austin'
+ORDER BY name;
+\`\`\`
 
-## DISTINCT vs. GROUP BY
+## Don't think rows — think sets
 
-\`SELECT DISTINCT col1, col2\` and \`SELECT col1, col2 FROM … GROUP BY col1, col2\` produce the same result. They typically use the same execution plan (a HashAggregate). Prefer \`DISTINCT\` for readability when you're not aggregating, \`GROUP BY\` when you need aggregates.
+Here's the mental shift that trips up most beginners.
 
-## Coming up
+In a programming language like Java or Python, you'd loop:
 
-The relational model only becomes powerful when relations interact. Next: **JOINs** — the operation that puts the *relational* in relational database.
+\`\`\`java
+for (Order order : orders) {
+  if (order.customerId == 1 && order.total > 100) {
+    print(order);
+  }
+}
+\`\`\`
+
+That's *imperative* — you tell the computer **how** to do it.
+
+SQL is *declarative* — you tell it **what** you want:
+
+\`\`\`sql
+SELECT * FROM orders WHERE customer_id = 1 AND total > 100;
+\`\`\`
+
+The database decides how to find those rows. On a 10-million-row table with an index, it'll skip 99.9% of the data without you writing a line about that. **That's why SQL is fast.**
+
+## The NULL gotcha (everyone trips on this)
+
+What's the value of "the address of a customer who didn't give an address"? It's not zero. It's not an empty string. It's **NULL** — "unknown."
+
+And here's the trap: in SQL, **NULL is never equal to anything, not even itself**.
+
+\`\`\`sql-playground
+-- @fixture: ecommerce
+-- @hint: Run this. Notice how 0 rows come back? That's the bug. NULL = anything is always "unknown" — never true.
+SELECT * FROM customers WHERE city = NULL;
+\`\`\`
+
+Zero rows? But surely *some* customers don't have a city. The query is broken — silently.
+
+The fix:
+
+\`\`\`sql-playground
+-- @fixture: ecommerce
+-- @hint: Use IS NULL instead of = NULL. Always. No exceptions.
+SELECT name, city FROM customers WHERE city IS NULL;
+\`\`\`
+
+Same idea works for checking the opposite: use \`IS NOT NULL\`, never \`!= NULL\` or \`<> NULL\`.
+
+This bug bites everyone exactly once. Remember it and you'll save your future self hours.
+
+## A trick that feels like cheating
+
+Want to know how many customers you have? You don't need to count them yourself:
+
+\`\`\`sql-playground
+-- @fixture: ecommerce
+-- @hint: COUNT(*) is a "function" — it counts rows. Try grouping by city to see customers per city.
+-- @challenge: Customers per city | SELECT city, COUNT(*) AS customers FROM customers GROUP BY city ORDER BY customers DESC;
+-- @challenge: How much revenue have we made? | SELECT SUM(total) AS revenue FROM orders WHERE status = 'completed';
+SELECT COUNT(*) AS total_customers FROM customers;
+\`\`\`
+
+\`COUNT(*)\` is your first **aggregate function** — it boils down a whole bunch of rows into a single number. There are more (\`SUM\`, \`AVG\`, \`MIN\`, \`MAX\`) and you'll meet them in lesson 3.
+
+## What you can do right now
+
+You're not a SQL expert yet. But after this lesson, you can:
+
+- ✅ Read any \`SELECT … FROM … WHERE … ORDER BY\` query and understand what it's asking
+- ✅ Write your own queries against simple tables
+- ✅ Avoid the NULL trap that bites everyone
+- ✅ Count rows and filter them by any condition
+
+That's already more SQL than 80% of the engineers in the industry use day-to-day.
+
+## What's next
+
+Tables on their own are useful. But the magic happens when you **combine** tables together — customers with their orders, orders with their products. That's called a **JOIN**, and it's the next lesson.
 `;
 
 const SQL_L2_CONTENT = `# JOINs Deep Dive: How Relations Compose

@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { IconRail } from "@/components/layout/IconRail";
+import { CommandPalette } from "@/components/layout/CommandPalette";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -13,12 +14,35 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     });
   }
 
+  // Index of every course + lesson — fed to the global Cmd-K palette.
+  const pathsRaw = await prisma.learningPath.findMany({
+    orderBy: { order: "asc" },
+    include: { lessons: { orderBy: { order: "asc" }, select: { slug: true, title: true } } },
+  });
+
+  const palettePaths = pathsRaw.map((p) => ({
+    slug: p.slug,
+    title: p.title,
+    description: p.description,
+    lessonCount: p.lessons.length,
+  }));
+
+  const paletteLessons = pathsRaw.flatMap((p) =>
+    p.lessons.map((l) => ({
+      slug: l.slug,
+      title: l.title,
+      pathSlug: p.slug,
+      pathTitle: p.title,
+    })),
+  );
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-app)" }}>
       <IconRail user={userRecord ?? (session?.user ? { name: session.user.name, email: session.user.email, image: session.user.image } : null)} />
       <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         {children}
       </main>
+      <CommandPalette paths={palettePaths} lessons={paletteLessons} />
     </div>
   );
 }

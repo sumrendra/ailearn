@@ -272,6 +272,15 @@ code, pre {
   transform: translateY(-2px);
 }
 
+/* Slow spinner — used by SQL playground status pill */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.spin-slow {
+  animation: spin-slow 1.2s linear infinite;
+  display: inline-flex;
+}
+
 /* ── Heatmap ────────────────────────────────────────────────────────────────── */
 .heatmap-cell { border-radius: 2px; transition: transform 0.1s; }
 .heatmap-cell:hover { transform: scale(1.4); }

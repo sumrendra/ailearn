@@ -2,7 +2,6 @@
 
 import { Sun, Moon, Search } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
-import Link from "next/link";
 
 interface TopbarProps {
   title?: string;
@@ -48,41 +47,44 @@ export function Topbar({ title, subtitle }: TopbarProps) {
         )}
       </div>
 
-      {/* Search */}
-      <Link href="/search" style={{ textDecoration: "none" }}>
-        <div style={{
+      {/* Search — opens the global command palette */}
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new CustomEvent("ailearn:open-palette"))}
+        style={{
           display: "flex", alignItems: "center", gap: 8,
           background: "var(--bg-secondary)",
           border: "1px solid var(--border-subtle)",
           borderRadius: "var(--radius-full)",
           padding: "6px 16px",
           cursor: "pointer",
-          minWidth: 200,
+          minWidth: 220,
           transition: "border-color 0.12s, box-shadow 0.12s",
+          fontFamily: "inherit",
         }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--accent)";
-            (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px rgba(108,71,255,0.1)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)";
-            (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
-          }}
-        >
-          <Search size={13} color="var(--text-tertiary)" />
-          <span style={{ fontSize: 13, color: "var(--text-tertiary)", flex: 1 }}>
-            Search lessons...
-          </span>
-          <kbd style={{
-            fontSize: 10,
-            background: "var(--bg-tertiary)",
-            border: "1px solid var(--border-default)",
-            borderRadius: 4, padding: "1px 5px",
-            color: "var(--text-tertiary)",
-            fontFamily: "inherit",
-          }}>⌘K</kbd>
-        </div>
-      </Link>
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--accent)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 0 3px rgba(108,71,255,0.1)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-subtle)";
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
+        }}
+        title="Open command palette"
+      >
+        <Search size={13} color="var(--text-tertiary)" />
+        <span style={{ fontSize: 13, color: "var(--text-tertiary)", flex: 1, textAlign: "left" }}>
+          Search courses, lessons...
+        </span>
+        <kbd style={{
+          fontSize: 10,
+          background: "var(--bg-tertiary)",
+          border: "1px solid var(--border-default)",
+          borderRadius: 4, padding: "1px 5px",
+          color: "var(--text-tertiary)",
+          fontFamily: "inherit",
+        }}>⌘K</kbd>
+      </button>
 
       {/* Theme toggle */}
       <button

@@ -10,9 +10,31 @@ import {
   Clock, Zap, ChevronLeft, ChevronRight, Lightbulb,
 } from "lucide-react";
 import { TutorChat } from "@/components/ai/TutorChat";
+import { SqlPlayground } from "@/components/playground/SqlPlayground";
+import { AttentionVisualizer } from "@/components/diagrams/AttentionVisualizer";
+import { EmbeddingExplorer } from "@/components/diagrams/EmbeddingExplorer";
+import { parseLessonBlock } from "@/lib/lesson-blocks";
+import { type FixtureKey } from "@/lib/sql-fixtures";
 import Link from "next/link";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Walk a react-markdown child tree and pull out the raw text content.
+ * Used to recover the source body of a fenced code block (e.g. ```sql-playground)
+ * so we can hand it to an interactive component.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractTextContent(node: any): string {
+  if (node == null) return "";
+  if (typeof node === "string") return node;
+  if (Array.isArray(node)) return node.map(extractTextContent).join("");
+  if (typeof node === "object") {
+    if (typeof node.props?.children !== "undefined") return extractTextContent(node.props.children);
+    if (node.value) return String(node.value);
+  }
+  return "";
+}
 
 function slugify(text: string): string {
   return String(text)
@@ -405,11 +427,35 @@ export function LessonViewer({
                 return <code className={className} {...props}>{children}</code>;
               },
 
-              // Code block → CodeBlock component
+              // Code block → either an interactive block or the CodeBlock component
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               pre: ({ children }: any) => {
                 const lang =
                   (children?.props?.className ?? "").replace("language-", "") || "code";
+
+                // Interactive SQL playground — fenced as ```sql-playground
+                if (lang === "sql-playground") {
+                  const raw = extractTextContent(children);
+                  const { meta, challenges, body } = parseLessonBlock(raw);
+                  const fixture = (meta.fixture as FixtureKey) || "ecommerce";
+                  return (
+                    <SqlPlayground
+                      fixture={fixture}
+                      initial={body}
+                      hint={meta.hint}
+                      challenges={challenges.length ? challenges : undefined}
+                    />
+                  );
+                }
+
+                // Interactive diagrams — fenced as ```diagram-attention etc.
+                if (lang === "diagram-attention") {
+                  return <AttentionVisualizer />;
+                }
+                if (lang === "diagram-embeddings") {
+                  return <EmbeddingExplorer />;
+                }
+
                 return (
                   <CodeBlock language={lang}>{children}</CodeBlock>
                 );
