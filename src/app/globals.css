@@ -262,6 +262,16 @@ code, pre {
   transform: translateY(-1px);
 }
 
+/* Learning-path card hover states (premium feel — lift + brighter border) */
+.path-card-row:hover > div {
+  border-color: var(--border-default) !important;
+  box-shadow: var(--shadow-md) !important;
+  transform: translateY(-1px);
+}
+.path-tile:hover > div {
+  transform: translateY(-2px);
+}
+
 /* ── Heatmap ────────────────────────────────────────────────────────────────── */
 .heatmap-cell { border-radius: 2px; transition: transform 0.1s; }
 .heatmap-cell:hover { transform: scale(1.4); }

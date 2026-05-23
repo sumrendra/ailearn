@@ -2516,6 +2516,679 @@ Before deploying an agent to production:
 The goal isn't perfection — agents will sometimes fail. The goal is **graceful, observable failure** that you can diagnose and improve.
 `;
 
+// ─── SQL MASTERY PATH ─────────────────────────────────────────────────────────
+
+const SQL_L1_CONTENT = `# The Relational Model & SELECT Fundamentals
+
+You already think in events and streams from Kafka. SQL asks you to think in **sets** instead — a query doesn't loop over rows, it describes the *result set* you want and lets the optimiser pick how to get there.
+
+## The mental shift
+
+| Java / Kafka | SQL |
+|--------------|-----|
+| Imperative \`for (Order o : orders)\` | Declarative \`SELECT … FROM orders WHERE …\` |
+| You decide *how* to iterate | The optimiser decides *how* to retrieve |
+| One record at a time | A *relation* (a multiset of tuples) at a time |
+| Consumer offsets, partitions | Indexes, statistics, query plans |
+
+Stop thinking *rows*. Start thinking **sets**.
+
+## The clause order vs. the execution order
+
+The order you *write* a query is not the order the database *runs* it.
+
+\`\`\`sql
+-- Written order
+SELECT   col1, col2
+FROM     table_a a
+JOIN     table_b b ON a.id = b.a_id
+WHERE    a.status = 'active'
+GROUP BY col1
+HAVING   COUNT(*) > 3
+ORDER BY col1
+LIMIT    10;
+\`\`\`
+
+**Logical execution order**: \`FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT\`.
+
+Two consequences:
+1. Column aliases defined in \`SELECT\` aren't visible in \`WHERE\` (because \`WHERE\` runs first).
+2. \`HAVING\` filters groups; \`WHERE\` filters rows *before* grouping.
+
+## Predicate logic, not boolean logic
+
+SQL uses **three-valued logic**: \`TRUE\`, \`FALSE\`, and \`UNKNOWN\` (\`NULL\`).
+
+\`\`\`sql
+SELECT * FROM users WHERE deleted_at = NULL;    -- always returns 0 rows
+SELECT * FROM users WHERE deleted_at IS NULL;   -- correct
+\`\`\`
+
+\`NULL = NULL\` is \`UNKNOWN\`, not \`TRUE\`. Always use \`IS NULL\` / \`IS NOT NULL\`. This burns every Java engineer's first SQL bug.
+
+## Projection vs. selection
+
+- **Projection** (\`SELECT col1, col2\`) = pick columns.
+- **Selection** (\`WHERE …\`) = pick rows.
+
+Together they slice a relation into a smaller relation. Everything else is built on top.
+
+## Why \`SELECT *\` is a smell in production code
+
+1. Network: you transfer columns you don't need
+2. Indexes: prevents *covering-index* optimisations (the DB has to read the heap)
+3. Schema drift: a new column silently changes payload shape, breaking JSON parsers
+4. PII: easy to accidentally exfiltrate sensitive columns
+
+In ad-hoc queries, \`*\` is fine. In application code, **enumerate the columns**.
+
+## DISTINCT vs. GROUP BY
+
+\`SELECT DISTINCT col1, col2\` and \`SELECT col1, col2 FROM … GROUP BY col1, col2\` produce the same result. They typically use the same execution plan (a HashAggregate). Prefer \`DISTINCT\` for readability when you're not aggregating, \`GROUP BY\` when you need aggregates.
+
+## Coming up
+
+The relational model only becomes powerful when relations interact. Next: **JOINs** — the operation that puts the *relational* in relational database.
+`;
+
+const SQL_L2_CONTENT = `# JOINs Deep Dive: How Relations Compose
+
+A \`JOIN\` is a Cartesian product followed by a filter. That's all — but the semantics of \`INNER\`, \`LEFT\`, \`RIGHT\`, \`FULL\`, and \`CROSS\` decide which rows survive when matches are missing.
+
+## The seven joins, by what they keep
+
+\`\`\`
+A: orders          B: customers
+   1, alice           1, alice@…
+   2, bob             3, carol@…
+   3, carol
+\`\`\`
+
+| Join | What survives | Result row count |
+|------|--------------|------------------|
+| \`INNER\` | Only rows in **both** A and B (matched on key) | 2 (alice, carol) |
+| \`LEFT\`  | All of A, B columns NULL when no match | 3 (bob's B columns NULL) |
+| \`RIGHT\` | All of B, A columns NULL when no match | 2 (no orphan customer) |
+| \`FULL\`  | All of A *and* all of B, NULL on either side | 3 |
+| \`CROSS\` | Every row in A × every row in B | 9 (no condition) |
+| \`SEMI\`  | Rows in A that *have* a match in B (no B cols) — written \`WHERE EXISTS\` | 2 |
+| \`ANTI\`  | Rows in A that *do not* have a match in B — written \`WHERE NOT EXISTS\` | 1 (bob) |
+
+## The mental model
+
+Visualise it as Venn diagrams. INNER is the intersection. LEFT is left circle + intersection. FULL is the union. Anti-join is left circle *minus* intersection.
+
+## The deadly classic: filtering an OUTER join in WHERE
+
+\`\`\`sql
+-- BUG: this is no longer an outer join
+SELECT *
+FROM   orders o
+LEFT JOIN refunds r ON r.order_id = o.id
+WHERE  r.status = 'pending';
+\`\`\`
+
+Because \`r.status\` is \`NULL\` for orders without refunds, the \`WHERE\` clause filters those rows out — silently converting your LEFT JOIN into an INNER JOIN. Fix:
+
+\`\`\`sql
+LEFT JOIN refunds r ON r.order_id = o.id AND r.status = 'pending'
+\`\`\`
+
+Move the predicate to the \`ON\` clause so non-matching rows still pass through with NULL refund columns.
+
+## Self-join: hierarchies, sequences, gaps
+
+\`\`\`sql
+-- Find direct reports for each manager
+SELECT  e.name AS employee, m.name AS manager
+FROM    employees e
+LEFT JOIN employees m ON e.manager_id = m.id;
+\`\`\`
+
+For arbitrary-depth hierarchies, use a **recursive CTE** instead (covered later).
+
+## Semi/anti joins via EXISTS
+
+In Postgres, \`EXISTS\` typically optimises better than \`IN (SELECT …)\` for correlated subqueries because it short-circuits on the first match.
+
+\`\`\`sql
+-- All customers who have placed at least one order
+SELECT c.*
+FROM   customers c
+WHERE  EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id);
+\`\`\`
+
+## Join algorithm intuition
+
+The optimiser picks one of three physical algorithms:
+
+| Algorithm | Best when |
+|-----------|-----------|
+| **Nested loop** | One side is tiny, or you have an index on the join key |
+| **Hash join** | Both sides are large and unsorted, equality predicate |
+| **Merge join** | Both inputs are already sorted on the join key (e.g. index ordering) |
+
+You don't pick directly. You shape input sizes (via \`WHERE\` pushdowns) and provide indexes (next lesson) — the planner picks.
+
+## Practical patterns
+
+\`\`\`sql
+-- Latest record per group (using LATERAL — a per-row subquery)
+SELECT u.id, u.name, latest.created_at, latest.payload
+FROM   users u
+LEFT JOIN LATERAL (
+  SELECT created_at, payload
+  FROM   events e
+  WHERE  e.user_id = u.id
+  ORDER BY created_at DESC
+  LIMIT 1
+) latest ON true;
+\`\`\`
+
+LATERAL is the SQL answer to "for each row in A, run a query that depends on A".
+
+## Coming up
+
+JOINs combine relations. Next, you combine *rows within a relation* — aggregation and window functions.
+`;
+
+const SQL_L3_CONTENT = `# Aggregation & Window Functions
+
+Aggregation collapses groups of rows into a single row per group. **Window functions** compute group-aware values while keeping every row visible — that distinction is what makes them so powerful.
+
+## Standard aggregation
+
+\`\`\`sql
+SELECT  customer_id,
+        COUNT(*)              AS order_count,
+        SUM(total)            AS lifetime_value,
+        AVG(total)            AS avg_order,
+        MAX(created_at)       AS last_order_at
+FROM    orders
+GROUP BY customer_id
+HAVING  COUNT(*) >= 3;
+\`\`\`
+
+- \`COUNT(*)\` counts rows, including NULLs.
+- \`COUNT(col)\` counts non-NULL values in \`col\`.
+- \`COUNT(DISTINCT col)\` counts unique non-NULL values (more expensive — requires a sort or hash).
+
+## The "every column in SELECT must be in GROUP BY (or aggregated)" rule
+
+\`\`\`sql
+-- INVALID in standard SQL — name is not in GROUP BY and not aggregated
+SELECT customer_id, name, COUNT(*) FROM orders GROUP BY customer_id;
+\`\`\`
+
+Postgres lets you SELECT functionally-dependent columns (e.g. \`name\` when grouping by \`customer_id\` and there's a \`PRIMARY KEY\` on \`customers\`), but writing \`MIN(name)\` or grouping by both is more portable.
+
+## Filtered aggregation: FILTER
+
+Way cleaner than \`CASE WHEN\` inside aggregates:
+
+\`\`\`sql
+SELECT
+  COUNT(*)                                                AS total,
+  COUNT(*) FILTER (WHERE status = 'completed')            AS completed,
+  COUNT(*) FILTER (WHERE created_at >= now() - INTERVAL '7 days') AS last_week,
+  AVG(amount) FILTER (WHERE refunded_at IS NULL)          AS avg_non_refunded
+FROM orders;
+\`\`\`
+
+Single pass, one row of output, multiple filtered views.
+
+## Window functions: the breakthrough
+
+\`OVER (…)\` turns an aggregate into a *windowed* computation — it sees a group of rows but still emits one row per input.
+
+\`\`\`sql
+SELECT
+  order_id, customer_id, total,
+  -- Rank each customer's orders by amount
+  ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY total DESC) AS rk,
+  -- Running total within each customer
+  SUM(total)   OVER (PARTITION BY customer_id ORDER BY created_at) AS running_total,
+  -- Total of each customer's lifetime value, visible on every row
+  SUM(total)   OVER (PARTITION BY customer_id)                     AS lifetime_value
+FROM orders;
+\`\`\`
+
+## The window-function vocabulary
+
+| Function | What it computes |
+|----------|-----------------|
+| \`ROW_NUMBER()\` | Unique sequential rank within partition |
+| \`RANK()\` | Same rank for ties, with gaps (1,2,2,4) |
+| \`DENSE_RANK()\` | Same rank for ties, no gaps (1,2,2,3) |
+| \`LAG(col, n)\` | Value from n rows back |
+| \`LEAD(col, n)\` | Value from n rows ahead |
+| \`FIRST_VALUE\` / \`LAST_VALUE\` | Bounds of the window |
+| \`NTILE(n)\` | Bucket into n equal-sized groups |
+| \`PERCENT_RANK\`, \`CUME_DIST\` | Percentile-style ranking |
+
+## Top-N per group (canonical pattern)
+
+\`\`\`sql
+-- Top 3 orders by amount per customer
+WITH ranked AS (
+  SELECT *,
+         ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY total DESC) AS rn
+  FROM orders
+)
+SELECT * FROM ranked WHERE rn <= 3;
+\`\`\`
+
+Memorise this. You'll use it weekly.
+
+## Frame clauses
+
+The default frame for ordered windows is \`RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW\` — handy for running totals. You can change it:
+
+\`\`\`sql
+-- 7-day rolling average
+AVG(amount) OVER (
+  ORDER BY date
+  RANGE BETWEEN INTERVAL '6 days' PRECEDING AND CURRENT ROW
+) AS rolling_7d_avg
+\`\`\`
+
+## When to use aggregation vs. window functions
+
+- **Aggregation**: you only want the summary — one row per group.
+- **Window**: you want each row enriched with information about its group.
+
+If you find yourself joining a GROUP BY subquery back to the original table to enrich rows, that's a window function pattern.
+
+## Coming up
+
+You have a SELECT, you joined three tables, you windowed by customer — and the query takes 30 seconds. Next: **indexes and query plans**.
+`;
+
+const SQL_L4_CONTENT = `# Indexes & Query Performance
+
+A query is only as fast as its plan. The optimiser uses statistics + available indexes to choose between sequential scans, index scans, hash joins, merge joins. Your job is to **read the plan**, identify the bottleneck, and feed the optimiser the right indexes.
+
+## Read the plan first, optimise second
+
+\`\`\`sql
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT * FROM orders WHERE customer_id = 42 AND status = 'pending';
+\`\`\`
+
+Key things to look for:
+
+| Symptom | Means |
+|---------|-------|
+| \`Seq Scan on orders … rows=10 (actual rows=10)\` | Scanning everything; OK for small tables |
+| \`Seq Scan … rows=100 (actual rows=10000)\` | Stats are stale — \`ANALYZE\` the table |
+| \`Index Cond:\` present | Using an index, good |
+| \`Filter:\` present after Index Scan | Index narrowed it, but a non-indexed column still required a row check |
+| \`Rows Removed by Filter: 9990\` | Most of what the index returned was discarded — wrong index choice |
+| \`Buffers: shared hit=X read=Y\` | \`read\` means disk I/O; \`hit\` means cached |
+
+## B-tree indexes — the default
+
+A B-tree index on \`(customer_id)\` makes \`WHERE customer_id = ?\` an \`O(log n)\` lookup. It also helps:
+- Range scans: \`WHERE customer_id BETWEEN 100 AND 200\`
+- \`ORDER BY customer_id\` (the index is already sorted)
+- Equality on a *prefix* of a multi-column index
+
+## Composite index ordering matters
+
+\`CREATE INDEX ON orders (customer_id, status)\` helps:
+
+| Query | Uses index? |
+|-------|------------|
+| \`WHERE customer_id = ? AND status = ?\` | Yes, fully |
+| \`WHERE customer_id = ?\` | Yes (prefix) |
+| \`WHERE status = ?\` | **No** — status is not a prefix |
+| \`WHERE customer_id = ? ORDER BY status\` | Yes — index is already sorted |
+
+Rule of thumb: **equality columns first, range/sort columns last**.
+
+## Index types beyond B-tree
+
+| Type | Best for |
+|------|---------|
+| **B-tree** | Equality, range, ORDER BY — the default |
+| **Hash** | Equality only; rarely worth it over B-tree |
+| **GIN** | Containment: JSONB, full-text search, arrays |
+| **GiST** | Geometric/range overlap, fuzzy text |
+| **BRIN** | Huge tables where values correlate with physical order (time-series) |
+| **HNSW / IVFFlat** (pgvector) | Approximate vector similarity |
+
+## Partial indexes
+
+If 99% of your rows have \`status = 'completed'\` and you mostly query the 1% pending:
+
+\`\`\`sql
+CREATE INDEX ON orders (created_at) WHERE status = 'pending';
+\`\`\`
+
+Index is tiny, lookups are fast, writes to completed rows don't pay the index cost. Big win for skewed data.
+
+## Expression indexes
+
+\`\`\`sql
+-- Case-insensitive email lookup
+CREATE INDEX ON users (LOWER(email));
+SELECT * FROM users WHERE LOWER(email) = LOWER($1);
+\`\`\`
+
+The index expression must match the query expression *exactly*.
+
+## Covering indexes & INCLUDE
+
+\`\`\`sql
+CREATE INDEX ON orders (customer_id) INCLUDE (total, created_at);
+-- Index-only scan possible if SELECT only references customer_id, total, created_at
+\`\`\`
+
+The DB never visits the heap. Massive speedup for read-heavy paths.
+
+## Things that defeat indexes silently
+
+\`\`\`sql
+-- ❌ Function on the column
+WHERE LOWER(email) = 'foo'              -- needs an expression index
+
+-- ❌ Implicit cast
+WHERE varchar_col = 123                  -- the 123 gets cast to varchar… or vice versa
+
+-- ❌ Leading wildcard
+WHERE name LIKE '%smith'                 -- B-tree can't help; use trigram (GIN) index
+
+-- ❌ OR across different columns
+WHERE customer_id = 5 OR status = 'pending'
+-- Often falls back to Seq Scan. Rewrite as UNION ALL.
+\`\`\`
+
+## When NOT to index
+
+- Tiny tables (< ~1000 rows): Seq Scan is faster
+- Write-heavy columns: each index slows INSERT/UPDATE
+- Low-cardinality columns alone (e.g. \`gender\`): partial index or compound
+
+## The optimisation loop
+
+1. \`EXPLAIN ANALYZE\` the slow query
+2. Find the node with the highest \`actual time\` and \`actual rows\` × \`loops\`
+3. Hypothesis: missing index, stale stats, bad join order, fetching too many rows
+4. Test the fix
+5. Re-run \`EXPLAIN ANALYZE\` — confirm the plan changed
+
+## Coming up
+
+Performance only matters if your data stays correct under concurrency. Next: **transactions, isolation levels, and locking**.
+`;
+
+const SQL_L5_CONTENT = `# Transactions, Isolation Levels & Locking
+
+You shipped a beautiful query. In production under load, you get duplicate charges, lost updates, and phantom reads. Welcome to **concurrency** — the part of SQL where Java's \`synchronized\` intuitions fail you.
+
+## ACID, quickly
+
+| Letter | Means | What it gives you |
+|--------|-------|-------------------|
+| **A**tomicity | All or nothing | Partial failure rolls back |
+| **C**onsistency | Constraints always hold | DB-enforced invariants |
+| **I**solation | Concurrent txns don't interfere (subject to isolation level) | Predictable reads |
+| **D**urability | Committed data survives crash | WAL + fsync |
+
+You usually get A, C, D for free. **I** is the part you have to think about.
+
+## The four standard isolation levels
+
+| Level | Dirty read | Non-repeatable read | Phantom read | Serialisation anomaly |
+|-------|-----------|---------------------|--------------|----------------------|
+| READ UNCOMMITTED | possible | possible | possible | possible |
+| READ COMMITTED (Postgres default) | no | possible | possible | possible |
+| REPEATABLE READ | no | no | no in PG (yes in standard) | possible |
+| SERIALIZABLE | no | no | no | no |
+
+**Postgres specifics**:
+- READ COMMITTED is the default — each statement sees a fresh snapshot
+- REPEATABLE READ takes a snapshot at the *first statement* of the transaction; subsequent statements all see that snapshot (which means phantoms are prevented too)
+- SERIALIZABLE adds dependency tracking and may abort transactions that would create a serialisation anomaly (you must retry)
+
+## The classic lost-update bug
+
+\`\`\`sql
+-- Transaction A
+BEGIN;
+SELECT balance FROM accounts WHERE id = 1;   -- reads 100
+-- … app calculates new balance = 100 + 20 = 120
+UPDATE accounts SET balance = 120 WHERE id = 1;
+COMMIT;
+
+-- Transaction B (concurrent)
+BEGIN;
+SELECT balance FROM accounts WHERE id = 1;   -- also reads 100
+-- … app calculates 100 + 30 = 130
+UPDATE accounts SET balance = 130 WHERE id = 1;
+COMMIT;
+\`\`\`
+
+Final balance: 130. The +20 is lost. Two correct fixes:
+
+### Fix 1: pessimistic lock with \`SELECT … FOR UPDATE\`
+
+\`\`\`sql
+BEGIN;
+SELECT balance FROM accounts WHERE id = 1 FOR UPDATE;  -- blocks others
+UPDATE accounts SET balance = balance + 20 WHERE id = 1;
+COMMIT;
+\`\`\`
+
+### Fix 2: atomic update — best when possible
+
+\`\`\`sql
+UPDATE accounts SET balance = balance + 20 WHERE id = 1;
+\`\`\`
+
+The increment happens *inside the database*. No read-modify-write race.
+
+### Fix 3: optimistic — version column
+
+\`\`\`sql
+UPDATE accounts SET balance = 120, version = version + 1
+WHERE id = 1 AND version = 7;
+-- If rowCount = 0, someone else updated; retry.
+\`\`\`
+
+Pick based on contention: low contention → optimistic. High → pessimistic. Atomic > both whenever possible.
+
+## Locks you'll actually meet
+
+| Lock | When acquired | Conflicts with |
+|------|---------------|----------------|
+| \`ROW SHARE\` | \`SELECT FOR SHARE\` | exclusive locks on rows |
+| \`ROW EXCLUSIVE\` | \`INSERT\`, \`UPDATE\`, \`DELETE\` | another transaction wanting to touch the same row |
+| \`SHARE\` | rarely directly; some DDL | writes |
+| \`EXCLUSIVE\` | exclusive DDL | nearly everything |
+| \`ACCESS EXCLUSIVE\` | \`ALTER TABLE\`, \`TRUNCATE\` (without \`CONCURRENTLY\`) | all reads and writes |
+
+Production rule: any \`ALTER TABLE\` on a hot table without \`CONCURRENTLY\` or low \`lock_timeout\` is an outage waiting to happen.
+
+## Deadlocks
+
+Two transactions, each holding a lock the other wants. Postgres detects this and aborts one with \`deadlock detected\`. Prevent by **always acquiring locks in the same order** across all code paths. Application-level retry of the loser is standard.
+
+## SKIP LOCKED for work queues
+
+\`\`\`sql
+SELECT * FROM job_queue
+WHERE  status = 'pending'
+ORDER  BY created_at
+LIMIT  1
+FOR UPDATE SKIP LOCKED;
+\`\`\`
+
+Multiple workers can each grab their own job without blocking each other. This is how to build a Postgres-based job queue that actually scales.
+
+## Long transactions are the silent killer
+
+A transaction held open for 30 minutes:
+- Holds row locks → blocks others
+- Prevents \`VACUUM\` from reclaiming dead tuples → table bloat
+- Holds the snapshot, so other txns can't recycle XIDs
+
+**Keep transactions short. Don't do network I/O inside them.**
+
+## Coming up
+
+Next: the advanced patterns that turn SQL from a CRUD tool into a query engine — CTEs, JSON, and \`pgvector\` for AI workloads.
+`;
+
+const SQL_L6_CONTENT = `# Advanced SQL: CTEs, JSON & pgvector for AI Systems
+
+You can do real engineering in SQL. This lesson covers the tools that put production analytics, hybrid storage, and AI retrieval in your stack — without bolting on a separate system.
+
+## CTEs: name your subqueries
+
+\`\`\`sql
+WITH recent_orders AS (
+  SELECT * FROM orders WHERE created_at >= now() - INTERVAL '30 days'
+),
+totals AS (
+  SELECT customer_id, SUM(total) AS spend FROM recent_orders GROUP BY customer_id
+)
+SELECT c.name, t.spend
+FROM   customers c
+JOIN   totals t USING (customer_id)
+WHERE  t.spend > 500;
+\`\`\`
+
+Readability win. **Performance note (Postgres ≥ 12)**: CTEs are no longer always materialised — the planner inlines them by default. Use \`WITH x AS MATERIALIZED (…)\` if you specifically want the temp-table behaviour.
+
+## Recursive CTEs: graphs and trees in SQL
+
+\`\`\`sql
+-- Walk a manager hierarchy
+WITH RECURSIVE org AS (
+  -- Base case: CEO
+  SELECT id, name, manager_id, 1 AS depth
+  FROM   employees WHERE manager_id IS NULL
+
+  UNION ALL
+
+  -- Step: anyone whose manager is already in the result
+  SELECT e.id, e.name, e.manager_id, o.depth + 1
+  FROM   employees e
+  JOIN   org o ON e.manager_id = o.id
+)
+SELECT * FROM org ORDER BY depth, name;
+\`\`\`
+
+The same shape handles category trees, comment threads, bill-of-materials, dependency graphs.
+
+## JSON / JSONB — when you don't have a schema yet
+
+\`\`\`sql
+-- Column type
+ALTER TABLE events ADD COLUMN payload JSONB;
+
+-- Query inside
+SELECT payload->>'user_id'     AS user_id,
+       (payload->'meta'->>'ip') AS ip
+FROM   events
+WHERE  payload @> '{"type":"signup"}';
+
+-- Index a path expression
+CREATE INDEX ON events USING GIN ((payload->'meta'));
+CREATE INDEX ON events USING GIN (payload jsonb_path_ops);  -- containment-only, smaller
+\`\`\`
+
+| Operator | Meaning |
+|----------|---------|
+| \`->\` | Get JSON value at key |
+| \`->>\` | Get value at key as text |
+| \`@>\` | Left contains right (uses GIN) |
+| \`?\` | Key exists |
+| \`#>>\` | Get path as text |
+
+**When to use JSONB**: optional/sparse attributes, ingestion of external schemas, payload columns on event tables. **When not to**: relational data that's queried via specific fields — those should be real columns.
+
+## UPSERT — INSERT … ON CONFLICT
+
+\`\`\`sql
+INSERT INTO sessions (user_id, last_seen)
+VALUES ($1, now())
+ON CONFLICT (user_id) DO UPDATE
+SET last_seen = EXCLUDED.last_seen;
+\`\`\`
+
+\`EXCLUDED\` refers to the row that *would have been* inserted. The cleanest way to express "create-or-update" in one round trip.
+
+## LATERAL again — per-row correlated subqueries
+
+\`\`\`sql
+-- Most recent 3 events per user, denormalised
+SELECT u.id, u.name, e.*
+FROM   users u
+CROSS JOIN LATERAL (
+  SELECT * FROM events
+  WHERE  events.user_id = u.id
+  ORDER  BY created_at DESC
+  LIMIT  3
+) e;
+\`\`\`
+
+## pgvector — vector search in Postgres
+
+The same database can power your RAG retrieval. No separate vector DB to operate.
+
+\`\`\`sql
+CREATE EXTENSION vector;
+
+CREATE TABLE documents (
+  id        BIGSERIAL PRIMARY KEY,
+  content   TEXT,
+  embedding VECTOR(1536)        -- OpenAI ada-002 dimension
+);
+
+-- HNSW index for ANN search
+CREATE INDEX ON documents USING hnsw (embedding vector_cosine_ops)
+  WITH (m = 16, ef_construction = 64);
+
+-- Top-5 most similar to a query embedding
+SELECT id, content, 1 - (embedding <=> $1) AS similarity
+FROM   documents
+ORDER  BY embedding <=> $1
+LIMIT  5;
+\`\`\`
+
+| Operator | Distance |
+|----------|----------|
+| \`<->\` | Euclidean (L2) |
+| \`<=>\` | Cosine |
+| \`<#>\` | Negative inner product |
+
+Pick the operator that matches the embedding model's training objective — almost always cosine for modern text embeddings.
+
+## Hybrid search: BM25 (full-text) + vector
+
+\`\`\`sql
+-- A naive linear combination — production systems use RRF or learned re-rankers
+SELECT  id, content,
+        0.5 * ts_rank(to_tsvector('english', content), plainto_tsquery($1))
+      + 0.5 * (1 - (embedding <=> $2)) AS score
+FROM    documents
+WHERE   to_tsvector('english', content) @@ plainto_tsquery($1)
+   OR   embedding <=> $2 < 0.5
+ORDER   BY score DESC
+LIMIT   10;
+\`\`\`
+
+For AI systems on Postgres: **JSONB for raw payloads, pgvector for retrieval, full-text for keyword fallback** — one storage layer, one transaction boundary, one backup. Hard to beat.
+
+## What you now know
+
+You can model relational data, compose queries with joins, aggregate with windows, plan and index for performance, reason about concurrency, and store/retrieve vector embeddings. That's the SQL surface area that powers most production systems — relational, analytical, and AI.
+
+The remaining frontier is *operations*: replication, partitioning, vacuum tuning, point-in-time recovery. That's where DBAs live — but as the engineer who *uses* the database, you now have the toolkit to write queries that are correct, fast, and safe under load.
+`;
+
 // ─── MAIN SEED FUNCTION ───────────────────────────────────────────────────────
 
 async function main() {
@@ -2530,7 +3203,7 @@ async function main() {
       slug: "llm-foundations",
       title: "LLM Foundations",
       description: "Master transformers, attention, tokenization, sampling, and the core engineering concepts behind every large language model.",
-      icon: "🧠",
+      icon: "brain",
       color: "#6c47ff",
       difficulty: "BEGINNER",
       estimatedHours: 8,
@@ -2546,7 +3219,7 @@ async function main() {
       slug: "rag-vector-dbs",
       title: "RAG & Vector Databases",
       description: "Build production-grade retrieval-augmented generation pipelines: embeddings, vector search, chunking strategies, reranking, and evaluation.",
-      icon: "🔍",
+      icon: "database",
       color: "#0f766e",
       difficulty: "INTERMEDIATE",
       estimatedHours: 10,
@@ -2562,12 +3235,128 @@ async function main() {
       slug: "ai-agents",
       title: "AI Agents & Tool Use",
       description: "Build autonomous agents that observe, reason, and act. Tool calling, the ReAct framework, memory, multi-agent systems, and reliability patterns.",
-      icon: "🤖",
+      icon: "cpu",
       color: "#b45309",
       difficulty: "ADVANCED",
       estimatedHours: 12,
       tags: ["Agents", "Tool calling", "ReAct", "LangChain", "LangChain4j"],
       order: 3,
+    },
+  });
+
+  const sqlPath = await prisma.learningPath.upsert({
+    where: { slug: "sql-mastery" },
+    update: {
+      description: "Think in sets, master joins and windows, read query plans, and build AI-ready storage with JSON and pgvector. SQL for senior engineers who already know Java and Kafka.",
+    },
+    create: {
+      slug: "sql-mastery",
+      title: "SQL Mastery",
+      description: "Think in sets, master joins and windows, read query plans, and build AI-ready storage with JSON and pgvector. SQL for senior engineers who already know Java and Kafka.",
+      icon: "table",
+      color: "#1d4ed8",
+      difficulty: "INTERMEDIATE",
+      estimatedHours: 10,
+      tags: ["SQL", "Postgres", "Indexes", "Transactions", "pgvector"],
+      order: 4,
+    },
+  });
+
+  // ── PATH 4: SQL MASTERY ─────────────────────────────────────────────────────
+
+  const sqlL1 = await prisma.lesson.upsert({
+    where: { slug: "sql-relational-model-fundamentals" },
+    update: { content: SQL_L1_CONTENT },
+    create: {
+      slug: "sql-relational-model-fundamentals",
+      title: "The Relational Model & SELECT Fundamentals",
+      description: "Shift from imperative iteration to set-based thinking. Logical clause order, three-valued logic, and why SELECT * is a smell.",
+      pathId: sqlPath.id,
+      order: 1,
+      estimatedMins: 20,
+      xpReward: 60,
+      tags: ["SQL", "Relational Model", "NULL"],
+      content: SQL_L1_CONTENT,
+    },
+  });
+
+  const sqlL2 = await prisma.lesson.upsert({
+    where: { slug: "sql-joins-deep-dive" },
+    update: { content: SQL_L2_CONTENT },
+    create: {
+      slug: "sql-joins-deep-dive",
+      title: "JOINs Deep Dive: How Relations Compose",
+      description: "INNER, LEFT, FULL, CROSS, SEMI, ANTI — and the deadly bug where filtering an outer join in WHERE silently converts it to an inner join.",
+      pathId: sqlPath.id,
+      order: 2,
+      estimatedMins: 25,
+      xpReward: 70,
+      tags: ["JOIN", "LATERAL", "EXISTS"],
+      content: SQL_L2_CONTENT,
+    },
+  });
+
+  const sqlL3 = await prisma.lesson.upsert({
+    where: { slug: "sql-aggregation-window-functions" },
+    update: { content: SQL_L3_CONTENT },
+    create: {
+      slug: "sql-aggregation-window-functions",
+      title: "Aggregation & Window Functions",
+      description: "GROUP BY, FILTER aggregates, and window functions — the breakthrough that lets you rank, lag, and roll without losing per-row context.",
+      pathId: sqlPath.id,
+      order: 3,
+      estimatedMins: 25,
+      xpReward: 75,
+      tags: ["GROUP BY", "Window Functions", "Aggregation"],
+      content: SQL_L3_CONTENT,
+    },
+  });
+
+  const sqlL4 = await prisma.lesson.upsert({
+    where: { slug: "sql-indexes-query-performance" },
+    update: { content: SQL_L4_CONTENT },
+    create: {
+      slug: "sql-indexes-query-performance",
+      title: "Indexes & Query Performance",
+      description: "Read EXPLAIN ANALYZE, choose between B-tree, GIN, GiST, BRIN, partial and covering indexes — and avoid the patterns that silently defeat them.",
+      pathId: sqlPath.id,
+      order: 4,
+      estimatedMins: 30,
+      xpReward: 85,
+      tags: ["Indexes", "EXPLAIN", "Query Plans", "Performance"],
+      content: SQL_L4_CONTENT,
+    },
+  });
+
+  const sqlL5 = await prisma.lesson.upsert({
+    where: { slug: "sql-transactions-isolation-locking" },
+    update: { content: SQL_L5_CONTENT },
+    create: {
+      slug: "sql-transactions-isolation-locking",
+      title: "Transactions, Isolation Levels & Locking",
+      description: "Lost updates, phantom reads, SELECT FOR UPDATE, optimistic vs. pessimistic concurrency, deadlocks, and SKIP LOCKED for work queues.",
+      pathId: sqlPath.id,
+      order: 5,
+      estimatedMins: 28,
+      xpReward: 85,
+      tags: ["Transactions", "Isolation", "Locking", "Concurrency"],
+      content: SQL_L5_CONTENT,
+    },
+  });
+
+  const sqlL6 = await prisma.lesson.upsert({
+    where: { slug: "sql-advanced-cte-json-pgvector" },
+    update: { content: SQL_L6_CONTENT },
+    create: {
+      slug: "sql-advanced-cte-json-pgvector",
+      title: "Advanced SQL: CTEs, JSON & pgvector for AI Systems",
+      description: "Recursive CTEs, JSONB for schema-less columns, UPSERT, LATERAL joins, and using pgvector to put your RAG retrieval inside Postgres.",
+      pathId: sqlPath.id,
+      order: 6,
+      estimatedMins: 30,
+      xpReward: 90,
+      tags: ["CTE", "JSONB", "pgvector", "RAG"],
+      content: SQL_L6_CONTENT,
     },
   });
 
@@ -3253,6 +4042,127 @@ async function main() {
         front: "What is the human-in-the-loop (HITL) pattern for agents and for which action types is it mandatory?",
         back: "HITL: agent pauses and requests explicit human approval before proceeding. Agent generates an action proposal, presents it to the user, waits for approve/reject. Mandatory for: (1) Irreversible actions — sending emails, deleting files, financial transactions, any action with side effects that can't be undone. (2) High-stakes decisions — medical, legal, financial advice where errors have serious consequences. (3) Novel/unexpected tool calls not seen in testing. Optional HITL (confidence-based): when the agent's reasoning has low confidence, surface it for human review rather than proceeding blindly. HITL significantly reduces blast radius of agent mistakes. The productivity cost is worth it for irreversible operations — a 30-second confirmation prevents a potentially catastrophic action.",
         tags: ["Reliability", "Human-in-the-loop", "Production"],
+      },
+    ],
+  });
+
+  // Flashcards — SQL Mastery Path
+  await prisma.flashcard.createMany({
+    skipDuplicates: true,
+    data: [
+      // L1: Relational model & SELECT
+      {
+        lessonId: sqlL1.id,
+        front: "Why does `WHERE column = NULL` always return zero rows, and what's the correct syntax?",
+        back: "SQL uses three-valued logic: TRUE, FALSE, and UNKNOWN. `NULL = NULL` evaluates to UNKNOWN, not TRUE — and `WHERE` only passes rows where the predicate is TRUE. Use `IS NULL` / `IS NOT NULL` to test for null. This is the single most common SQL bug for engineers coming from Java's `null == null` (which is true).",
+        tags: ["SQL", "NULL", "Predicates"],
+      },
+      {
+        lessonId: sqlL1.id,
+        front: "What is the logical execution order of a SQL query, and why does it matter?",
+        back: "FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT. Two practical consequences: (1) column aliases defined in SELECT are not visible in WHERE because SELECT runs after WHERE; (2) WHERE filters rows before grouping, while HAVING filters groups after — so `WHERE COUNT(*) > 3` is a syntax error, you need `HAVING COUNT(*) > 3`.",
+        tags: ["SQL", "Query Order"],
+      },
+      {
+        lessonId: sqlL1.id,
+        front: "Why is `SELECT *` considered a smell in production application code?",
+        back: "Four reasons: (1) Network — transfers columns you don't need. (2) Indexes — prevents covering-index optimisations, forcing the DB to read the heap. (3) Schema drift — a new column silently changes payload shape and can break ORM/JSON parsers. (4) PII risk — easy to accidentally expose sensitive columns. Fine in ad-hoc queries, but application code should enumerate columns explicitly.",
+        tags: ["SQL", "Best Practices"],
+      },
+      // L2: JOINs
+      {
+        lessonId: sqlL2.id,
+        front: "Why does putting a predicate on the right-side table of a LEFT JOIN in WHERE silently convert it to an INNER JOIN?",
+        back: "After a LEFT JOIN, rows that didn't match have NULL in the right-side columns. A WHERE clause like `r.status = 'pending'` evaluates to UNKNOWN for those NULL rows and they're filtered out — so only matched rows survive, which is exactly what an INNER JOIN does. Fix: move the predicate to the ON clause: `LEFT JOIN refunds r ON r.order_id = o.id AND r.status = 'pending'`. Then unmatched rows still flow through with NULL refund columns.",
+        tags: ["SQL", "JOIN", "Bugs"],
+      },
+      {
+        lessonId: sqlL2.id,
+        front: "What is a LATERAL join and what problem does it solve?",
+        back: "LATERAL lets the right-hand side of a join reference columns from the left-hand side — effectively a correlated subquery in the FROM clause. Use it for 'for each row in A, compute something that depends on A'. Classic case: top-N rows per group. `SELECT u.*, e.* FROM users u CROSS JOIN LATERAL (SELECT * FROM events WHERE user_id = u.id ORDER BY created_at DESC LIMIT 3) e`. Without LATERAL, you'd need window functions + a subquery filter.",
+        tags: ["SQL", "LATERAL", "JOIN"],
+      },
+      {
+        lessonId: sqlL2.id,
+        front: "When should you use EXISTS vs IN (SELECT ...) for a semi-join?",
+        back: "EXISTS short-circuits — it stops scanning as soon as one matching row is found. IN materialises the subquery into a set first, then checks membership. For correlated subqueries on indexed columns, EXISTS is usually faster. For uncorrelated subqueries with small result sets, IN can be fine. Also: NOT IN has a NULL trap — if the subquery returns a NULL anywhere, the whole expression becomes UNKNOWN and you get zero rows. NOT EXISTS doesn't have that bug. Default to EXISTS / NOT EXISTS.",
+        tags: ["SQL", "EXISTS", "Semi-join"],
+      },
+      // L3: Aggregation & windows
+      {
+        lessonId: sqlL3.id,
+        front: "What is the difference between COUNT(*), COUNT(col), and COUNT(DISTINCT col)?",
+        back: "COUNT(*) counts rows including those with all NULL values — it's a row counter. COUNT(col) counts rows where `col IS NOT NULL`. COUNT(DISTINCT col) counts unique non-null values, which forces a sort or hash (much more expensive). On a multi-million-row table, COUNT(*) is fast (just touches the visibility map); COUNT(DISTINCT col) can take seconds. If you only need an approximation, use HyperLogLog extensions like `approx_count_distinct`.",
+        tags: ["SQL", "Aggregation", "COUNT"],
+      },
+      {
+        lessonId: sqlL3.id,
+        front: "What is the canonical SQL pattern for 'top N rows per group', and what window function does it use?",
+        back: "Use ROW_NUMBER() over a partition, then filter in an outer query: `WITH ranked AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY total DESC) AS rn FROM orders) SELECT * FROM ranked WHERE rn <= 3`. Picks top 3 orders per customer. Use RANK() if you want ties to share the same rank (with gaps), or DENSE_RANK() for ties without gaps. ROW_NUMBER is the right default unless you have a specific tie-breaking need.",
+        tags: ["SQL", "Window Functions", "ROW_NUMBER"],
+      },
+      {
+        lessonId: sqlL3.id,
+        front: "What does `FILTER (WHERE …)` do on an aggregate, and why is it cleaner than CASE WHEN?",
+        back: "FILTER limits which rows the aggregate considers, without filtering the outer result. `COUNT(*) FILTER (WHERE status = 'completed')` counts only completed rows but still emits a single value alongside other aggregates. Compare to `SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END)` — same result, far less readable. FILTER works on any aggregate (SUM, AVG, COUNT) and lets you compute multiple filtered statistics in one SELECT with one table pass.",
+        tags: ["SQL", "Aggregation", "FILTER"],
+      },
+      // L4: Indexes & performance
+      {
+        lessonId: sqlL4.id,
+        front: "For a composite index on `(customer_id, status)`, which queries can use it and which can't?",
+        back: "B-tree indexes are usable when the query references a prefix of the index columns. `WHERE customer_id = ?` — yes, prefix. `WHERE customer_id = ? AND status = ?` — yes, full. `WHERE status = ?` — NO, status is not a prefix; the planner falls back to a sequential scan. `WHERE customer_id = ? ORDER BY status` — yes, the index is already sorted by status within each customer_id. Rule: equality-filter columns first, then range/sort columns.",
+        tags: ["SQL", "Indexes", "Composite"],
+      },
+      {
+        lessonId: sqlL4.id,
+        front: "What is a partial index and when does it dramatically outperform a regular index?",
+        back: "A partial index only includes rows matching a WHERE predicate: `CREATE INDEX ON orders (created_at) WHERE status = 'pending'`. Dramatic wins when: (1) the predicate matches a tiny fraction of rows (e.g. <5%), (2) you query that subset frequently, (3) the rest of the table doesn't need the index. The index is smaller (faster lookups, less RAM), writes to non-matching rows skip the index entirely. Classic use: pending jobs in a queue, soft-deleted records, recent rows in a time-series.",
+        tags: ["SQL", "Indexes", "Partial"],
+      },
+      {
+        lessonId: sqlL4.id,
+        front: "What patterns silently defeat an index, and what should you watch for in EXPLAIN ANALYZE?",
+        back: "(1) Function on the column: `WHERE LOWER(email) = …` — needs an expression index on `LOWER(email)`. (2) Implicit type cast: `WHERE varchar_col = 123` — the planner may cast both sides. (3) Leading wildcard LIKE: `WHERE name LIKE '%smith'` — B-tree can't help; use a trigram (GIN) index. (4) OR across different columns often forces a sequential scan; rewrite as UNION ALL. In EXPLAIN ANALYZE, look for `Seq Scan` where you expected an `Index Scan`, or `Rows Removed by Filter` much larger than `Rows Returned`.",
+        tags: ["SQL", "Indexes", "Performance"],
+      },
+      // L5: Transactions & locking
+      {
+        lessonId: sqlL5.id,
+        front: "What is the lost-update bug, and what are the three ways to prevent it?",
+        back: "Two concurrent transactions both read the same value, both calculate a new value based on the read, and both write back — the second write overwrites the first, losing one update. Three fixes: (1) Atomic update — express the change as `SET balance = balance + 20`, computed inside the database, no read-modify-write race. (2) Pessimistic lock — `SELECT ... FOR UPDATE` acquires an exclusive row lock for the duration of the transaction. (3) Optimistic concurrency — add a version column, update only when the version still matches the value you read; retry on zero rows affected. Atomic > optimistic (low contention) > pessimistic (high contention).",
+        tags: ["SQL", "Transactions", "Concurrency"],
+      },
+      {
+        lessonId: sqlL5.id,
+        front: "What does `SELECT ... FOR UPDATE SKIP LOCKED` do, and what production pattern does it enable?",
+        back: "It acquires row-level locks like FOR UPDATE, but rather than waiting on rows already locked by another transaction, it skips them entirely. This enables a high-throughput Postgres-based work queue: many workers can each pull jobs concurrently without blocking each other. `SELECT * FROM jobs WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED`. Each worker gets a different job. No queue server needed — Postgres handles the locking, durability, and ordering.",
+        tags: ["SQL", "Locking", "Work Queue"],
+      },
+      {
+        lessonId: sqlL5.id,
+        front: "Why are long-lived transactions dangerous, even ones that only read?",
+        back: "A transaction holding a snapshot keeps MVCC visibility frozen at its start time. Consequences: (1) VACUUM can't reclaim dead tuples that are still 'visible' to the transaction, causing table bloat. (2) Row locks held by the transaction continue to block writers. (3) Replication can lag, since standby servers can't apply changes that would conflict with the snapshot. (4) Transaction ID consumption is amplified. Operational rule: keep transactions short, never do network I/O (HTTP calls, queue publishes) inside a transaction, and monitor `pg_stat_activity` for transactions older than a few seconds.",
+        tags: ["SQL", "Transactions", "Operations"],
+      },
+      // L6: Advanced
+      {
+        lessonId: sqlL6.id,
+        front: "When does Postgres materialise a CTE, and when does it inline it?",
+        back: "Postgres < 12: CTEs were always materialised — computed once into a temp table, then read from. This created an 'optimisation fence' that could be useful or terrible depending on your case. Postgres >= 12: the planner inlines CTEs by default (treats them like subqueries, can push down predicates and reorder joins). To force the old behaviour, write `WITH x AS MATERIALIZED (...)`. Materialise when: the CTE is expensive and referenced multiple times. Inline when: the CTE is used once and benefits from join reordering with the outer query.",
+        tags: ["SQL", "CTE", "Performance"],
+      },
+      {
+        lessonId: sqlL6.id,
+        front: "What is the difference between the JSON operators `->`, `->>`, `@>`, and `?` in Postgres?",
+        back: "`->` returns a JSON value (still typed as json/jsonb). `->>` returns the value as text — use this when you need a string for comparison or to pass to a function. `@>` is containment: `left @> right` is true when right is a subset of left, e.g. `payload @> '{\"type\":\"signup\"}'` finds all rows whose JSON contains that key-value pair. `?` tests key existence. For performance, create a GIN index on the JSONB column to accelerate `@>` and `?` queries.",
+        tags: ["SQL", "JSONB", "Operators"],
+      },
+      {
+        lessonId: sqlL6.id,
+        front: "How does pgvector let you do RAG retrieval inside Postgres, and which distance operator should you use for text embeddings?",
+        back: "pgvector adds a `VECTOR(n)` column type and ANN indexes (HNSW, IVFFlat). Store embeddings alongside your documents: `CREATE TABLE documents (id BIGSERIAL, content TEXT, embedding VECTOR(1536))`. Create an HNSW index: `CREATE INDEX ON documents USING hnsw (embedding vector_cosine_ops)`. Query for nearest neighbours: `SELECT * FROM documents ORDER BY embedding <=> $query LIMIT 5`. Use `<=>` (cosine distance) for modern text embeddings — the embedding models are trained to encode meaning in vector direction, not magnitude. Use `<->` (L2/Euclidean) only when the model was trained for it (rare for text).",
+        tags: ["SQL", "pgvector", "RAG", "AI"],
       },
     ],
   });

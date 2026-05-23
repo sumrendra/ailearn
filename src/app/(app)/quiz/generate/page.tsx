@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Topbar } from "@/components/layout/Topbar";
-import { Zap, ChevronLeft, RotateCcw, Check, X, ArrowRight, Sparkles, Loader2 } from "lucide-react";
+import { Zap, ChevronLeft, RotateCcw, Check, X, ArrowRight, Sparkles, Loader2, Trophy, Target, BookOpen } from "lucide-react";
 import Link from "next/link";
 
 type Difficulty = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
@@ -476,8 +476,18 @@ export default function QuizGeneratePage() {
             border: "1px solid var(--border-subtle)", padding: "48px 32px",
             textAlign: "center", boxShadow: "var(--shadow-sm)",
           }}>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>
-              {score >= 4 ? "🏆" : score >= 3 ? "🎯" : "📚"}
+            <div style={{
+              width: 88, height: 88, margin: "0 auto 18px",
+              borderRadius: "50%",
+              background: score >= 4 ? "var(--xp-gold-light)" : score >= 3 ? "var(--accent-light)" : "var(--bg-secondary)",
+              border: `1.5px solid ${score >= 4 ? "var(--xp-gold)" : score >= 3 ? "var(--accent)" : "var(--border-default)"}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              {score >= 4
+                ? <Trophy size={36} color="var(--xp-gold)" strokeWidth={2.2} />
+                : score >= 3
+                ? <Target size={36} color="var(--accent)" strokeWidth={2.2} />
+                : <BookOpen size={36} color="var(--text-secondary)" strokeWidth={2.2} />}
             </div>
             <h2 style={{ fontSize: 24, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
               {score}/{questions.length} correct

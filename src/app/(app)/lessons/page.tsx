@@ -1,8 +1,12 @@
 export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
 import { Topbar } from "@/components/layout/Topbar";
+import { PathIcon } from "@/components/learn/PathIcon";
+import { getPathMeta } from "@/lib/learning-paths";
 import Link from "next/link";
-import { Clock, Zap, ArrowRight } from "lucide-react";
+import { Clock, Zap, ArrowRight, CheckCircle2, Circle } from "lucide-react";
 
 const diffColor: Record<string, string> = {
   BEGINNER: "var(--beginner)",
@@ -10,84 +14,225 @@ const diffColor: Record<string, string> = {
   ADVANCED: "var(--advanced)",
 };
 
+const diffLabel: Record<string, string> = {
+  BEGINNER: "Beginner",
+  INTERMEDIATE: "Intermediate",
+  ADVANCED: "Advanced",
+};
+
 export default async function LessonsPage() {
+  const session = await auth();
+  const userId = session?.user?.id;
+
   const paths = await prisma.learningPath.findMany({
     orderBy: { order: "asc" },
     include: { lessons: { orderBy: { order: "asc" } } },
   });
 
+  let completedLessonIds = new Set<string>();
+  if (userId) {
+    const progress = await prisma.lessonProgress.findMany({
+      where: { userId, status: "COMPLETED" },
+      select: { lessonId: true },
+    });
+    completedLessonIds = new Set(progress.map((p) => p.lessonId));
+  }
+
   return (
     <>
-      <Topbar title="All Lessons" subtitle="Browse every lesson across all learning paths" />
-      <div style={{ padding: "24px", maxWidth: 900, width: "100%" }}>
-        {paths.map((path) => (
-          <div key={path.id} style={{ marginBottom: 32 }}>
-            {/* Path header */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <span style={{ fontSize: 22 }}>{path.icon ?? "📚"}</span>
-              <div>
-                <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
-                  {path.title}
-                </h2>
-                <span style={{
-                  fontSize: 11, fontWeight: 500,
-                  color: diffColor[path.difficulty] ?? "var(--text-tertiary)",
-                }}>
-                  {path.difficulty.charAt(0) + path.difficulty.slice(1).toLowerCase()} · {path.lessons.length} lessons
-                </span>
-              </div>
-            </div>
-
-            {/* Lessons */}
-            <div style={{
-              background: "var(--bg-card)", borderRadius: "var(--radius-lg)",
-              border: "1px solid var(--border-subtle)", overflow: "hidden",
-              boxShadow: "var(--shadow-sm)",
-            }}>
-              {path.lessons.map((lesson, idx) => (
-                <Link key={lesson.id} href={`/lessons/${lesson.slug}`} style={{ textDecoration: "none" }}>
-                  <div className="hover-item" style={{
-                    display: "flex", alignItems: "center", gap: 16,
-                    padding: "14px 20px",
-                    borderBottom: idx < path.lessons.length - 1 ? "1px solid var(--border-subtle)" : "none",
-                  }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                      background: "var(--bg-tertiary)", border: "2px solid var(--border-default)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)",
-                    }}>
-                      {idx + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)" }}>
-                        {lesson.title}
-                      </div>
-                      {lesson.description && (
-                        <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 2 }}>
-                          {lesson.description}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-                      {lesson.estimatedMins && (
-                        <span style={{ fontSize: 12, color: "var(--text-tertiary)", display: "flex", alignItems: "center", gap: 4 }}>
-                          <Clock size={11} /> {lesson.estimatedMins}m
+      <Topbar title="All Lessons" subtitle="Every lesson across every path, in order" />
+      <div style={{ padding: "28px 32px", maxWidth: 960, width: "100%" }}>
+        {paths.map((path) => {
+          const meta = getPathMeta(path.slug);
+          const completed = path.lessons.filter((l) => completedLessonIds.has(l.id)).length;
+          return (
+            <section key={path.id} style={{ marginBottom: 36 }}>
+              {/* Section header */}
+              <header
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  marginBottom: 14,
+                }}
+              >
+                <PathIcon slug={path.slug} size={42} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h2
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: "var(--text-primary)",
+                      letterSpacing: "-0.01em",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {path.title}
+                  </h2>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--text-tertiary)",
+                      marginTop: 3,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                    }}
+                  >
+                    <span style={{ color: diffColor[path.difficulty], fontWeight: 600 }}>
+                      {diffLabel[path.difficulty]}
+                    </span>
+                    <span>·</span>
+                    <span>{path.lessons.length} lessons</span>
+                    {userId && completed > 0 && (
+                      <>
+                        <span>·</span>
+                        <span style={{ color: meta.color, fontWeight: 600 }}>
+                          {completed} completed
                         </span>
-                      )}
-                      {lesson.xpReward && (
-                        <span style={{ fontSize: 12, color: "var(--xp-gold)", fontWeight: 500, display: "flex", alignItems: "center", gap: 3 }}>
-                          <Zap size={11} /> +{lesson.xpReward}
-                        </span>
-                      )}
-                      <ArrowRight size={13} color="var(--text-tertiary)" />
-                    </div>
+                      </>
+                    )}
                   </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
+                </div>
+              </header>
+
+              {/* Lesson list */}
+              <div
+                style={{
+                  background: "var(--bg-card)",
+                  borderRadius: "var(--radius-lg)",
+                  border: "1px solid var(--border-subtle)",
+                  overflow: "hidden",
+                  boxShadow: "var(--shadow-sm)",
+                }}
+              >
+                {path.lessons.map((lesson, idx) => {
+                  const isComplete = completedLessonIds.has(lesson.id);
+                  return (
+                    <Link
+                      key={lesson.id}
+                      href={`/lessons/${lesson.slug}`}
+                      style={{ textDecoration: "none" }}
+                    >
+                      <div
+                        className="hover-item"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 16,
+                          padding: "16px 22px",
+                          borderBottom:
+                            idx < path.lessons.length - 1
+                              ? "1px solid var(--border-subtle)"
+                              : "none",
+                        }}
+                      >
+                        {/* Status indicator */}
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
+                            background: isComplete ? `color-mix(in srgb, ${meta.color} 12%, transparent)` : "var(--bg-tertiary)",
+                            border: isComplete ? `1.5px solid ${meta.color}` : "1.5px solid var(--border-default)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isComplete ? (
+                            <CheckCircle2 size={16} color={meta.color} strokeWidth={2.4} />
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "var(--text-tertiary)",
+                              }}
+                            >
+                              {idx + 1}
+                            </span>
+                          )}
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 14,
+                              fontWeight: 600,
+                              color: "var(--text-primary)",
+                              letterSpacing: "-0.005em",
+                            }}
+                          >
+                            {lesson.title}
+                          </div>
+                          {lesson.description && (
+                            <div
+                              style={{
+                                fontSize: 12.5,
+                                color: "var(--text-tertiary)",
+                                marginTop: 3,
+                                lineHeight: 1.5,
+                                overflow: "hidden",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 1,
+                                WebkitBoxOrient: "vertical",
+                              }}
+                            >
+                              {lesson.description}
+                            </div>
+                          )}
+                        </div>
+
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 16,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {lesson.estimatedMins ? (
+                            <span
+                              style={{
+                                fontSize: 12,
+                                color: "var(--text-tertiary)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                              }}
+                            >
+                              <Clock size={11} /> {lesson.estimatedMins}m
+                            </span>
+                          ) : null}
+                          {lesson.xpReward ? (
+                            <span
+                              style={{
+                                fontSize: 11.5,
+                                fontWeight: 600,
+                                color: "var(--xp-gold)",
+                                background: "var(--xp-gold-light)",
+                                padding: "2px 9px",
+                                borderRadius: 999,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                              }}
+                            >
+                              <Zap size={10} /> +{lesson.xpReward}
+                            </span>
+                          ) : null}
+                          <ArrowRight size={14} color="var(--text-tertiary)" />
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </>
   );

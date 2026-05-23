@@ -2,30 +2,10 @@ export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
 import { Topbar } from "@/components/layout/Topbar";
-import { ArrowRight, BookOpen, Clock, ChevronLeft, Zap, Brain, Database, Cpu, Lock, PlayCircle } from "lucide-react";
-
-const PATH_META: Record<string, {
-  Icon: React.ComponentType<{ size?: number; color?: string }>;
-  gradient: string;
-  color: string;
-}> = {
-  "llm-foundations": {
-    Icon: Brain,
-    gradient: "linear-gradient(135deg, #4f35cc 0%, #7c5cff 60%, #9b6dff 100%)",
-    color: "#6c47ff",
-  },
-  "rag-vector-dbs": {
-    Icon: Database,
-    gradient: "linear-gradient(135deg, #0c5e58 0%, #0f766e 60%, #14b8a6 100%)",
-    color: "#0f766e",
-  },
-  "ai-agents": {
-    Icon: Cpu,
-    gradient: "linear-gradient(135deg, #92400e 0%, #b45309 60%, #d97706 100%)",
-    color: "#b45309",
-  },
-};
+import { getPathMeta } from "@/lib/learning-paths";
+import { ArrowRight, BookOpen, Clock, ChevronLeft, Zap, PlayCircle, CheckCircle2 } from "lucide-react";
 
 const DIFF_LABEL: Record<string, string> = {
   BEGINNER: "Beginner", INTERMEDIATE: "Intermediate", ADVANCED: "Advanced",
@@ -45,11 +25,25 @@ export default async function LearningPathPage({
 
   if (!path) notFound();
 
-  const meta = PATH_META[path.slug];
-  const Icon = meta?.Icon ?? BookOpen;
+  const meta = getPathMeta(path.slug);
+  const Icon = meta.Icon;
   const totalMins = path.lessons.reduce((s, l) => s + (l.estimatedMins ?? 0), 0);
   const totalHrs = totalMins > 0 ? (Math.round(totalMins / 6) / 10).toFixed(1) : (path.estimatedHours ?? 0);
   const totalXP = path.lessons.reduce((s, l) => s + (l.xpReward ?? 0), 0);
+
+  // Per-user progress for this path.
+  const session = await auth();
+  const userId = session?.user?.id;
+  let completedIds = new Set<string>();
+  if (userId) {
+    const progress = await prisma.lessonProgress.findMany({
+      where: { userId, status: "COMPLETED", lessonId: { in: path.lessons.map((l) => l.id) } },
+      select: { lessonId: true },
+    });
+    completedIds = new Set(progress.map((p) => p.lessonId));
+  }
+  const completedCount = path.lessons.filter((l) => completedIds.has(l.id)).length;
+  const firstUnfinished = path.lessons.find((l) => !completedIds.has(l.id)) ?? path.lessons[0];
 
   return (
     <>
@@ -73,7 +67,7 @@ export default async function LearningPathPage({
         }}>
           {/* Gradient hero */}
           <div style={{
-            background: meta?.gradient ?? "linear-gradient(135deg, #6c47ff, #9b6dff)",
+            background: meta.gradient,
             padding: "40px 40px 36px",
             position: "relative", overflow: "hidden",
           }}>
@@ -146,22 +140,37 @@ export default async function LearningPathPage({
             borderBottom: "1px solid var(--border-subtle)",
             display: "flex", alignItems: "center", justifyContent: "space-between",
           }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>Ready to start?</div>
-              <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                0 of {path.lessons.length} lessons completed
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
+                {completedCount === 0 ? "Ready to start?" : completedCount === path.lessons.length ? "Path complete!" : "Pick up where you left off"}
               </div>
+              <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 2 }}>
+                {completedCount} of {path.lessons.length} lessons completed
+              </div>
+              {/* Progress bar */}
+              {path.lessons.length > 0 && (
+                <div style={{ marginTop: 8, height: 4, background: "var(--bg-tertiary)", borderRadius: 999, overflow: "hidden", maxWidth: 360 }}>
+                  <div style={{
+                    width: `${(completedCount / path.lessons.length) * 100}%`,
+                    height: "100%",
+                    background: meta.color,
+                    borderRadius: 999,
+                    transition: "width 0.4s ease",
+                  }} />
+                </div>
+              )}
             </div>
-            {path.lessons.length > 0 && (
-              <Link href={`/lessons/${path.lessons[0].slug}`} style={{ textDecoration: "none" }}>
+            {firstUnfinished && (
+              <Link href={`/lessons/${firstUnfinished.slug}`} style={{ textDecoration: "none" }}>
                 <div style={{
-                  background: meta?.color ?? "var(--accent)", color: "#fff",
+                  background: meta.color, color: "#fff",
                   padding: "11px 22px", borderRadius: "var(--radius-md)",
                   fontSize: 14, fontWeight: 700,
                   display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
-                  boxShadow: `0 4px 14px ${(meta?.color ?? "#6c47ff")}40`,
+                  boxShadow: `0 4px 14px ${meta.glow}`,
+                  whiteSpace: "nowrap",
                 }}>
-                  <PlayCircle size={16} /> Start learning
+                  <PlayCircle size={16} /> {completedCount > 0 ? "Continue" : "Start learning"}
                 </div>
               </Link>
             )}
@@ -178,7 +187,9 @@ export default async function LearningPathPage({
               </div>
             </div>
 
-            {path.lessons.map((lesson, idx) => (
+            {path.lessons.map((lesson, idx) => {
+              const isComplete = completedIds.has(lesson.id);
+              return (
               <Link key={lesson.id} href={`/lessons/${lesson.slug}`} style={{ textDecoration: "none" }}>
                 <div className="hover-item" style={{
                   display: "flex", alignItems: "center", gap: 16,
@@ -186,16 +197,16 @@ export default async function LearningPathPage({
                   borderBottom: idx < path.lessons.length - 1 ? "1px solid var(--border-subtle)" : "none",
                   cursor: "pointer",
                 }}>
-                  {/* Step number with connector */}
+                  {/* Step indicator */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, flexShrink: 0 }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: "50%",
-                      background: "var(--bg-tertiary)",
-                      border: `2px solid var(--border-default)`,
+                      background: isComplete ? `color-mix(in srgb, ${meta.color} 12%, transparent)` : "var(--bg-tertiary)",
+                      border: isComplete ? `2px solid ${meta.color}` : `2px solid var(--border-default)`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 13, fontWeight: 700, color: "var(--text-tertiary)",
+                      fontSize: 13, fontWeight: 700, color: isComplete ? meta.color : "var(--text-tertiary)",
                     }}>
-                      {idx + 1}
+                      {isComplete ? <CheckCircle2 size={18} color={meta.color} strokeWidth={2.4} /> : idx + 1}
                     </div>
                   </div>
 
@@ -243,7 +254,8 @@ export default async function LearningPathPage({
                   </div>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

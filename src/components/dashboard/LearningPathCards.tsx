@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Clock, BookOpen, Brain, Database, Cpu, Zap } from "lucide-react";
+import { ArrowRight, Clock, BookOpen, Zap } from "lucide-react";
+import { getPathMeta } from "@/lib/learning-paths";
 
 type PathData = {
   id: string;
@@ -17,37 +18,16 @@ type PathData = {
   progress: number;
 };
 
-const pathIconMap: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
-  "llm-foundations": Brain,
-  "rag-vector-dbs":  Database,
-  "ai-agents":       Cpu,
-};
-
-const pathMeta: Record<string, { gradient: string; color: string }> = {
-  "llm-foundations": {
-    gradient: "linear-gradient(135deg, #4f35cc 0%, #7c5cff 60%, #9b6dff 100%)",
-    color: "#6c47ff",
-  },
-  "rag-vector-dbs": {
-    gradient: "linear-gradient(135deg, #0c5e58 0%, #0f766e 60%, #14b8a6 100%)",
-    color: "#0f766e",
-  },
-  "ai-agents": {
-    gradient: "linear-gradient(135deg, #92400e 0%, #b45309 60%, #d97706 100%)",
-    color: "#b45309",
-  },
-};
-
 const difficultyLabel: Record<string, string> = {
   BEGINNER: "Beginner", INTERMEDIATE: "Intermediate", ADVANCED: "Advanced",
 };
 
 export function LearningPathCards({ paths }: { paths: PathData[] }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
       {paths.map((path) => {
-        const meta = pathMeta[path.slug] ?? { gradient: "linear-gradient(135deg, #6c47ff, #9b6dff)", color: path.color };
-        const Icon = pathIconMap[path.slug];
+        const meta = getPathMeta(path.slug);
+        const Icon = meta.Icon;
         const totalMins = path.lessons.reduce((s, l) => s + l.estimatedMins, 0);
         const hrs = totalMins > 0 ? `${(Math.round(totalMins / 6) / 10).toFixed(1)}h` : `${path.estimatedHours}h`;
         const totalXP = path.lessons.reduce((s, l) => s + l.xpReward, 0);
@@ -92,7 +72,7 @@ export function LearningPathCards({ paths }: { paths: PathData[] }) {
                       display: "flex", alignItems: "center", justifyContent: "center",
                       flexShrink: 0,
                     }}>
-                      {Icon ? <Icon size={20} color="#fff" /> : <span style={{ fontSize: 18 }}>{path.icon || "📚"}</span>}
+                      <Icon size={20} color="#fff" />
                     </div>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{path.title}</div>

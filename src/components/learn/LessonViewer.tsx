@@ -7,7 +7,7 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import {
   Sparkles, Copy, Check, X, BookOpen, Trophy,
-  Clock, Zap, ChevronLeft, ChevronRight,
+  Clock, Zap, ChevronLeft, ChevronRight, Lightbulb,
 } from "lucide-react";
 import { TutorChat } from "@/components/ai/TutorChat";
 import Link from "next/link";
@@ -429,11 +429,12 @@ export function LessonViewer({
                     position: "absolute", top: -11, left: 14,
                     fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
                     color: "var(--accent)", textTransform: "uppercase",
-                    background: "var(--bg-card)", padding: "2px 8px",
+                    background: "var(--bg-card)", padding: "2px 9px",
                     borderRadius: "var(--radius-full)",
                     border: "1px solid rgba(108,71,255,0.2)",
+                    display: "inline-flex", alignItems: "center", gap: 5,
                   }}>
-                    💡 Note
+                    <Lightbulb size={10} strokeWidth={2.4} /> Note
                   </div>
                   <div style={{ marginTop: 6 }}>
                     {children}
