@@ -3,12 +3,8 @@
 /* ════════════════════════════════════════════════════════════════════════════
  * AILearn — design system v2
  *
- * Two complete themes (light + dark), both designed from scratch for premium
- * feel. Tokens are HSL channels so we can compose translucent overlays via
- * `color-mix()` and `hsl(var(--token) / opacity)`.
- *
- * Type scale: golden-ratio-ish; tight tracking on display, normal on body.
- * Motion: physics-based via cubic-beziers tuned for "alive but not slow."
+ * Tokens are full `hsl(...)` colors so they drop in anywhere CSS expects a
+ * color. Two complete themes (light + dark), tuned independently.
  * ════════════════════════════════════════════════════════════════════════ */
 
 /* ── Fonts ───────────────────────────────────────────────────────────────── */
@@ -16,79 +12,89 @@
   --font-display: var(--font-inter), "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-sans:    var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono:    "JetBrains Mono", "SF Mono", "Fira Code", "Cascadia Code", monospace;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Shape */
+  --radius-xs:  4px;
+  --radius-sm:  8px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-xl:  20px;
+  --radius-2xl: 28px;
+  --radius-full: 9999px;
 }
 
 /* ── Light theme (default) ──────────────────────────────────────────────── */
 :root {
-  /* Surfaces — layered for depth perception */
-  --bg-app:        0 0% 99%;          /* page background, near-white */
-  --bg-surface:    0 0% 100%;         /* cards */
-  --bg-elevated:   0 0% 100%;         /* popovers, modals */
-  --bg-sunken:     220 14% 96%;       /* inset areas */
-  --bg-subtle:     220 14% 97%;       /* hover background */
-  --bg-tertiary:   220 13% 91%;       /* badges, chips */
+  /* Surfaces */
+  --bg-app:        hsl(0 0% 99%);
+  --bg-surface:    hsl(0 0% 100%);
+  --bg-elevated:   hsl(0 0% 100%);
+  --bg-sunken:     hsl(220 14% 96%);
+  --bg-subtle:     hsl(220 14% 97%);
+  --bg-tertiary:   hsl(220 13% 91%);
+  --bg-primary:    hsl(0 0% 100%);
+  --bg-secondary:  hsl(220 14% 96%);
+  --bg-card:       hsl(0 0% 100%);
+  --bg-sidebar:    hsl(0 0% 100%);
 
-  /* Backwards-compat aliases */
-  --bg-primary:    var(--bg-surface);
-  --bg-secondary:  var(--bg-sunken);
-  --bg-card:       var(--bg-surface);
-  --bg-sidebar:    var(--bg-surface);
+  /* Text */
+  --text-primary:    hsl(222 27% 11%);
+  --text-secondary:  hsl(220 13% 36%);
+  --text-tertiary:   hsl(220 10% 55%);
+  --text-quaternary: hsl(220 8% 68%);
+  --text-inverse:    hsl(0 0% 100%);
+  --text-on-accent:  hsl(0 0% 100%);
 
-  /* Text — tuned for OLED + LCD */
-  --text-primary:    222 27% 11%;
-  --text-secondary:  220 13% 36%;
-  --text-tertiary:   220 10% 55%;
-  --text-quaternary: 220 8% 68%;
-  --text-inverse:    0 0% 100%;
-  --text-on-accent:  0 0% 100%;
+  /* Borders */
+  --border-subtle:   hsl(220 13% 91%);
+  --border-default:  hsl(220 13% 82%);
+  --border-strong:   hsl(220 10% 64%);
 
-  /* Borders — hairlines */
-  --border-subtle:   220 13% 91%;
-  --border-default:  220 13% 82%;
-  --border-strong:   220 10% 64%;
-
-  /* Accent — refined violet (slightly warmer than v1) */
-  --accent-hue:     258;
-  --accent:         var(--accent-hue) 87% 64%;
-  --accent-hover:   var(--accent-hue) 87% 58%;
-  --accent-active:  var(--accent-hue) 87% 52%;
-  --accent-light:   var(--accent-hue) 93% 96%;
-  --accent-text:    var(--accent-hue) 60% 40%;
+  /* Accent — violet */
+  --accent:        hsl(258 87% 64%);
+  --accent-hover:  hsl(258 87% 58%);
+  --accent-active: hsl(258 87% 52%);
+  --accent-light:  hsl(258 93% 96%);
+  --accent-text:   hsl(258 60% 40%);
+  --accent-2:      hsl(258 80% 72%);
 
   /* Semantic */
-  --success:        152 60% 42%;
-  --success-light:  142 76% 95%;
-  --warning:        30 95% 50%;
-  --warning-light:  41 100% 95%;
-  --danger:         0 72% 51%;
-  --danger-light:   0 84% 96%;
-  --info:           217 91% 60%;
-  --info-light:     214 100% 96%;
+  --success:       hsl(152 60% 42%);
+  --success-light: hsl(142 76% 95%);
+  --warning:       hsl(30 95% 50%);
+  --warning-light: hsl(41 100% 95%);
+  --danger:        hsl(0 72% 51%);
+  --danger-light:  hsl(0 84% 96%);
+  --info:          hsl(217 91% 60%);
+  --info-light:    hsl(214 100% 96%);
 
   /* Gamification */
-  --xp-gold:        38 92% 50%;
-  --xp-gold-light:  48 100% 96%;
-  --streak-orange:  20 91% 48%;
-  --streak-light:   20 100% 96%;
+  --xp-gold:       hsl(38 92% 50%);
+  --xp-gold-light: hsl(48 100% 96%);
+  --streak-orange: hsl(20 91% 48%);
+  --streak-light:  hsl(20 100% 96%);
 
   /* Difficulty */
-  --beginner:           152 60% 42%;
-  --beginner-light:     142 76% 95%;
-  --intermediate:       30 95% 50%;
-  --intermediate-light: 41 100% 95%;
-  --advanced:           0 72% 51%;
-  --advanced-light:     0 84% 96%;
+  --beginner:           hsl(152 60% 42%);
+  --beginner-light:     hsl(142 76% 95%);
+  --intermediate:       hsl(30 95% 50%);
+  --intermediate-light: hsl(41 100% 95%);
+  --advanced:           hsl(0 72% 51%);
+  --advanced-light:     hsl(0 84% 96%);
 
-  /* Shape */
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-2xl: 28px;
-  --radius-full: 9999px;
-
-  /* Shadow — composed for depth */
+  /* Shadow */
   --shadow-xs:  0 1px 2px hsl(220 30% 12% / 0.05);
   --shadow-sm:  0 1px 3px hsl(220 30% 12% / 0.06), 0 1px 2px hsl(220 30% 12% / 0.04);
   --shadow-md:  0 4px 6px hsl(220 30% 12% / 0.07), 0 2px 4px hsl(220 30% 12% / 0.05);
@@ -96,69 +102,69 @@
   --shadow-xl:  0 20px 25px hsl(220 30% 12% / 0.10), 0 10px 10px hsl(220 30% 12% / 0.04);
   --shadow-2xl: 0 25px 50px hsl(220 30% 12% / 0.15);
 
-  /* Glass surfaces (premium frosted look) */
+  /* Glass surfaces */
   --glass-bg:     hsl(0 0% 100% / 0.72);
   --glass-border: hsl(0 0% 100% / 0.6);
   --glass-blur:   saturate(180%) blur(20px);
 
-  /* Mesh accent dots (used on hero backgrounds) */
+  /* Mesh accent dots */
   --mesh-1: hsl(258 100% 75% / 0.4);
   --mesh-2: hsl(196 100% 70% / 0.35);
   --mesh-3: hsl(330 100% 75% / 0.30);
+  --mesh-4: hsl(258 100% 80% / 0.25);
 }
 
 /* ── Dark theme ──────────────────────────────────────────────────────────── */
 [data-theme="dark"] {
-  --bg-app:        222 25% 8%;
-  --bg-surface:    222 21% 11%;
-  --bg-elevated:   222 21% 14%;
-  --bg-sunken:     222 27% 7%;
-  --bg-subtle:     222 21% 13%;
-  --bg-tertiary:   222 20% 17%;
+  --bg-app:        hsl(222 25% 8%);
+  --bg-surface:    hsl(222 21% 11%);
+  --bg-elevated:   hsl(222 21% 14%);
+  --bg-sunken:     hsl(222 27% 7%);
+  --bg-subtle:     hsl(222 21% 13%);
+  --bg-tertiary:   hsl(222 20% 17%);
+  --bg-primary:    hsl(222 21% 11%);
+  --bg-secondary:  hsl(222 27% 7%);
+  --bg-card:       hsl(222 21% 11%);
+  --bg-sidebar:    hsl(222 21% 14%);
 
-  --bg-primary:    var(--bg-surface);
-  --bg-secondary:  var(--bg-sunken);
-  --bg-card:       var(--bg-surface);
-  --bg-sidebar:    var(--bg-elevated);
+  --text-primary:    hsl(220 14% 96%);
+  --text-secondary:  hsl(220 13% 75%);
+  --text-tertiary:   hsl(220 10% 58%);
+  --text-quaternary: hsl(220 8% 45%);
+  --text-inverse:    hsl(222 27% 11%);
+  --text-on-accent:  hsl(0 0% 100%);
 
-  --text-primary:    220 14% 96%;
-  --text-secondary:  220 13% 75%;
-  --text-tertiary:   220 10% 58%;
-  --text-quaternary: 220 8% 45%;
-  --text-inverse:    222 27% 11%;
-  --text-on-accent:  0 0% 100%;
+  --border-subtle:   hsl(220 14% 18%);
+  --border-default:  hsl(220 14% 25%);
+  --border-strong:   hsl(220 13% 40%);
 
-  --border-subtle:   220 14% 18%;
-  --border-default:  220 14% 25%;
-  --border-strong:   220 13% 40%;
+  --accent:        hsl(258 87% 68%);
+  --accent-hover:  hsl(258 87% 72%);
+  --accent-active: hsl(258 87% 76%);
+  --accent-light:  hsl(258 50% 18%);
+  --accent-text:   hsl(258 80% 78%);
+  --accent-2:      hsl(258 85% 78%);
 
-  --accent-hue:     258;
-  --accent:         var(--accent-hue) 87% 68%;
-  --accent-hover:   var(--accent-hue) 87% 72%;
-  --accent-active:  var(--accent-hue) 87% 76%;
-  --accent-light:   var(--accent-hue) 50% 18%;
-  --accent-text:    var(--accent-hue) 80% 78%;
+  --success:       hsl(152 55% 55%);
+  --success-light: hsl(152 30% 18%);
+  --warning:       hsl(30 90% 60%);
+  --warning-light: hsl(30 35% 18%);
+  --danger:        hsl(0 72% 60%);
+  --danger-light:  hsl(0 40% 18%);
+  --info:          hsl(217 91% 70%);
+  --info-light:    hsl(217 40% 18%);
 
-  --success:        152 55% 55%;
-  --success-light:  152 30% 18%;
-  --warning:        30 90% 60%;
-  --warning-light:  30 35% 18%;
-  --danger:         0 72% 60%;
-  --danger-light:   0 40% 18%;
-  --info:           217 91% 70%;
-  --info-light:     217 40% 18%;
+  --xp-gold:       hsl(38 92% 60%);
+  --xp-gold-light: hsl(38 35% 18%);
+  --streak-orange: hsl(20 91% 60%);
+  --streak-light:  hsl(20 35% 18%);
 
-  --xp-gold:        38 92% 60%;
-  --xp-gold-light:  38 35% 18%;
-  --streak-orange:  20 91% 60%;
-  --streak-light:   20 35% 18%;
-
-  --beginner:           152 55% 55%;
-  --beginner-light:     152 30% 18%;
-  --intermediate:       30 90% 60%;
-  --intermediate-light: 30 35% 18%;
-  --advanced:           0 72% 60%;
-  --advanced-light:     0 40% 18%;
+  --beginner:           hsl(152 55% 55%);
+  --beginner-light:     hsl(152 30% 18%);
+  --intermediate:       hsl(30 90% 60%);
+  --intermediate-light: hsl(30 35% 18%);
+  --advanced:           hsl(0 72% 60%);
+  --advanced-light:     hsl(0 40% 18%);
 
   --shadow-xs:  0 1px 2px hsl(0 0% 0% / 0.4);
   --shadow-sm:  0 1px 3px hsl(0 0% 0% / 0.5), 0 1px 2px hsl(0 0% 0% / 0.3);
@@ -173,159 +179,13 @@
   --mesh-1: hsl(258 100% 65% / 0.25);
   --mesh-2: hsl(196 100% 60% / 0.20);
   --mesh-3: hsl(330 100% 70% / 0.18);
+  --mesh-4: hsl(258 100% 70% / 0.20);
 }
 
-/* Auto-apply system preference unless user overrides */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
   }
-}
-
-/* ── HSL-aware aliases for legacy code that uses var() directly ─────────── */
-:root, [data-theme="dark"] {
-  --c-bg-app:        hsl(var(--bg-app));
-  --c-bg-surface:    hsl(var(--bg-surface));
-  --c-bg-elevated:   hsl(var(--bg-elevated));
-  --c-bg-sunken:     hsl(var(--bg-sunken));
-  --c-bg-subtle:     hsl(var(--bg-subtle));
-  --c-bg-tertiary:   hsl(var(--bg-tertiary));
-  --c-bg-primary:    hsl(var(--bg-primary));
-  --c-bg-secondary:  hsl(var(--bg-secondary));
-  --c-bg-card:       hsl(var(--bg-card));
-  --c-bg-sidebar:    hsl(var(--bg-sidebar));
-  --c-text-primary:    hsl(var(--text-primary));
-  --c-text-secondary:  hsl(var(--text-secondary));
-  --c-text-tertiary:   hsl(var(--text-tertiary));
-  --c-text-quaternary: hsl(var(--text-quaternary));
-  --c-text-inverse:    hsl(var(--text-inverse));
-  --c-border-subtle:   hsl(var(--border-subtle));
-  --c-border-default:  hsl(var(--border-default));
-  --c-border-strong:   hsl(var(--border-strong));
-  --c-accent:          hsl(var(--accent));
-  --c-accent-hover:    hsl(var(--accent-hover));
-  --c-accent-light:    hsl(var(--accent-light));
-  --c-accent-text:     hsl(var(--accent-text));
-  --c-success:         hsl(var(--success));
-  --c-success-light:   hsl(var(--success-light));
-  --c-warning:         hsl(var(--warning));
-  --c-warning-light:   hsl(var(--warning-light));
-  --c-danger:          hsl(var(--danger));
-  --c-danger-light:    hsl(var(--danger-light));
-  --c-info:            hsl(var(--info));
-  --c-info-light:      hsl(var(--info-light));
-  --c-xp-gold:         hsl(var(--xp-gold));
-  --c-xp-gold-light:   hsl(var(--xp-gold-light));
-  --c-streak-orange:   hsl(var(--streak-orange));
-  --c-streak-light:    hsl(var(--streak-light));
-  --c-beginner:           hsl(var(--beginner));
-  --c-beginner-light:     hsl(var(--beginner-light));
-  --c-intermediate:       hsl(var(--intermediate));
-  --c-intermediate-light: hsl(var(--intermediate-light));
-  --c-advanced:           hsl(var(--advanced));
-  --c-advanced-light:     hsl(var(--advanced-light));
-}
-
-/* Legacy `var(--bg-card)` → resolve to color via the alias above */
-:root, [data-theme="dark"] {
-  /* If any old code reads var(--bg-card) expecting a color, give them one */
-}
-:root {
-  /* Reassign the original names to point at hsl() composites so the old
-   * component code keeps working without changes. */
-}
-
-/* Compose: redefine the bare tokens to hsl() — preserves legacy code */
-:where(:root) {
-  --bg-app:        hsl(0 0% 99%);
-  --bg-surface:    hsl(0 0% 100%);
-  --bg-elevated:   hsl(0 0% 100%);
-  --bg-sunken:     hsl(220 14% 96%);
-  --bg-subtle:     hsl(220 14% 97%);
-  --bg-tertiary:   hsl(220 13% 91%);
-  --bg-primary:    hsl(0 0% 100%);
-  --bg-secondary:  hsl(220 14% 96%);
-  --bg-card:       hsl(0 0% 100%);
-  --bg-sidebar:    hsl(0 0% 100%);
-  --text-primary:    hsl(222 27% 11%);
-  --text-secondary:  hsl(220 13% 36%);
-  --text-tertiary:   hsl(220 10% 55%);
-  --text-quaternary: hsl(220 8% 68%);
-  --text-inverse:    hsl(0 0% 100%);
-  --border-subtle:   hsl(220 13% 91%);
-  --border-default:  hsl(220 13% 82%);
-  --border-strong:   hsl(220 10% 64%);
-  --accent:        hsl(258 87% 64%);
-  --accent-hover:  hsl(258 87% 58%);
-  --accent-light:  hsl(258 93% 96%);
-  --accent-text:   hsl(258 60% 40%);
-  --accent-2:      hsl(258 80% 72%);
-  --success:       hsl(152 60% 42%);
-  --success-light: hsl(142 76% 95%);
-  --warning:       hsl(30 95% 50%);
-  --warning-light: hsl(41 100% 95%);
-  --danger:        hsl(0 72% 51%);
-  --danger-light:  hsl(0 84% 96%);
-  --info:          hsl(217 91% 60%);
-  --info-light:    hsl(214 100% 96%);
-  --xp-gold:       hsl(38 92% 50%);
-  --xp-gold-light: hsl(48 100% 96%);
-  --streak-orange: hsl(20 91% 48%);
-  --streak-light:  hsl(20 100% 96%);
-  --beginner:           hsl(152 60% 42%);
-  --beginner-light:     hsl(142 76% 95%);
-  --intermediate:       hsl(30 95% 50%);
-  --intermediate-light: hsl(41 100% 95%);
-  --advanced:           hsl(0 72% 51%);
-  --advanced-light:     hsl(0 84% 96%);
-  --glass-bg:     hsl(0 0% 100% / 0.72);
-  --glass-border: hsl(0 0% 100% / 0.6);
-}
-
-:where([data-theme="dark"]) {
-  --bg-app:        hsl(222 25% 8%);
-  --bg-surface:    hsl(222 21% 11%);
-  --bg-elevated:   hsl(222 21% 14%);
-  --bg-sunken:     hsl(222 27% 7%);
-  --bg-subtle:     hsl(222 21% 13%);
-  --bg-tertiary:   hsl(222 20% 17%);
-  --bg-primary:    hsl(222 21% 11%);
-  --bg-secondary:  hsl(222 27% 7%);
-  --bg-card:       hsl(222 21% 11%);
-  --bg-sidebar:    hsl(222 21% 14%);
-  --text-primary:    hsl(220 14% 96%);
-  --text-secondary:  hsl(220 13% 75%);
-  --text-tertiary:   hsl(220 10% 58%);
-  --text-quaternary: hsl(220 8% 45%);
-  --text-inverse:    hsl(222 27% 11%);
-  --border-subtle:   hsl(220 14% 18%);
-  --border-default:  hsl(220 14% 25%);
-  --border-strong:   hsl(220 13% 40%);
-  --accent:        hsl(258 87% 68%);
-  --accent-hover:  hsl(258 87% 72%);
-  --accent-light:  hsl(258 50% 18%);
-  --accent-text:   hsl(258 80% 78%);
-  --accent-2:      hsl(258 85% 78%);
-  --success:       hsl(152 55% 55%);
-  --success-light: hsl(152 30% 18%);
-  --warning:       hsl(30 90% 60%);
-  --warning-light: hsl(30 35% 18%);
-  --danger:        hsl(0 72% 60%);
-  --danger-light:  hsl(0 40% 18%);
-  --info:          hsl(217 91% 70%);
-  --info-light:    hsl(217 40% 18%);
-  --xp-gold:       hsl(38 92% 60%);
-  --xp-gold-light: hsl(38 35% 18%);
-  --streak-orange: hsl(20 91% 60%);
-  --streak-light:  hsl(20 35% 18%);
-  --beginner:           hsl(152 55% 55%);
-  --beginner-light:     hsl(152 30% 18%);
-  --intermediate:       hsl(30 90% 60%);
-  --intermediate-light: hsl(30 35% 18%);
-  --advanced:           hsl(0 72% 60%);
-  --advanced-light:     hsl(0 40% 18%);
-  --glass-bg:     hsl(222 21% 11% / 0.72);
-  --glass-border: hsl(220 14% 25% / 0.6);
 }
 
 /* ── Base reset + typography ─────────────────────────────────────────────── */
@@ -340,12 +200,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-feature-settings: "cv11", "ss01", "ss03";   /* better Inter glyphs */
+  font-feature-settings: "cv11", "ss01", "ss03";
   font-variant-ligatures: contextual common-ligatures;
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Display typography (used in hero headings) */
 .display-xl { font-size: clamp(48px, 6vw, 84px); line-height: 1.02; letter-spacing: -0.04em; font-weight: 700; font-family: var(--font-display); }
 .display-lg { font-size: clamp(36px, 4.5vw, 56px); line-height: 1.05; letter-spacing: -0.03em; font-weight: 700; font-family: var(--font-display); }
 .display-md { font-size: clamp(28px, 3vw, 36px); line-height: 1.15; letter-spacing: -0.025em; font-weight: 700; font-family: var(--font-display); }
@@ -356,14 +215,12 @@ body {
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; }
 
-/* Focus rings — accessible + premium */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* Selection */
 ::selection {
   background: hsl(258 87% 64% / 0.20);
   color: inherit;
@@ -372,7 +229,6 @@ button { font-family: inherit; }
   background: hsl(258 87% 68% / 0.30);
 }
 
-/* Scrollbars — premium, theme-aware */
 ::-webkit-scrollbar { width: 12px; height: 12px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
@@ -428,7 +284,6 @@ button { font-family: inherit; }
   border-color: var(--border-default) !important;
 }
 
-/* Glass surface */
 .glass {
   background: var(--glass-bg);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -436,7 +291,6 @@ button { font-family: inherit; }
   border: 1px solid var(--glass-border);
 }
 
-/* Premium card */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
@@ -444,7 +298,6 @@ button { font-family: inherit; }
   box-shadow: var(--shadow-sm);
 }
 
-/* Gradient mesh background — drop into a relative parent */
 .mesh-bg {
   position: absolute;
   inset: -20%;
@@ -453,35 +306,14 @@ button { font-family: inherit; }
   filter: blur(80px);
   opacity: 0.9;
   background:
-    radial-gradient(at 20% 20%, var(--mesh-1, hsl(258 100% 75% / 0.4)) 0px, transparent 50%),
-    radial-gradient(at 80% 0%,  var(--mesh-2, hsl(196 100% 70% / 0.35)) 0px, transparent 50%),
-    radial-gradient(at 80% 50%, var(--mesh-3, hsl(330 100% 75% / 0.30)) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, hsl(258 100% 80% / 0.25) 0px, transparent 50%);
+    radial-gradient(at 20% 20%, var(--mesh-1) 0px, transparent 50%),
+    radial-gradient(at 80% 0%,  var(--mesh-2) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, var(--mesh-3) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, var(--mesh-4) 0px, transparent 50%);
   animation: mesh-drift 40s ease-in-out infinite;
 }
+[data-theme="dark"] .mesh-bg { opacity: 0.7; }
 
-[data-theme="dark"] .mesh-bg {
-  background:
-    radial-gradient(at 20% 20%, hsl(258 100% 65% / 0.25) 0px, transparent 50%),
-    radial-gradient(at 80% 0%,  hsl(196 100% 60% / 0.20) 0px, transparent 50%),
-    radial-gradient(at 80% 50%, hsl(330 100% 70% / 0.18) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, hsl(258 100% 70% / 0.20) 0px, transparent 50%);
-  opacity: 0.7;
-}
-
-/* Subtle grain noise for depth */
-.grain::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
-  opacity: 0.05;
-  mix-blend-mode: overlay;
-}
-
-/* Aurora effect — for special hero elements */
 .aurora {
   position: relative;
   background: linear-gradient(135deg,
@@ -491,23 +323,18 @@ button { font-family: inherit; }
   background-size: 300% 300%;
   animation: aurora-shift 20s ease infinite;
 }
-
 @keyframes aurora-shift {
   0%, 100% { background-position: 0% 50%; }
   50%      { background-position: 100% 50%; }
 }
 
-/* Spotlight — animated radial gradient that follows cursor */
-.spotlight {
-  position: relative;
-  overflow: hidden;
-}
+.spotlight { position: relative; overflow: hidden; }
 .spotlight::after {
   content: "";
   position: absolute;
   inset: 0;
   background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%),
-              hsl(var(--accent-hue, 258) 87% 64% / 0.15) 0%,
+              hsl(258 87% 64% / 0.15) 0%,
               transparent 50%);
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -515,14 +342,12 @@ button { font-family: inherit; }
 }
 .spotlight:hover::after { opacity: 1; }
 
-/* Heatmap */
 .heatmap-cell { border-radius: 2px; transition: transform 0.1s; }
 .heatmap-cell:hover { transform: scale(1.4); }
 
-/* ── Lesson reader prose styles ──────────────────────────────────────────── */
+/* ── Lesson reader prose ─────────────────────────────────────────────────── */
 .prose-reader {
   --prose-max-width: 720px;
-  max-width: var(--prose-max-width);
   font-size: 17px;
   line-height: 1.75;
   color: var(--text-primary);
@@ -536,11 +361,11 @@ button { font-family: inherit; }
   color: var(--text-primary);
 }
 .prose-reader h1 { font-size: 36px; line-height: 1.15; margin: 0 0 24px; font-weight: 800; }
-.prose-reader h2 { font-size: 26px; line-height: 1.25; margin: 56px 0 16px; font-weight: 700; }
-.prose-reader h3 { font-size: 19px; line-height: 1.35; margin: 36px 0 12px; font-weight: 700; }
-.prose-reader h4 { font-size: 16px; line-height: 1.4;  margin: 28px 0 10px; font-weight: 700; }
+.prose-reader h2 { font-size: 26px; line-height: 1.25; margin: 48px 0 14px; font-weight: 700; }
+.prose-reader h3 { font-size: 19px; line-height: 1.35; margin: 32px 0 10px; font-weight: 700; }
+.prose-reader h4 { font-size: 16px; line-height: 1.4;  margin: 24px 0 8px; font-weight: 700; }
 
-.prose-reader p { margin: 0 0 20px; }
+.prose-reader p { margin: 0 0 18px; }
 .prose-reader strong { font-weight: 700; color: var(--text-primary); }
 .prose-reader em { font-style: italic; }
 .prose-reader a {
@@ -554,21 +379,21 @@ button { font-family: inherit; }
 
 .prose-reader ul, .prose-reader ol {
   padding-left: 28px;
-  margin: 0 0 24px;
+  margin: 0 0 22px;
 }
-.prose-reader li { margin: 8px 0; }
+.prose-reader li { margin: 6px 0; }
 .prose-reader li::marker { color: var(--text-tertiary); }
 
 .prose-reader hr {
   border: none;
   border-top: 1px solid var(--border-subtle);
-  margin: 48px auto;
+  margin: 40px auto;
   width: 60%;
 }
 
 .prose-reader blockquote {
-  margin: 28px 0;
-  padding: 16px 22px;
+  margin: 24px 0;
+  padding: 14px 20px;
   background: var(--bg-subtle);
   border-left: 3px solid var(--accent);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
@@ -587,7 +412,7 @@ button { font-family: inherit; }
 }
 
 .prose-reader pre {
-  margin: 28px 0;
+  margin: 24px 0;
   padding: 0;
   background: transparent;
 }
@@ -595,7 +420,7 @@ button { font-family: inherit; }
 .prose-reader table {
   width: 100%;
   border-collapse: collapse;
-  margin: 28px 0;
+  margin: 24px 0;
   font-size: 14.5px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -614,10 +439,10 @@ button { font-family: inherit; }
 .prose-reader img {
   max-width: 100%;
   border-radius: var(--radius-md);
-  margin: 24px 0;
+  margin: 22px 0;
 }
 
-/* ── Highlight.js — code block colors, theme-aware ───────────────────────── */
+/* ── Highlight.js ────────────────────────────────────────────────────────── */
 .hljs {
   display: block;
   overflow-x: auto;

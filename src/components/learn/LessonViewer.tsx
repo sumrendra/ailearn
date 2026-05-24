@@ -276,54 +276,17 @@ export function LessonViewer({
         <div style={{ flex: "1 1 720px", maxWidth: 800, minWidth: 0 }}>
 
         {/* ── Chapter header ────────────────────────────────────────────── */}
-        <div style={{ marginBottom: 52, maxWidth: 740 }}>
+        <div style={{ marginBottom: 36, maxWidth: 800 }}>
 
-          {/* Breadcrumb row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
-            {pathSlug && (
-              <Link href={`/learn/${pathSlug}`} style={{ textDecoration: "none" }}>
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 5,
-                  fontSize: 11, color: "var(--text-tertiary)", fontWeight: 500,
-                  transition: "color 0.12s",
-                }}>
-                  <ChevronLeft size={12} /> Paths
-                </div>
-              </Link>
-            )}
-
-            {pathName && (
-              <>
-                <span style={{ color: "var(--border-default)", fontSize: 11 }}>/</span>
-                <span style={{
-                  display: "inline-flex", alignItems: "center",
-                  fontSize: 11.5, fontWeight: 600, color: "#fff",
-                  background: pathColor,
-                  padding: "3px 10px", borderRadius: 999,
-                  letterSpacing: "0.02em",
-                }}>
-                  {pathName}
-                </span>
-              </>
-            )}
-
-            {lessonIndex !== undefined && totalLessons !== undefined && (
-              <span style={{
-                fontSize: 11.5, color: "var(--text-tertiary)", fontWeight: 500,
-              }}>
-                Lesson {lessonIndex + 1} of {totalLessons}
-              </span>
-            )}
-          </div>
-
-          {/* Lesson title */}
+          {/* Lesson title — breadcrumb lives in the lesson topbar above */}
           <h1 style={{
-            fontSize: 36,
+            fontFamily: "var(--font-display)",
+            fontSize: 42,
             fontWeight: 800,
             color: "var(--text-primary)",
-            lineHeight: 1.15,
-            letterSpacing: "-0.03em",
-            marginBottom: 20,
+            lineHeight: 1.1,
+            letterSpacing: "-0.035em",
+            marginBottom: 16,
           }}>
             {lessonTitle}
           </h1>
@@ -366,35 +329,30 @@ export function LessonViewer({
             </div>
           )}
 
-          {/* Divider */}
+          {/* Inline Ask AI Tutor — small, right-aligned, sits below the meta row */}
           <div style={{
-            height: 1,
-            background: "var(--border-subtle)",
-            marginTop: 28,
-          }} />
-        </div>
-
-        {/* ── Action bar ────────────────────────────────────────────────── */}
-        <div style={{
-          display: "flex", justifyContent: "flex-end",
-          marginBottom: diagramComponent ? 28 : 36, maxWidth: 740,
-        }}>
-          <button
-            onClick={() => setTutorOpen((v) => !v)}
-            style={{
-              display: "flex", alignItems: "center", gap: 7,
-              padding: "8px 16px", border: "none",
-              borderRadius: "var(--radius-md)",
-              background: tutorOpen ? "var(--bg-tertiary)" : "var(--accent)",
-              color: tutorOpen ? "var(--text-secondary)" : "#fff",
-              fontSize: 13, fontWeight: 500, cursor: "pointer",
-              boxShadow: tutorOpen ? "none" : "0 2px 10px rgba(108,71,255,0.4)",
-              transition: "all 0.15s",
-            }}
-          >
-            <Sparkles size={13} />
-            {tutorOpen ? "Close tutor" : "Ask AI Tutor"}
-          </button>
+            display: "flex", alignItems: "center", justifyContent: "flex-end",
+            marginTop: 18,
+            paddingTop: 18,
+            borderTop: "1px solid var(--border-subtle)",
+          }}>
+            <button
+              onClick={() => setTutorOpen((v) => !v)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 7,
+                padding: "7px 14px", border: "none",
+                borderRadius: 999,
+                background: tutorOpen ? "var(--bg-tertiary)" : "var(--accent)",
+                color: tutorOpen ? "var(--text-secondary)" : "#fff",
+                fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+                boxShadow: tutorOpen ? "none" : "0 4px 14px hsl(258 87% 64% / 0.35)",
+                transition: "all 0.15s",
+              }}
+            >
+              <Sparkles size={12} />
+              {tutorOpen ? "Close tutor" : "Ask AI Tutor"}
+            </button>
+          </div>
         </div>
 
         {/* ── Visual diagram ────────────────────────────────────────────── */}
@@ -838,39 +796,41 @@ export function LessonViewer({
             </button>
           ))}
 
-          {/* Reading progress */}
-          <div style={{
-            marginTop: 24, padding: "16px 20px 0",
-            borderTop: "1px solid var(--border-subtle)",
-          }}>
+          {/* Reading progress — only show once the user has actually started scrolling */}
+          {readPct > 0 && (
             <div style={{
-              display: "flex", justifyContent: "space-between",
-              alignItems: "center", marginBottom: 8,
-            }}>
-              <span style={{ fontSize: 10, color: "var(--text-tertiary)", fontWeight: 500 }}>
-                Progress
-              </span>
-              <span style={{
-                fontSize: 10, fontWeight: 700,
-                color: readPct === 100 ? "var(--success)" : "var(--accent)",
-              }}>
-                {readPct}%
-              </span>
-            </div>
-            <div style={{
-              height: 4, background: "var(--bg-tertiary)",
-              borderRadius: "var(--radius-full)", overflow: "hidden",
+              marginTop: 24, padding: "16px 20px 0",
+              borderTop: "1px solid var(--border-subtle)",
             }}>
               <div style={{
-                height: "100%", width: `${readPct}%`,
-                background: readPct === 100
-                  ? "var(--success)"
-                  : `linear-gradient(90deg, ${pathColor}, #c084fc)`,
-                transition: "width 0.3s ease",
-                borderRadius: "var(--radius-full)",
-              }} />
+                display: "flex", justifyContent: "space-between",
+                alignItems: "center", marginBottom: 8,
+              }}>
+                <span className="text-eyebrow" style={{ color: "var(--text-quaternary)" }}>
+                  Progress
+                </span>
+                <span style={{
+                  fontSize: 10, fontWeight: 700,
+                  color: readPct === 100 ? "var(--success)" : "var(--accent)",
+                }}>
+                  {readPct}%
+                </span>
+              </div>
+              <div style={{
+                height: 4, background: "var(--bg-tertiary)",
+                borderRadius: "var(--radius-full)", overflow: "hidden",
+              }}>
+                <div style={{
+                  height: "100%", width: `${readPct}%`,
+                  background: readPct === 100
+                    ? "var(--success)"
+                    : `linear-gradient(90deg, ${pathColor}, hsl(258 87% 72%))`,
+                  transition: "width 0.3s ease",
+                  borderRadius: "var(--radius-full)",
+                }} />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
