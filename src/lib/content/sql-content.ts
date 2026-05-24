@@ -575,3 +575,149 @@ If you've made it through all six lessons:
 
 That's most of what you need to use Postgres confidently in production. The remaining frontier is operations — backups, replication, vacuum tuning — but as the engineer who *writes* the queries, you now have the toolkit. Bonne continuation!
 `;
+
+/* SQL Mastery — Lesson 1 (was inline in seed.ts) */
+export const SQL_L1 = `# Your First SQL Query — How Databases Think
+
+Imagine you have a spreadsheet with 10 million rows of customer orders. You want to find every order from "Alice" that's over $100. How would you do it in your head? You'd flip through the rows one by one, checking each.
+
+A database can do exactly that. But it would be *slow*. So instead, SQL asks you to do something a little weird: **describe what you want, not how to find it**.
+
+That's the whole game.
+
+## A query is a sentence
+
+Here's what a SQL query looks like:
+
+\`\`\`
+SELECT name, total
+FROM orders
+WHERE customer_id = 1
+\`\`\`
+
+Read it like English:
+
+> "**Select** the *name* and *total* columns, **from** the *orders* table, **where** the *customer_id* equals 1."
+
+That's it. You're describing the result you want. The database figures out how to get there.
+
+## Let's try it — for real
+
+Below is a real Postgres database running in your browser (no kidding — it's literally Postgres compiled to WebAssembly). It has some sample tables. Click **Run** and you'll see Alice's orders:
+
+\`\`\`sql-playground
+-- @fixture: ecommerce
+-- @hint: Click "Run" or press Cmd/Ctrl + Enter. Then try changing the WHERE clause — what happens with customer_id = 2?
+SELECT id, status, total, created_at
+FROM orders
+WHERE customer_id = 1;
+\`\`\`
+
+You should see three rows pop out. That's the query result. **No installation, no setup, no server.** You just talked to a database.
+
+> Try changing \`customer_id = 1\` to \`customer_id = 2\` and run again. See how the rows change? That's it. That's SQL.
+
+## The four words you'll write the most
+
+Almost every query you ever write will use these four keywords:
+
+| Word | What it does | Example |
+|------|--------------|---------|
+| \`SELECT\` | Pick which columns to return | \`SELECT name, email\` |
+| \`FROM\` | Pick which table to read | \`FROM customers\` |
+| \`WHERE\` | Filter — only keep rows that match | \`WHERE city = 'Austin'\` |
+| \`ORDER BY\` | Sort the results | \`ORDER BY total DESC\` |
+
+That's the whole foundation. Let's use them.
+
+\`\`\`sql-playground
+-- @fixture: ecommerce
+-- @hint: Customers from Austin, sorted alphabetically. Try changing 'Austin' to 'San Francisco'.
+-- @challenge: Customers who signed up in 2024-04 or later | SELECT name, signed_up FROM customers WHERE signed_up >= '2024-04-01' ORDER BY signed_up;
+-- @challenge: Top 3 most expensive products | SELECT name, price FROM products ORDER BY price DESC LIMIT 3;
+SELECT name, city, signed_up
+FROM customers
+WHERE city = 'Austin'
+ORDER BY name;
+\`\`\`
+
+## Don't think rows — think sets
+
+Here's the mental shift that trips up most beginners.
+
+In a programming language like Java or Python, you'd loop:
+
+\`\`\`java
+for (Order order : orders) {
+  if (order.customerId == 1 && order.total > 100) {
+    print(order);
+  }
+}
+\`\`\`
+
+That's *imperative* — you tell the computer **how** to do it.
+
+SQL is *declarative* — you tell it **what** you want:
+
+\`\`\`sql
+SELECT * FROM orders WHERE customer_id = 1 AND total > 100;
+\`\`\`
+
+The database decides how to find those rows. On a 10-million-row table with an index, it'll skip 99.9% of the data without you writing a line about that. **That's why SQL is fast.**
+
+## The NULL gotcha (everyone trips on this)
+
+What's the value of "the address of a customer who didn't give an address"? It's not zero. It's not an empty string. It's **NULL** — "unknown."
+
+And here's the trap: in SQL, **NULL is never equal to anything, not even itself**.
+
+\`\`\`sql-playground
+-- @fixture: ecommerce
+-- @hint: Run this. Notice how 0 rows come back? That's the bug. NULL = anything is always "unknown" — never true.
+SELECT * FROM customers WHERE city = NULL;
+\`\`\`
+
+Zero rows? But surely *some* customers don't have a city. The query is broken — silently.
+
+The fix:
+
+\`\`\`sql-playground
+-- @fixture: ecommerce
+-- @hint: Use IS NULL instead of = NULL. Always. No exceptions.
+SELECT name, city FROM customers WHERE city IS NULL;
+\`\`\`
+
+Same idea works for checking the opposite: use \`IS NOT NULL\`, never \`!= NULL\` or \`<> NULL\`.
+
+This bug bites everyone exactly once. Remember it and you'll save your future self hours.
+
+## A trick that feels like cheating
+
+Want to know how many customers you have? You don't need to count them yourself:
+
+\`\`\`sql-playground
+-- @fixture: ecommerce
+-- @hint: COUNT(*) is a "function" — it counts rows. Try grouping by city to see customers per city.
+-- @challenge: Customers per city | SELECT city, COUNT(*) AS customers FROM customers GROUP BY city ORDER BY customers DESC;
+-- @challenge: How much revenue have we made? | SELECT SUM(total) AS revenue FROM orders WHERE status = 'completed';
+SELECT COUNT(*) AS total_customers FROM customers;
+\`\`\`
+
+\`COUNT(*)\` is your first **aggregate function** — it boils down a whole bunch of rows into a single number. There are more (\`SUM\`, \`AVG\`, \`MIN\`, \`MAX\`) and you'll meet them in lesson 3.
+
+## What you can do right now
+
+You're not a SQL expert yet. But after this lesson, you can:
+
+- ✅ Read any \`SELECT … FROM … WHERE … ORDER BY\` query and understand what it's asking
+- ✅ Write your own queries against simple tables
+- ✅ Avoid the NULL trap that bites everyone
+- ✅ Count rows and filter them by any condition
+
+That's already more SQL than 80% of the engineers in the industry use day-to-day.
+
+## What's next
+
+Tables on their own are useful. But the magic happens when you **combine** tables together — customers with their orders, orders with their products. That's called a **JOIN**, and it's the next lesson.
+`;
+

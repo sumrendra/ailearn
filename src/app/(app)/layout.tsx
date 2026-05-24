@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getAllPaths } from "@/lib/content";
 import { IconRail } from "@/components/layout/IconRail";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 
@@ -15,10 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   // Index of every course + lesson — fed to the global Cmd-K palette.
-  const pathsRaw = await prisma.learningPath.findMany({
-    orderBy: { order: "asc" },
-    include: { lessons: { orderBy: { order: "asc" }, select: { slug: true, title: true } } },
-  });
+  const pathsRaw = getAllPaths();
 
   const palettePaths = pathsRaw.map((p) => ({
     slug: p.slug,

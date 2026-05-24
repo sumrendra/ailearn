@@ -1,33 +1,24 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getAllLessons } from "@/lib/content";
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (!q) return new Response(JSON.stringify({ results: [] }), { headers: { "Content-Type": "application/json" } });
 
-  const lessons = await prisma.lesson.findMany({
-    where: {
-      OR: [
-        { title: { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-        { content: { contains: q, mode: "insensitive" } },
-      ],
-    },
-    select: {
-      slug: true,
-      title: true,
-      description: true,
-      path: { select: { title: true } },
-    },
-    take: 10,
-  });
-
-  const results = lessons.map((l) => ({
-    slug: l.slug,
-    title: l.title,
-    description: l.description,
-    pathTitle: l.path.title,
-  }));
+  const needle = q.toLowerCase();
+  const results = getAllLessons()
+    .filter((l) =>
+      l.title.toLowerCase().includes(needle) ||
+      l.description.toLowerCase().includes(needle) ||
+      l.content.toLowerCase().includes(needle),
+    )
+    .slice(0, 10)
+    .map((l) => ({
+      slug: l.slug,
+      title: l.title,
+      description: l.description,
+      pathTitle: l.pathTitle,
+    }));
 
   return new Response(JSON.stringify({ results }), {
     headers: { "Content-Type": "application/json" },

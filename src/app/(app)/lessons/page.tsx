@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getAllPaths } from "@/lib/content";
 import { Topbar } from "@/components/layout/Topbar";
 import { PathIcon } from "@/components/learn/PathIcon";
 import { getPathMeta } from "@/lib/learning-paths";
@@ -24,18 +25,15 @@ export default async function LessonsPage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const paths = await prisma.learningPath.findMany({
-    orderBy: { order: "asc" },
-    include: { lessons: { orderBy: { order: "asc" } } },
-  });
+  const paths = getAllPaths();
 
-  let completedLessonIds = new Set<string>();
+  let completedLessonSlugs = new Set<string>();
   if (userId) {
     const progress = await prisma.lessonProgress.findMany({
       where: { userId, status: "COMPLETED" },
-      select: { lessonId: true },
+      select: { lessonSlug: true },
     });
-    completedLessonIds = new Set(progress.map((p) => p.lessonId));
+    completedLessonSlugs = new Set(progress.map((p) => p.lessonSlug));
   }
 
   return (
@@ -44,9 +42,9 @@ export default async function LessonsPage() {
       <div style={{ padding: "28px 32px", maxWidth: 960, width: "100%" }}>
         {paths.map((path) => {
           const meta = getPathMeta(path.slug);
-          const completed = path.lessons.filter((l) => completedLessonIds.has(l.id)).length;
+          const completed = path.lessons.filter((l) => completedLessonSlugs.has(l.slug)).length;
           return (
-            <section key={path.id} style={{ marginBottom: 36 }}>
+            <section key={path.slug} style={{ marginBottom: 36 }}>
               {/* Section header */}
               <header
                 style={{
@@ -107,10 +105,10 @@ export default async function LessonsPage() {
                 }}
               >
                 {path.lessons.map((lesson, idx) => {
-                  const isComplete = completedLessonIds.has(lesson.id);
+                  const isComplete = completedLessonSlugs.has(lesson.slug);
                   return (
                     <Link
-                      key={lesson.id}
+                      key={lesson.slug}
                       href={`/lessons/${lesson.slug}`}
                       style={{ textDecoration: "none" }}
                     >

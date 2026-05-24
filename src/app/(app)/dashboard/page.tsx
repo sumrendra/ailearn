@@ -1,26 +1,13 @@
 export const dynamic = "force-dynamic";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getAllPaths, getLessonBySlug } from "@/lib/content";
+import { getPathMeta } from "@/lib/learning-paths";
 import { DashboardClient } from "./DashboardClient";
-
-const PATH_COLORS: Record<string, string> = {
-  "llm-foundations": "#6c47ff",
-  "rag-vector-dbs":  "#0f766e",
-  "ai-agents":       "#b45309",
-};
 
 export default async function DashboardPage() {
   const session = await auth();
-
-  const paths = await prisma.learningPath.findMany({
-    orderBy: { order: "asc" },
-    include: {
-      lessons: {
-        orderBy: { order: "asc" },
-        select: { id: true, slug: true, title: true, estimatedMins: true, xpReward: true },
-      },
-    },
-  });
+  const paths = getAllPaths();
 
   const totalLessons = paths.reduce((s, p) => s + p.lessons.length, 0);
   const totalXP      = paths.reduce((s, p) => s + p.lessons.reduce((a, l) => a + (l.xpReward ?? 0), 0), 0);
@@ -46,7 +33,7 @@ export default async function DashboardPage() {
       }),
       prisma.lessonProgress.findMany({
         where: { userId: session.user.id, status: "COMPLETED" },
-        include: { lesson: { include: { path: { select: { title: true, slug: true } } } } },
+        select: { lessonSlug: true, completedAt: true },
         orderBy: { completedAt: "desc" },
         take: 4,
       }),
@@ -61,17 +48,24 @@ export default async function DashboardPage() {
       };
     }
 
-    recentLessons = progressRows.map(r => ({
-      title: r.lesson.title,
-      slug: r.lesson.slug,
-      pathTitle: r.lesson.path.title,
-      pathSlug: r.lesson.path.slug,
-      pathColor: PATH_COLORS[r.lesson.path.slug] ?? "#6c47ff",
-    }));
+    // Join user progress against in-memory content
+    recentLessons = progressRows
+      .map((r) => {
+        const lesson = getLessonBySlug(r.lessonSlug);
+        if (!lesson) return null;
+        return {
+          title: lesson.title,
+          slug: lesson.slug,
+          pathTitle: lesson.pathTitle,
+          pathSlug: lesson.pathSlug,
+          pathColor: getPathMeta(lesson.pathSlug).color,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
 
-    // Compute per-path completion percentage
+    // Per-path completion percentage
     for (const path of paths) {
-      const done = progressRows.filter(r => r.lesson.path.slug === path.slug).length;
+      const done = progressRows.filter((r) => path.lessons.some((l) => l.slug === r.lessonSlug)).length;
       pathProgress[path.slug] = path.lessons.length > 0 ? Math.round((done / path.lessons.length) * 100) : 0;
     }
   }
@@ -90,13 +84,13 @@ export default async function DashboardPage() {
       continuePath={firstPath ? {
         title: firstPath.title,
         slug: firstPath.slug,
-        color: PATH_COLORS[firstPath.slug] ?? "#6c47ff",
+        color: getPathMeta(firstPath.slug).color,
         lesson: firstLesson ? { title: firstLesson.title, slug: firstLesson.slug } : null,
       } : null}
       paths={paths.map(p => ({
         title: p.title,
         slug: p.slug,
-        color: PATH_COLORS[p.slug] ?? "#6c47ff",
+        color: getPathMeta(p.slug).color,
         totalLessons: p.lessons.length,
         xpAvailable: p.lessons.reduce((s, l) => s + (l.xpReward ?? 0), 0),
         firstLesson: p.lessons[0] ? { slug: p.lessons[0].slug } : null,

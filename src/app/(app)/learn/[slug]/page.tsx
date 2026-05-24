@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getPathBySlug } from "@/lib/content";
 import { Topbar } from "@/components/layout/Topbar";
 import { getPathMeta } from "@/lib/learning-paths";
 import { ArrowRight, BookOpen, Clock, ChevronLeft, Zap, PlayCircle, CheckCircle2 } from "lucide-react";
@@ -18,11 +19,7 @@ export default async function LearningPathPage({
 }) {
   const { slug } = await params;
 
-  const path = await prisma.learningPath.findUnique({
-    where: { slug },
-    include: { lessons: { orderBy: { order: "asc" } } },
-  });
-
+  const path = getPathBySlug(slug);
   if (!path) notFound();
 
   const meta = getPathMeta(path.slug);
@@ -34,16 +31,16 @@ export default async function LearningPathPage({
   // Per-user progress for this path.
   const session = await auth();
   const userId = session?.user?.id;
-  let completedIds = new Set<string>();
+  let completedSlugs = new Set<string>();
   if (userId) {
     const progress = await prisma.lessonProgress.findMany({
-      where: { userId, status: "COMPLETED", lessonId: { in: path.lessons.map((l) => l.id) } },
-      select: { lessonId: true },
+      where: { userId, status: "COMPLETED", lessonSlug: { in: path.lessons.map((l) => l.slug) } },
+      select: { lessonSlug: true },
     });
-    completedIds = new Set(progress.map((p) => p.lessonId));
+    completedSlugs = new Set(progress.map((p) => p.lessonSlug));
   }
-  const completedCount = path.lessons.filter((l) => completedIds.has(l.id)).length;
-  const firstUnfinished = path.lessons.find((l) => !completedIds.has(l.id)) ?? path.lessons[0];
+  const completedCount = path.lessons.filter((l) => completedSlugs.has(l.slug)).length;
+  const firstUnfinished = path.lessons.find((l) => !completedSlugs.has(l.slug)) ?? path.lessons[0];
 
   return (
     <>
@@ -188,9 +185,9 @@ export default async function LearningPathPage({
             </div>
 
             {path.lessons.map((lesson, idx) => {
-              const isComplete = completedIds.has(lesson.id);
+              const isComplete = completedSlugs.has(lesson.slug);
               return (
-              <Link key={lesson.id} href={`/lessons/${lesson.slug}`} style={{ textDecoration: "none" }}>
+              <Link key={lesson.slug} href={`/lessons/${lesson.slug}`} style={{ textDecoration: "none" }}>
                 <div className="hover-item" style={{
                   display: "flex", alignItems: "center", gap: 16,
                   padding: "18px 32px",

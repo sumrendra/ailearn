@@ -6,6 +6,12 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Auth / users ─────────────────────────────────────────────────────────
+//
+// All static educational content (paths, lessons, flashcards, quizzes,
+// achievements, daily challenges) lives in code under src/lib/content/.
+// The database is intentionally scoped to user-specific data only.
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -23,15 +29,15 @@ model User {
   lastActiveDate  DateTime?
   streakFreezes   Int      @default(2)
 
-  accounts         Account[]
-  sessions         Session[]
-  progress         LessonProgress[]
-  flashcardReviews FlashcardReview[]
-  quizAttempts     QuizAttempt[]
-  notes            Note[]
-  achievements     UserAchievement[]
+  accounts          Account[]
+  sessions          Session[]
+  progress          LessonProgress[]
+  flashcardReviews  FlashcardReview[]
+  quizAttempts      QuizAttempt[]
+  notes             Note[]
+  achievements      UserAchievement[]
   interviewSessions InterviewSession[]
-  chatSessions     ChatSession[]
+  chatSessions      ChatSession[]
 }
 
 model Account {
@@ -69,105 +75,48 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model LearningPath {
-  id             String   @id @default(cuid())
-  slug           String   @unique
-  title          String
-  description    String
-  icon           String
-  color          String
-  difficulty     Difficulty
-  estimatedHours Int
-  tags           String[]
-  order          Int      @default(0)
-  createdAt      DateTime @default(now())
-
-  lessons Lesson[]
-}
-
-model Lesson {
-  id            String   @id @default(cuid())
-  slug          String   @unique
-  title         String
-  description   String
-  content       String   @db.Text
-  pathId        String
-  order         Int
-  estimatedMins Int      @default(15)
-  xpReward      Int      @default(50)
-  tags          String[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  path          LearningPath     @relation(fields: [pathId], references: [id])
-  progress      LessonProgress[]
-  flashcards    Flashcard[]
-  quizQuestions QuizQuestion[]
-  notes         Note[]
-}
+// ─── User-specific progress / activity ────────────────────────────────────
+//
+// These reference content (lessons, flashcards, etc.) by their stable string
+// slugs/keys — content lives in code, so no FK to a `Lesson` table.
 
 model LessonProgress {
   id            String         @id @default(cuid())
   userId        String
-  lessonId      String
+  lessonSlug    String
   status        ProgressStatus @default(NOT_STARTED)
   completedAt   DateTime?
   timeSpentMins Int            @default(0)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, lessonId])
-}
-
-model Flashcard {
-  id        String   @id @default(cuid())
-  lessonId  String?
-  front     String   @db.Text
-  back      String   @db.Text
-  tags      String[]
-  createdAt DateTime @default(now())
-
-  lesson  Lesson?           @relation(fields: [lessonId], references: [id])
-  reviews FlashcardReview[]
+  @@unique([userId, lessonSlug])
+  @@index([lessonSlug])
 }
 
 model FlashcardReview {
   id         String   @id @default(cuid())
   userId     String
-  cardId     String
+  /// Stable key from src/lib/content/flashcards.ts (typically "lessonSlug:n")
+  cardKey    String
   rating     Int
   nextReview DateTime
   interval   Int      @default(1)
   easeFactor Float    @default(2.5)
   reviewedAt DateTime @default(now())
 
-  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  card Flashcard @relation(fields: [cardId], references: [id], onDelete: Cascade)
-}
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model QuizQuestion {
-  id            String       @id @default(cuid())
-  lessonId      String?
-  type          QuestionType
-  question      String       @db.Text
-  options       Json?
-  correctAnswer String?      @db.Text
-  explanation   String       @db.Text
-  difficulty    Difficulty
-  tags          String[]
-  createdAt     DateTime     @default(now())
-
-  lesson   Lesson?               @relation(fields: [lessonId], references: [id])
-  attempts QuizAttemptQuestion[]
+  @@index([userId, nextReview])
+  @@index([cardKey])
 }
 
 model QuizAttempt {
   id          String   @id @default(cuid())
   userId      String
-  lessonId    String?
+  lessonSlug  String?
   score       Int
   totalQs     Int
   xpEarned    Int      @default(0)
@@ -180,51 +129,40 @@ model QuizAttempt {
 model QuizAttemptQuestion {
   id          String  @id @default(cuid())
   attemptId   String
-  questionId  String
+  /// Stable key from src/lib/content/quizzes.ts (typically "lessonSlug:qN")
+  questionKey String
   userAnswer  String  @db.Text
   isCorrect   Boolean
   timeTakenMs Int     @default(0)
 
-  attempt  QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question QuizQuestion @relation(fields: [questionId], references: [id])
+  attempt QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 }
 
 model Note {
-  id        String   @id @default(cuid())
-  userId    String
-  lessonId  String?
-  title     String
-  content   String   @db.Text
-  tags      String[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  userId     String
+  lessonSlug String?
+  title      String
+  content    String   @db.Text
+  tags       String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson? @relation(fields: [lessonId], references: [id])
-}
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model Achievement {
-  id          String @id @default(cuid())
-  slug        String @unique
-  title       String
-  description String
-  icon        String
-  xpReward    Int    @default(100)
-  rarity      Rarity @default(COMMON)
-
-  users UserAchievement[]
+  @@index([userId])
+  @@index([lessonSlug])
 }
 
 model UserAchievement {
-  id            String   @id @default(cuid())
-  userId        String
-  achievementId String
-  unlockedAt    DateTime @default(now())
+  id              String   @id @default(cuid())
+  userId          String
+  achievementSlug String
+  unlockedAt      DateTime @default(now())
 
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  achievement Achievement @relation(fields: [achievementId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, achievementId])
+  @@unique([userId, achievementSlug])
 }
 
 model InterviewSession {
@@ -241,24 +179,14 @@ model InterviewSession {
 }
 
 model ChatSession {
-  id        String   @id @default(cuid())
-  userId    String
-  lessonId  String?
-  messages  Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  userId     String
+  lessonSlug String?
+  messages   Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model DailyChallenge {
-  id       String        @id @default(cuid())
-  date     DateTime      @unique @db.Date
-  type     ChallengeType
-  title    String
-  content  String        @db.Text
-  xpReward Int           @default(25)
-  tags     String[]
 }
 
 enum ProgressStatus {
@@ -271,27 +199,4 @@ enum Difficulty {
   BEGINNER
   INTERMEDIATE
   ADVANCED
-}
-
-enum QuestionType {
-  MCQ
-  TRUE_FALSE
-  SHORT_ANSWER
-  CODE_REVIEW
-  SCENARIO
-}
-
-enum Rarity {
-  COMMON
-  RARE
-  EPIC
-  LEGENDARY
-}
-
-enum ChallengeType {
-  CONCEPT
-  PAPER
-  CODE_SNIPPET
-  SCENARIO
-  TOOL_SPOTLIGHT
 }

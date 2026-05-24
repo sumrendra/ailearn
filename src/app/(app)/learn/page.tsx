@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getAllPaths } from "@/lib/content";
 import { Topbar } from "@/components/layout/Topbar";
 import { KnowledgeMap } from "@/components/learn/KnowledgeMap";
 import { PathCard, type PathCardData } from "@/components/learn/PathCard";
@@ -12,25 +13,17 @@ export default async function LearnPage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  // Fetch all paths + their lessons in one query.
-  const paths = await prisma.learningPath.findMany({
-    orderBy: { order: "asc" },
-    include: {
-      lessons: {
-        orderBy: { order: "asc" },
-        select: { id: true, slug: true, estimatedMins: true, xpReward: true },
-      },
-    },
-  });
+  // Content lives in code now — paths/lessons are pure imports, no DB hit.
+  const paths = getAllPaths();
 
-  // Per-user lesson progress (single query, joined client-side).
-  let completedLessonIds = new Set<string>();
+  // Per-user lesson progress is the one thing that still belongs in the DB.
+  let completedLessonSlugs = new Set<string>();
   if (userId) {
     const progress = await prisma.lessonProgress.findMany({
       where: { userId, status: "COMPLETED" },
-      select: { lessonId: true },
+      select: { lessonSlug: true },
     });
-    completedLessonIds = new Set(progress.map((p) => p.lessonId));
+    completedLessonSlugs = new Set(progress.map((p) => p.lessonSlug));
   }
 
   // Aggregate stats.
@@ -45,15 +38,15 @@ export default async function LearnPage() {
   );
   const totalHrs = Math.round((totalMins / 60) * 10) / 10;
   const completedCount = paths.reduce(
-    (s, p) => s + p.lessons.filter((l) => completedLessonIds.has(l.id)).length,
+    (s, p) => s + p.lessons.filter((l) => completedLessonSlugs.has(l.slug)).length,
     0,
   );
 
-  // Map each DB row into the shape PathCard expects.
+  // Map each path into the shape PathCard expects.
   const cardData: PathCardData[] = paths.map((p) => {
     const lessonMins = p.lessons.reduce((s, l) => s + (l.estimatedMins ?? 0), 0);
     const lessonXP = p.lessons.reduce((s, l) => s + (l.xpReward ?? 0), 0);
-    const completed = p.lessons.filter((l) => completedLessonIds.has(l.id)).length;
+    const completed = p.lessons.filter((l) => completedLessonSlugs.has(l.slug)).length;
     return {
       slug: p.slug,
       title: p.title,
