@@ -15,6 +15,10 @@ import { SQL_L1, SQL_L2, SQL_L3, SQL_L4, SQL_L5, SQL_L6 } from "./sql-content";
 import { FR_L1, FR_L2, FR_L3, FR_L4, FR_L5, FR_L6 } from "./french-content";
 import { XL_L1, XL_L2, XL_L3, XL_L4, XL_L5, XL_L6 } from "./excel-content";
 import { JV_L1, JV_L2, JV_L3, JV_L4, JV_L5, JV_L6, JV_L7, JV_L8 } from "./java-content";
+import { JF_L1, JF_L2, JF_L3, JF_L4, JF_L5, JF_L6 } from "./java-frameworks-content";
+import { KF_L1, KF_L2, KF_L3, KF_L4, KF_L5, KF_L6 } from "./kafka-content";
+import { MS_L1, MS_L2, MS_L3, MS_L4, MS_L5, MS_L6 } from "./microservices-content";
+import { SD_L1, SD_L2, SD_L3, SD_L4, SD_L5, SD_L6 } from "./system-design-content";
 
 export const PATHS: LearningPath[] = [
   // ── LLM Foundations ───────────────────────────────────────────────────────
@@ -157,6 +161,86 @@ export const PATHS: LearningPath[] = [
       { slug: "java-modern-concurrency",   title: "Modern Java concurrency — virtual threads, CompletableFuture", description: "Virtual threads (Java 21), CompletableFuture pipelines, Structured Concurrency, when virtual threads help vs hurt. The patterns 2026 Java code uses.", content: JV_L6, order: 6, estimatedMins: 26, xpReward: 90, tags: ["Java", "Virtual Threads", "CompletableFuture", "Java 21"] },
       { slug: "java-streams-functional",   title: "Streams and functional Java", description: "Stream pipelines (lazy intermediate ops, eager terminal ops), map vs flatMap, Collectors, the parallel-streams trap, Optional done right.", content: JV_L7, order: 7, estimatedMins: 24, xpReward: 80, tags: ["Java", "Streams", "Functional", "Optional"] },
       { slug: "java-modern-features",      title: "Modern Java — records, sealed classes, pattern matching", description: "Records for value objects, sealed types for closed hierarchies, switch pattern matching with destructuring, text blocks, var, sequenced collections.", content: JV_L8, order: 8, estimatedMins: 22, xpReward: 80, tags: ["Java", "Records", "Pattern Matching", "Java 21"] },
+    ],
+  },
+  // ── Java Frameworks ───────────────────────────────────────────────────────
+  {
+    slug: "java-frameworks",
+    title: "Java Frameworks",
+    description: "Spring, Spring Boot, JPA, and Hibernate — the framework toolkit 95% of production Java jobs use. From DI fundamentals to production-grade testing and observability.",
+    icon: "leaf",
+    color: "#16a34a",
+    difficulty: "INTERMEDIATE",
+    estimatedHours: 10,
+    tags: ["Java", "Spring", "Spring Boot", "JPA", "Hibernate"],
+    order: 8,
+    lessons: [
+      { slug: "spring-core-di-ioc",          title: "Spring Core — DI, IoC, and the bean container", description: "Inversion of Control, constructor injection, bean lifecycle, profiles. The one idea that makes Spring Spring.", content: JF_L1, order: 1, estimatedMins: 25, xpReward: 80, tags: ["Spring", "DI", "IoC"] },
+      { slug: "spring-boot-autoconfig",      title: "Spring Boot — autoconfiguration and starters", description: "Starters, @Conditional autoconfig, application.yml, profiles, Actuator, externalized config. The Boot magic, demystified.", content: JF_L2, order: 2, estimatedMins: 24, xpReward: 80, tags: ["Spring Boot", "Autoconfig", "Actuator"] },
+      { slug: "spring-mvc-rest",             title: "Spring MVC and REST APIs", description: "Controllers, validation, error handling with @RestControllerAdvice + ProblemDetail, virtual-thread controllers, OpenAPI auto-gen.", content: JF_L3, order: 3, estimatedMins: 26, xpReward: 85, tags: ["Spring MVC", "REST", "Validation"] },
+      { slug: "spring-data-jpa",             title: "Spring Data JPA — repositories and the N+1 trap", description: "Derived queries, @Query, the N+1 bug and three fixes, DTO projections, @Transactional, Flyway migrations.", content: JF_L4, order: 4, estimatedMins: 28, xpReward: 90, tags: ["JPA", "Spring Data", "N+1"] },
+      { slug: "hibernate-deep-dive",         title: "Hibernate — what JPA hides", description: "Entity states, dirty checking, lazy loading internals, first/second-level caches, cascade types, the equals/hashCode-on-id trap.", content: JF_L5, order: 5, estimatedMins: 26, xpReward: 90, tags: ["Hibernate", "JPA", "Session"] },
+      { slug: "spring-production",           title: "Shipping Spring Boot — testing, observability, production patterns", description: "The testing pyramid, Testcontainers, profiles, secrets, Actuator + Prometheus + Grafana, health probes, graceful shutdown.", content: JF_L6, order: 6, estimatedMins: 24, xpReward: 85, tags: ["Spring Boot", "Testing", "Observability"] },
+    ],
+  },
+  // ── Apache Kafka ──────────────────────────────────────────────────────────
+  {
+    slug: "kafka-essentials",
+    title: "Apache Kafka",
+    description: "The distributed log that became the backend's nervous system. End-to-end production Kafka: topics, partitions, producers, consumers, Streams, and the ops gotchas.",
+    icon: "share-2",
+    color: "#7c3aed",
+    difficulty: "INTERMEDIATE",
+    estimatedHours: 9,
+    tags: ["Kafka", "Streaming", "Event-Driven", "Distributed Systems"],
+    order: 9,
+    lessons: [
+      { slug: "kafka-why-log-abstraction",   title: "Why Kafka? The log abstraction", description: "Why Kafka is fundamentally different from a queue, when to reach for it, and the at-least-once + idempotent default.", content: KF_L1, order: 1, estimatedMins: 22, xpReward: 75, tags: ["Kafka", "Architecture"] },
+      { slug: "kafka-topics-partitions",     title: "Topics, partitions, and replication", description: "Partitions = parallelism. Replication factor, in-sync replicas, acks=all + min.insync.replicas=2. The production-safe defaults.", content: KF_L2, order: 2, estimatedMins: 25, xpReward: 80, tags: ["Kafka", "Partitions", "Replication"] },
+      { slug: "kafka-producers",             title: "Producers — keys, idempotence, batching", description: "Production-safe producer config, partition keys, async send + callbacks, transactional producer, Schema Registry.", content: KF_L3, order: 3, estimatedMins: 25, xpReward: 80, tags: ["Kafka", "Producer", "Idempotence"] },
+      { slug: "kafka-consumers",             title: "Consumers — groups, offsets, rebalances", description: "Consumer groups, manual offset commit, the rebalance storm, static membership, cooperative rebalancing, DLT pipelines.", content: KF_L4, order: 4, estimatedMins: 26, xpReward: 85, tags: ["Kafka", "Consumer", "Rebalance"] },
+      { slug: "kafka-streams",               title: "Kafka Streams — stream processing in your service", description: "KStream vs KTable, windowed aggregation, joins, Interactive Queries — stream processing without standing up Flink.", content: KF_L5, order: 5, estimatedMins: 24, xpReward: 85, tags: ["Kafka Streams", "Stream Processing"] },
+      { slug: "kafka-production-ops",        title: "Production Kafka — sizing, monitoring, the gotchas", description: "Sizing partitions and brokers, the 5 metrics to alert on, common production bugs, Confluent vs Apache.", content: KF_L6, order: 6, estimatedMins: 22, xpReward: 80, tags: ["Kafka", "Operations", "Monitoring"] },
+    ],
+  },
+  // ── Microservices ─────────────────────────────────────────────────────────
+  {
+    slug: "microservices-architecture",
+    title: "Microservices",
+    description: "The patterns, the failures, the interviews. Communication, resilience, API gateways, distributed data with sagas and outbox, observability with OpenTelemetry.",
+    icon: "network",
+    color: "#0891b2",
+    difficulty: "ADVANCED",
+    estimatedHours: 10,
+    tags: ["Microservices", "Distributed Systems", "Saga", "Resilience"],
+    order: 10,
+    lessons: [
+      { slug: "microservices-when-and-not",  title: "Why microservices? (And when to NOT)", description: "The real costs of microservices, the modular monolith middle ground, Conway's law, the org-size floor before they pay off.", content: MS_L1, order: 1, estimatedMins: 22, xpReward: 75, tags: ["Microservices", "Architecture"] },
+      { slug: "microservices-comms",         title: "Communication patterns — sync vs async", description: "REST vs gRPC vs GraphQL, sync vs async, eventual consistency, when each wins.", content: MS_L2, order: 2, estimatedMins: 24, xpReward: 80, tags: ["Microservices", "Communication", "REST", "gRPC"] },
+      { slug: "microservices-resilience",    title: "Resilience — circuit breakers, retries, bulkheads", description: "Timeouts, retry with exponential backoff + jitter, circuit breakers, bulkheads, Resilience4j, service meshes.", content: MS_L3, order: 3, estimatedMins: 24, xpReward: 85, tags: ["Resilience", "Circuit Breaker", "Resilience4j"] },
+      { slug: "microservices-api-gateway",   title: "API gateways and BFF pattern", description: "Spring Cloud Gateway, Kong, Envoy. JWT propagation, rate limiting, the BFF pattern for client-specific APIs.", content: MS_L4, order: 4, estimatedMins: 22, xpReward: 80, tags: ["API Gateway", "BFF"] },
+      { slug: "microservices-distributed-data", title: "Distributed data — sagas, outbox, CDC", description: "Orchestrated vs choreographed sagas, the killer outbox pattern, Debezium for CDC, when NOT to use a saga.", content: MS_L5, order: 5, estimatedMins: 28, xpReward: 95, tags: ["Saga", "Outbox", "CDC", "Debezium"] },
+      { slug: "microservices-observability", title: "Observability — tracing, logs, metrics, OpenTelemetry", description: "The three pillars, OpenTelemetry as the standard, distributed tracing with sampling, structured logs, SLOs.", content: MS_L6, order: 6, estimatedMins: 24, xpReward: 85, tags: ["Observability", "OpenTelemetry", "Tracing"] },
+    ],
+  },
+  // ── System Design ─────────────────────────────────────────────────────────
+  {
+    slug: "system-design",
+    title: "System Design",
+    description: "Pass the senior interview — the framework, scalability, databases at scale, async architecture, real-time + distributed, and the classic problems (Twitter, Uber, URL shortener).",
+    icon: "blocks",
+    color: "#dc2626",
+    difficulty: "ADVANCED",
+    estimatedHours: 9,
+    tags: ["System Design", "Scalability", "Interview", "Architecture"],
+    order: 11,
+    lessons: [
+      { slug: "system-design-framework",     title: "The system-design interview — the framework", description: "The 6-step structure: clarify, estimate, API, architecture, deep dive, tradeoffs. Back-of-envelope estimation. Good candidate vs bad.", content: SD_L1, order: 1, estimatedMins: 22, xpReward: 80, tags: ["System Design", "Interview", "Framework"] },
+      { slug: "system-design-scalability",   title: "Scalability — load balancing, caching, CDNs", description: "Horizontal scale, L4 vs L7 LB, 5 cache layers, the cache stampede problem, CDN for dynamic content, read replicas.", content: SD_L2, order: 2, estimatedMins: 25, xpReward: 85, tags: ["Scalability", "Caching", "Load Balancing", "CDN"] },
+      { slug: "system-design-databases",     title: "Databases at scale — SQL, NoSQL, sharding", description: "SQL vs NoSQL pragmatics, CAP theorem, replication, sharding strategies, picking a shard key, polyglot persistence.", content: SD_L3, order: 3, estimatedMins: 26, xpReward: 90, tags: ["Databases", "Sharding", "NoSQL", "Replication"] },
+      { slug: "system-design-async",         title: "Async architecture — queues, event streaming, CQRS", description: "Job queues vs Kafka, CQRS and event sourcing, when to reach for each pattern (and when not to).", content: SD_L4, order: 4, estimatedMins: 25, xpReward: 85, tags: ["Async", "CQRS", "Event Sourcing"] },
+      { slug: "system-design-realtime",      title: "Real-time and distributed — push, geo, coordination", description: "WebSocket vs SSE, push notifications, multi-region patterns, distributed locking dangers, idempotency keys.", content: SD_L5, order: 5, estimatedMins: 26, xpReward: 90, tags: ["Real-time", "WebSocket", "Geo-distribution"] },
+      { slug: "system-design-classic-problems", title: "Classic system design problems — applied", description: "Walk through URL shortener, news feed (Twitter), and ride-sharing (Uber) end-to-end — the framework + toolkit applied.", content: SD_L6, order: 6, estimatedMins: 28, xpReward: 100, tags: ["System Design", "Interview", "URL Shortener", "News Feed"] },
     ],
   },
 ];

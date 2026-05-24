@@ -10,6 +10,7 @@
  */
 import {
   Brain, Database, Cpu, Table2, Server, Cloud, Code2, Box, Languages, FileSpreadsheet, Coffee,
+  Leaf, Share2, Network, Blocks,
   type LucideIcon,
 } from "lucide-react";
 
@@ -95,6 +96,42 @@ const META: Record<string, PathMeta> = {
     gradient: "linear-gradient(135deg, #7c2d12 0%, #ea580c 55%, #fb923c 100%)",
     glow: "rgba(234,88,12,0.30)",
     tier: "foundation",
+  },
+  "java-frameworks": {
+    Icon: Leaf,
+    color: "#16a34a",
+    tint: "rgba(22,163,74,0.08)",
+    ring: "rgba(22,163,74,0.22)",
+    gradient: "linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)",
+    glow: "rgba(22,163,74,0.28)",
+    tier: "specialization",
+  },
+  "kafka-essentials": {
+    Icon: Share2,
+    color: "#7c3aed",
+    tint: "rgba(124,58,237,0.08)",
+    ring: "rgba(124,58,237,0.22)",
+    gradient: "linear-gradient(135deg, #4c1d95 0%, #7c3aed 55%, #a78bfa 100%)",
+    glow: "rgba(124,58,237,0.30)",
+    tier: "specialization",
+  },
+  "microservices-architecture": {
+    Icon: Network,
+    color: "#0891b2",
+    tint: "rgba(8,145,178,0.08)",
+    ring: "rgba(8,145,178,0.22)",
+    gradient: "linear-gradient(135deg, #155e75 0%, #0891b2 55%, #22d3ee 100%)",
+    glow: "rgba(8,145,178,0.28)",
+    tier: "advanced",
+  },
+  "system-design": {
+    Icon: Blocks,
+    color: "#dc2626",
+    tint: "rgba(220,38,38,0.08)",
+    ring: "rgba(220,38,38,0.22)",
+    gradient: "linear-gradient(135deg, #7f1d1d 0%, #dc2626 55%, #f87171 100%)",
+    glow: "rgba(220,38,38,0.30)",
+    tier: "advanced",
   },
 };
 
