@@ -24,6 +24,9 @@ import { GrammarTable } from "@/components/french/GrammarTable";
 import { FormulaPlayground } from "@/components/excel/FormulaPlayground";
 import { PivotSimulator } from "@/components/excel/PivotSimulator";
 import { FormulaQuiz } from "@/components/excel/FormulaQuiz";
+import { HashMapVisualizer } from "@/components/java/HashMapVisualizer";
+import { CollectionsHierarchy } from "@/components/java/CollectionsHierarchy";
+import { JavaQuiz } from "@/components/java/JavaQuiz";
 import { parseLessonBlock } from "@/lib/lesson-blocks";
 import {
   parseFrenchVocab, parseFrenchSentence, parseFrenchDialogue,
@@ -32,6 +35,7 @@ import {
 import {
   parseExcelFormula, parseExcelPivot, parseExcelQuiz,
 } from "@/lib/excel-blocks";
+import { parseJavaQuiz } from "@/lib/java-blocks";
 import { type FixtureKey } from "@/lib/sql-fixtures";
 import Link from "next/link";
 
@@ -562,6 +566,27 @@ export function LessonViewer({
                       options={data.options}
                       correct={data.correct}
                       explanation={data.explanation}
+                    />
+                  ) : null;
+                }
+
+                // Java course interactive blocks
+                if (lang === "java-hashmap") {
+                  return <HashMapVisualizer />;
+                }
+                if (lang === "java-collections") {
+                  return <CollectionsHierarchy />;
+                }
+                if (lang === "java-quiz") {
+                  const data = parseJavaQuiz(extractTextContent(children));
+                  return data ? (
+                    <JavaQuiz
+                      question={data.question}
+                      code={data.code}
+                      options={data.options}
+                      correct={data.correct}
+                      explanation={data.explanation}
+                      level={data.level}
                     />
                   ) : null;
                 }

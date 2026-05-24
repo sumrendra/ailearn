@@ -10,6 +10,9 @@ import {
 import {
   XL_L1, XL_L2, XL_L3, XL_L4, XL_L5, XL_L6,
 } from "./excel-content";
+import {
+  JV_L1, JV_L2, JV_L3, JV_L4, JV_L5, JV_L6, JV_L7, JV_L8,
+} from "./java-content";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -2945,6 +2948,154 @@ async function main() {
     },
   });
 
+  const javaPath = await prisma.learningPath.upsert({
+    where: { slug: "java-complete" },
+    update: {
+      description: "From the JVM to virtual threads — the complete Java toolkit for senior engineers and interview prep. Interactive HashMap visualizer, clickable class hierarchy, and tricky 'what does this print?' quizzes throughout.",
+    },
+    create: {
+      slug: "java-complete",
+      title: "Java Complete",
+      description: "From the JVM to virtual threads — the complete Java toolkit for senior engineers and interview prep. Interactive HashMap visualizer, clickable class hierarchy, and tricky 'what does this print?' quizzes throughout.",
+      icon: "coffee",
+      color: "#ea580c",
+      difficulty: "INTERMEDIATE",
+      estimatedHours: 12,
+      tags: ["Java", "JVM", "Collections", "Concurrency", "Streams", "Interview"],
+      order: 7,
+    },
+  });
+
+  // ── PATH 7: JAVA COMPLETE ───────────────────────────────────────────────────
+
+  const jvL1 = await prisma.lesson.upsert({
+    where: { slug: "java-jvm-fundamentals" },
+    update: { content: JV_L1 },
+    create: {
+      slug: "java-jvm-fundamentals",
+      title: "How Java actually runs — JVM, JRE, JDK",
+      description: "Bytecode, the heap/stack/method-area memory model, garbage collection, and the pass-by-value question every interview asks.",
+      pathId: javaPath.id,
+      order: 1,
+      estimatedMins: 22,
+      xpReward: 70,
+      tags: ["Java", "JVM", "Memory Model", "Fundamentals"],
+      content: JV_L1,
+    },
+  });
+
+  const jvL2 = await prisma.lesson.upsert({
+    where: { slug: "java-oop-solid" },
+    update: { content: JV_L2 },
+    create: {
+      slug: "java-oop-solid",
+      title: "OOP done right — classes, interfaces, SOLID",
+      description: "When to use class vs interface vs abstract class, SOLID principles (especially Liskov), composition over inheritance, and the final/finally/finalize classic.",
+      pathId: javaPath.id,
+      order: 2,
+      estimatedMins: 25,
+      xpReward: 75,
+      tags: ["Java", "OOP", "SOLID", "Design"],
+      content: JV_L2,
+    },
+  });
+
+  const jvL3 = await prisma.lesson.upsert({
+    where: { slug: "java-collections-framework" },
+    update: { content: JV_L3 },
+    create: {
+      slug: "java-collections-framework",
+      title: "The Collections Framework",
+      description: "Interactive class hierarchy. ArrayList vs LinkedList vs ArrayDeque, the equals/hashCode contract, Comparable vs Comparator, fail-fast vs fail-safe iterators.",
+      pathId: javaPath.id,
+      order: 3,
+      estimatedMins: 25,
+      xpReward: 80,
+      tags: ["Java", "Collections", "ArrayList", "HashMap"],
+      content: JV_L3,
+    },
+  });
+
+  const jvL4 = await prisma.lesson.upsert({
+    where: { slug: "java-hashmap-internals" },
+    update: { content: JV_L4 },
+    create: {
+      slug: "java-hashmap-internals",
+      title: "HashMap — the deep dive every interview asks about",
+      description: "Live visualization of HashMap internals: hash spreading, bucket chains, treeification at 8 entries, resize at 75% load, the null/mutable-key gotchas.",
+      pathId: javaPath.id,
+      order: 4,
+      estimatedMins: 28,
+      xpReward: 95,
+      tags: ["Java", "HashMap", "Internals", "Interview"],
+      content: JV_L4,
+    },
+  });
+
+  const jvL5 = await prisma.lesson.upsert({
+    where: { slug: "java-concurrency-basics" },
+    update: { content: JV_L5 },
+    create: {
+      slug: "java-concurrency-basics",
+      title: "Concurrency — threads, synchronization, the Memory Model",
+      description: "Runnable vs Callable, volatile vs synchronized, the lost-update problem, ReentrantLock, BlockingQueue, ThreadLocal — the classic primitives.",
+      pathId: javaPath.id,
+      order: 5,
+      estimatedMins: 28,
+      xpReward: 90,
+      tags: ["Java", "Concurrency", "Threads", "synchronized", "volatile"],
+      content: JV_L5,
+    },
+  });
+
+  const jvL6 = await prisma.lesson.upsert({
+    where: { slug: "java-modern-concurrency" },
+    update: { content: JV_L6 },
+    create: {
+      slug: "java-modern-concurrency",
+      title: "Modern Java concurrency — virtual threads, CompletableFuture",
+      description: "Virtual threads (Java 21), CompletableFuture pipelines, Structured Concurrency, when virtual threads help vs hurt. The patterns 2026 Java code uses.",
+      pathId: javaPath.id,
+      order: 6,
+      estimatedMins: 26,
+      xpReward: 90,
+      tags: ["Java", "Virtual Threads", "CompletableFuture", "Java 21"],
+      content: JV_L6,
+    },
+  });
+
+  const jvL7 = await prisma.lesson.upsert({
+    where: { slug: "java-streams-functional" },
+    update: { content: JV_L7 },
+    create: {
+      slug: "java-streams-functional",
+      title: "Streams and functional Java",
+      description: "Stream pipelines (lazy intermediate ops, eager terminal ops), map vs flatMap, Collectors, the parallel-streams trap, Optional done right.",
+      pathId: javaPath.id,
+      order: 7,
+      estimatedMins: 24,
+      xpReward: 80,
+      tags: ["Java", "Streams", "Functional", "Optional"],
+      content: JV_L7,
+    },
+  });
+
+  const jvL8 = await prisma.lesson.upsert({
+    where: { slug: "java-modern-features" },
+    update: { content: JV_L8 },
+    create: {
+      slug: "java-modern-features",
+      title: "Modern Java — records, sealed classes, pattern matching",
+      description: "Records for value objects, sealed types for closed hierarchies, switch pattern matching with destructuring, text blocks, var, sequenced collections.",
+      pathId: javaPath.id,
+      order: 8,
+      estimatedMins: 22,
+      xpReward: 80,
+      tags: ["Java", "Records", "Pattern Matching", "Java 21"],
+      content: JV_L8,
+    },
+  });
+
   // ── PATH 5: FRENCH FUNDAMENTALS ─────────────────────────────────────────────
 
   const frL1 = await prisma.lesson.upsert({
@@ -4180,6 +4331,159 @@ async function main() {
         front: "Conditional formatting: when should you use a color scale vs data bars vs icon sets?",
         back: "Color scale (red→yellow→green): magnitude across a range — e.g. MRR rankings, health scores. Data bars (in-cell bars): visual comparison within a column — 'who's biggest at a glance'. Icon sets (▲/▬/▼): trend or status — e.g. up/flat/down YoY change. Rule of thumb: pick the one that the eye decodes fastest for your specific question.",
         tags: ["Excel", "Conditional Formatting"],
+      },
+    ],
+  });
+
+  // Flashcards — Java Complete
+  await prisma.flashcard.createMany({
+    skipDuplicates: true,
+    data: [
+      // L1: JVM fundamentals
+      {
+        lessonId: jvL1.id,
+        front: "What's the difference between JDK, JRE, and JVM?",
+        back: "JVM = the runtime that executes bytecode. JRE = JVM + standard library (java.util, java.io, ...). JDK = JRE + development tools (javac, jdb). The JDK is a superset of the JRE which is a superset of the JVM. Since Java 11, the standalone JRE is no longer distributed — you install a JDK.",
+        tags: ["Java", "JVM"],
+      },
+      {
+        lessonId: jvL1.id,
+        front: "Is Java pass-by-value or pass-by-reference?",
+        back: "Java is ALWAYS pass-by-value. The trick: for objects, the VALUE being passed is the reference (the pointer to the heap object). So when you mutate the object's fields inside a method, the caller sees the change (same object). When you REASSIGN the parameter inside the method (param = newObject), the caller does NOT see it (only the local copy of the reference was changed).",
+        tags: ["Java", "Memory Model"],
+      },
+      {
+        lessonId: jvL1.id,
+        front: "Where do objects live in JVM memory, and where do local variables live?",
+        back: "Objects ALWAYS live on the heap (shared across threads, garbage-collected). Local variables live on the stack (per-thread). For object types, the local variable is a reference (pointer) on the stack pointing to the actual object on the heap. Primitives as local variables live directly on the stack; primitives inside an object live inside that object on the heap.",
+        tags: ["Java", "Memory Model"],
+      },
+      // L2: OOP / SOLID
+      {
+        lessonId: jvL2.id,
+        front: "What does the Liskov Substitution Principle (the L in SOLID) actually mean?",
+        back: "Subclasses must be usable wherever the parent is, without breaking caller assumptions. Classic violation: Penguin extends Bird and throws on fly(). Code that has a Bird and calls fly() now breaks for Penguin. The fix: extract a Flyable interface and have only flying birds implement it. Penguin extends Bird (or Animal) but doesn't implement Flyable.",
+        tags: ["Java", "SOLID"],
+      },
+      {
+        lessonId: jvL2.id,
+        front: "How does Java avoid the C++ diamond problem of multiple inheritance?",
+        back: "Java forbids multiple class inheritance (only one superclass). A class CAN implement multiple interfaces. Since Java 8, interfaces have default methods — if two interfaces define the same default method and a class implements both, the code does NOT compile until you explicitly resolve it: 'public String hello() { return A.super.hello(); }' This forces the developer to choose, avoiding ambiguity.",
+        tags: ["Java", "OOP"],
+      },
+      {
+        lessonId: jvL2.id,
+        front: "What's the difference between final, finally, and finalize?",
+        back: "final is a KEYWORD: final variable = can't reassign; final method = can't override; final class = can't extend. finally is a BLOCK in try/catch/finally that always runs (used for cleanup). finalize() was a METHOD on Object that the GC could call before collection — deprecated since Java 9 and removed in Java 18. Modern cleanup: try-with-resources for AutoCloseable, or the Cleaner API.",
+        tags: ["Java", "Keywords"],
+      },
+      // L3: Collections
+      {
+        lessonId: jvL3.id,
+        front: "Why is Map not in the Collection hierarchy?",
+        back: "Collection is for sequences/sets of single items (List, Set, Queue). Map is a key→value mapping — fundamentally different shape. You can get collection-like views of a Map via entrySet(), keySet(), values() which ARE Collections. This is why 'Map instanceof Collection' is false. Don't memorize the trivia — understand why the abstractions are separate.",
+        tags: ["Java", "Collections"],
+      },
+      {
+        lessonId: jvL3.id,
+        front: "What is the equals() / hashCode() contract, and why does it matter for HashMap keys?",
+        back: "Three rules: (1) if a.equals(b) then a.hashCode() == b.hashCode() — MUST hold. (2) Equal hashCodes don't imply equals (collisions are fine). (3) Both consistent with the same fields. Break the contract → put() lands in one bucket, get() looks in another, you get null. Always override BOTH together. Modern shortcut: use 'record' — the compiler generates both correctly.",
+        tags: ["Java", "Collections", "Contract"],
+      },
+      {
+        lessonId: jvL3.id,
+        front: "What happens if you modify an ArrayList while iterating with for-each?",
+        back: "ConcurrentModificationException, immediately. ArrayList's iterator is FAIL-FAST — it tracks a modCount and throws on the next next() call after detecting modification. Correct ways: (1) use the Iterator's own remove() method; (2) use list.removeIf(predicate); (3) use a copy: new ArrayList<>(list).forEach(...). ConcurrentHashMap and CopyOnWriteArrayList are weakly consistent (no exception, snapshot iteration).",
+        tags: ["Java", "Iterator", "ConcurrentModification"],
+      },
+      // L4: HashMap deep dive
+      {
+        lessonId: jvL4.id,
+        front: "What's the default load factor of HashMap and why?",
+        back: "0.75. When size > capacity × 0.75, the table doubles and all entries are re-hashed. 0.75 is a tested sweet spot — lower (e.g. 0.5) wastes memory and triggers more resizes; higher (e.g. 1.0) means longer collision chains. The default has been 0.75 since the original Java HashMap and is very rarely worth changing.",
+        tags: ["Java", "HashMap"],
+      },
+      {
+        lessonId: jvL4.id,
+        front: "What changed in HashMap internals between Java 7 and Java 8?",
+        back: "Java 7 always used linked-list collision chains. Worst case (all keys hash to same bucket): O(n) lookups. Java 8+: when a bucket reaches 8 entries (TREEIFY_THRESHOLD), the linked list converts to a red-black TREE — worst-case lookup drops to O(log n). When the tree shrinks back to 6 entries (UNTREEIFY_THRESHOLD), it converts back to a list (trees have more memory overhead). This is the answer to 'what's new in HashMap 8?'",
+        tags: ["Java", "HashMap", "Java 8"],
+      },
+      {
+        lessonId: jvL4.id,
+        front: "Why does HashMap XOR the upper 16 bits of the hashCode into the lower 16?",
+        back: "Bucket index = hash & (capacity - 1). For typical capacities (16, 32, 64), this only uses the LOWER bits of the hash. If hashCode() has poor distribution in the lower bits but good distribution in the upper bits (a common mistake), all your entries collide. The XOR 'spreads' the high bits into the low bits, giving the bucket index access to more entropy. Defensive coding against bad hashCode() implementations.",
+        tags: ["Java", "HashMap", "Hashing"],
+      },
+      {
+        lessonId: jvL4.id,
+        front: "Why does ConcurrentHashMap reject null keys/values when HashMap allows them?",
+        back: "HashMap allows one null key (bucket 0) and any number of null values — useful for single-threaded code. ConcurrentHashMap REJECTS them because of an ambiguity in concurrent code: a get() returning null is ambiguous between 'key not present' and 'value is null'. In single-threaded HashMap you can disambiguate with containsKey(), but in concurrent code that's a race condition. Rejecting null entirely eliminates the bug class.",
+        tags: ["Java", "ConcurrentHashMap"],
+      },
+      // L5: Concurrency basics
+      {
+        lessonId: jvL5.id,
+        front: "What does the 'volatile' keyword guarantee, and what doesn't it guarantee?",
+        back: "volatile guarantees VISIBILITY — a write by one thread is immediately visible to other threads (writes flush to main memory; reads invalidate the local cache). It does NOT guarantee ATOMICITY — counter++ (read, increment, write) on a volatile int is still racy across threads. Use AtomicInteger for atomic increments, or synchronized blocks for compound operations.",
+        tags: ["Java", "Concurrency", "volatile"],
+      },
+      {
+        lessonId: jvL5.id,
+        front: "When should you prefer AtomicInteger over synchronized for a counter?",
+        back: "Almost always for simple counters. AtomicInteger uses CPU CAS (compare-and-swap) instructions — lock-free, ~10× faster under contention than synchronized for incrementAndGet(). synchronized requires acquiring a lock, putting threads to sleep on contention. For very-high-contention scenarios, LongAdder is even faster (it spreads writes across multiple internal cells, summing on read).",
+        tags: ["Java", "Concurrency", "Atomic"],
+      },
+      {
+        lessonId: jvL5.id,
+        front: "What's the right way to acquire two locks and avoid deadlock?",
+        back: "Always acquire locks in the SAME GLOBAL ORDER across all code paths. Common technique: order by object hash or some stable property. If Thread 1 acquires (A then B) and Thread 2 acquires (B then A), they can deadlock when each holds the first lock and waits for the second. Same order means at most one thread holds the lower-ordered lock, and that thread can always make progress. Or use ReentrantLock.tryLock(timeout) to detect and retry.",
+        tags: ["Java", "Concurrency", "Deadlock"],
+      },
+      // L6: Modern concurrency
+      {
+        lessonId: jvL6.id,
+        front: "What problem do virtual threads solve, and when shouldn't you use them?",
+        back: "Problem: platform threads are ~1MB each, OS-scheduled — you can't have millions. Virtual threads (Java 21) are JVM-managed, ~few hundred bytes each, multiplexed onto a small carrier pool. The JVM parks a virtual thread on blocking I/O, freeing the carrier for other work. PERFECT for I/O-heavy concurrent code (HTTP, DB calls). DON'T use them for CPU-bound work (you only have N cores anyway), or with heavy synchronized blocks (which pin virtual threads to their carrier). Replace synchronized with ReentrantLock if going heavy on virtual threads.",
+        tags: ["Java", "Virtual Threads", "Java 21"],
+      },
+      {
+        lessonId: jvL6.id,
+        front: "What's the difference between CompletableFuture.thenApply, thenCompose, and thenCombine?",
+        back: "thenApply(Function<T, R>) — transforms the result (sync) → returns CompletableFuture<R>. thenCompose(Function<T, CompletableFuture<R>>) — chains ANOTHER async operation (flat-map, avoids nested futures). thenCombine(CompletableFuture<U>, BiFunction<T, U, R>) — waits for TWO futures and combines their results. Quick rule: thenApply if the transform is synchronous; thenCompose if it returns another CompletableFuture; thenCombine for joining two independent futures.",
+        tags: ["Java", "CompletableFuture"],
+      },
+      // L7: Streams
+      {
+        lessonId: jvL7.id,
+        front: "What's the difference between map and flatMap on a Stream?",
+        back: "map: T → R, one-to-one. stream.map(String::length) gives Stream<Integer>. flatMap: T → Stream<R>, one-to-many then flatten. stream.flatMap(List::stream) on a Stream<List<X>> gives Stream<X>. Use flatMap when each input produces MULTIPLE outputs (a list or stream), and you want them combined into one stream. Using map instead would give you Stream<Stream<X>> — usually a bug.",
+        tags: ["Java", "Streams"],
+      },
+      {
+        lessonId: jvL7.id,
+        front: "When should you avoid parallel streams?",
+        back: "Almost always in production code, unless you've measured. Pitfalls: (1) all parallel streams share ForkJoinPool.commonPool — one heavy stream starves all others. (2) Order is lost in unordered operations. (3) Overhead is only worth it for LARGE collections with EXPENSIVE per-element work. (4) Side effects break — modifying shared state is undefined. For I/O-bound concurrency, prefer virtual threads + CompletableFuture. Parallel streams are great for CPU-bound transformations on large data — measure first.",
+        tags: ["Java", "Streams", "Parallel"],
+      },
+      {
+        lessonId: jvL7.id,
+        front: "Should Optional be used as a method parameter, instance field, or only as a return type?",
+        back: "ONLY as a return type. As a parameter: just allow null or overload — passing Optional.empty() everywhere is noise. As an instance field: makes serialization weird and adds an extra heap allocation per field. As a return type: it perfectly signals 'this might be absent' to callers, who must handle both cases. Designed by Java's API leads exactly for this use case.",
+        tags: ["Java", "Optional"],
+      },
+      // L8: Modern Java
+      {
+        lessonId: jvL8.id,
+        front: "What does the 'record' keyword generate for you, and when should you use it?",
+        back: "record Person(String name, int age) {} generates: canonical constructor, accessor methods (name(), age() — no 'get' prefix), equals() based on all fields, hashCode() consistent with equals, toString() showing all fields, and marks the class final. Use records for VALUE OBJECTS: DTOs, API responses, immutable data carriers. Don't use for entities with mutable state or behavior-heavy classes — those are still regular classes.",
+        tags: ["Java", "Records", "Java 16"],
+      },
+      {
+        lessonId: jvL8.id,
+        front: "How does a 'sealed' interface make 'switch' exhaustive?",
+        back: "sealed interface Shape permits Circle, Square, Triangle {} tells the compiler there are EXACTLY three implementations. A switch on Shape that handles all three is exhaustive — no default needed. If you add a fourth implementation, every switch breaks at COMPILE TIME, forcing you to handle the new case. Combined with record destructuring (case Circle(double r) -> ...), this gives you Scala-like algebraic data types in plain Java.",
+        tags: ["Java", "Sealed", "Pattern Matching"],
       },
     ],
   });

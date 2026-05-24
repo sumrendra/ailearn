@@ -9,7 +9,7 @@
  * Pure module: no React imports, safe in server components.
  */
 import {
-  Brain, Database, Cpu, Table2, Server, Cloud, Code2, Box, Languages, FileSpreadsheet,
+  Brain, Database, Cpu, Table2, Server, Cloud, Code2, Box, Languages, FileSpreadsheet, Coffee,
   type LucideIcon,
 } from "lucide-react";
 
@@ -85,6 +85,15 @@ const META: Record<string, PathMeta> = {
     ring: "rgba(4,120,87,0.22)",
     gradient: "linear-gradient(135deg, #064e3b 0%, #047857 55%, #10b981 100%)",
     glow: "rgba(4,120,87,0.30)",
+    tier: "foundation",
+  },
+  "java-complete": {
+    Icon: Coffee,
+    color: "#ea580c",
+    tint: "rgba(234,88,12,0.08)",
+    ring: "rgba(234,88,12,0.22)",
+    gradient: "linear-gradient(135deg, #7c2d12 0%, #ea580c 55%, #fb923c 100%)",
+    glow: "rgba(234,88,12,0.30)",
     tier: "foundation",
   },
 };
