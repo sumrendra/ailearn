@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getAllPaths } from "@/lib/content";
-import { IconRail } from "@/components/layout/IconRail";
+import { AppSidebar } from "@/components/layout/AppSidebar";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -34,9 +34,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     })),
   );
 
+  const sidebarUser = userRecord ?? (session?.user ? {
+    name: session.user.name,
+    email: session.user.email,
+    image: session.user.image,
+  } : null);
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-app)" }}>
-      <IconRail user={userRecord ?? (session?.user ? { name: session.user.name, email: session.user.email, image: session.user.image } : null)} />
+      <AppSidebar user={sidebarUser} />
       <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         {children}
       </main>

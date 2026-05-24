@@ -4,19 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { getAllPaths } from "@/lib/content";
 import { Topbar } from "@/components/layout/Topbar";
-import { KnowledgeMap } from "@/components/learn/KnowledgeMap";
+import { LearnHero } from "@/components/learn/LearnHero";
+import { PathBentoGrid } from "@/components/learn/PathBentoGrid";
 import { PathCard, type PathCardData } from "@/components/learn/PathCard";
-import { StatCard } from "@/components/learn/StatCard";
-import { Map, BookOpen, Zap, Clock } from "lucide-react";
 
 export default async function LearnPage() {
   const session = await auth();
   const userId = session?.user?.id;
-
-  // Content lives in code now — paths/lessons are pure imports, no DB hit.
   const paths = getAllPaths();
 
-  // Per-user lesson progress is the one thing that still belongs in the DB.
+  // Pull per-user progress
   let completedLessonSlugs = new Set<string>();
   if (userId) {
     const progress = await prisma.lessonProgress.findMany({
@@ -26,7 +23,7 @@ export default async function LearnPage() {
     completedLessonSlugs = new Set(progress.map((p) => p.lessonSlug));
   }
 
-  // Aggregate stats.
+  // Aggregates
   const totalLessons = paths.reduce((s, p) => s + p.lessons.length, 0);
   const totalXP = paths.reduce(
     (s, p) => s + p.lessons.reduce((a, l) => a + (l.xpReward ?? 0), 0),
@@ -36,13 +33,12 @@ export default async function LearnPage() {
     (s, p) => s + p.lessons.reduce((a, l) => a + (l.estimatedMins ?? 0), 0),
     0,
   );
-  const totalHrs = Math.round((totalMins / 60) * 10) / 10;
   const completedCount = paths.reduce(
     (s, p) => s + p.lessons.filter((l) => completedLessonSlugs.has(l.slug)).length,
     0,
   );
 
-  // Map each path into the shape PathCard expects.
+  // Map to card data
   const cardData: PathCardData[] = paths.map((p) => {
     const lessonMins = p.lessons.reduce((s, l) => s + (l.estimatedMins ?? 0), 0);
     const lessonXP = p.lessons.reduce((s, l) => s + (l.xpReward ?? 0), 0);
@@ -60,76 +56,46 @@ export default async function LearnPage() {
     };
   });
 
-  // Pick the most-progressed-but-incomplete path as the featured hero.
-  // Falls back to the first foundation path.
+  // Featured: most-progressed-but-incomplete; fall back to first
   const featured =
     cardData
       .filter((p) => (p.completedLessons ?? 0) > 0 && (p.completedLessons ?? 0) < p.lessonCount)
       .sort((a, b) => (b.completedLessons ?? 0) - (a.completedLessons ?? 0))[0] ??
     cardData[0];
 
+  const totalHrs = Math.round((totalMins / 60) * 10) / 10;
+
   return (
     <>
-      <Topbar title="Learning Paths" subtitle="Structured journeys from zero to production" />
+      <Topbar title="Learn" subtitle="Choose your next path" />
 
-      <div style={{ padding: "28px 32px", maxWidth: 1080, width: "100%" }}>
-        {/* Stats strip */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 14,
-            marginBottom: 24,
+      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: "0 32px 80px" }}>
+        {/* Hero */}
+        <LearnHero
+          stats={{
+            paths: paths.length,
+            lessons: totalLessons,
+            completed: completedCount,
+            totalXP,
+            totalHours: totalHrs,
+            isAuthed: !!userId,
           }}
-        >
-          <StatCard
-            Icon={Map}
-            iconColor="var(--accent)"
-            value={paths.length}
-            label="Learning paths"
-          />
-          <StatCard
-            Icon={BookOpen}
-            iconColor="#0f766e"
-            value={totalLessons}
-            label={userId ? `${completedCount} completed` : "Total lessons"}
-          />
-          <StatCard
-            Icon={Zap}
-            iconColor="var(--xp-gold)"
-            value={`${totalXP.toLocaleString()} XP`}
-            label="Available to earn"
-          />
-          <StatCard
-            Icon={Clock}
-            iconColor="#475569"
-            value={`${totalHrs}h`}
-            label="Estimated study time"
-          />
-        </div>
+          featured={featured}
+        />
 
-        {/* Featured / continue hero */}
-        {featured && (
-          <div style={{ marginBottom: 24 }}>
-            <PathCard data={featured} variant="feature" />
-          </div>
-        )}
+        {/* Bento grid of all paths grouped by tier */}
+        <PathBentoGrid paths={cardData} />
 
-        {/* Knowledge Map (responsive grid of tiles) */}
-        <div style={{ marginBottom: 28 }}>
-          <KnowledgeMap paths={cardData} />
-        </div>
-
-        {/* Detailed list */}
-        <div>
+        {/* Detailed all-paths list */}
+        <div style={{ marginTop: 64 }}>
           <h2
             style={{
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 700,
-              letterSpacing: "0.08em",
+              letterSpacing: "0.12em",
               textTransform: "uppercase",
-              color: "var(--text-primary)",
-              marginBottom: 14,
+              color: "var(--text-tertiary)",
+              marginBottom: 18,
             }}
           >
             All paths

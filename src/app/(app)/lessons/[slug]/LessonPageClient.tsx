@@ -76,14 +76,18 @@ export function LessonPageClient({
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", position: "relative" }}>
 
       {/* ── Slim lesson topbar ─────────────────────────────────────────────── */}
-      <div style={{
-        height: 52, flexShrink: 0,
-        display: "flex", alignItems: "center",
-        padding: "0 20px", gap: 12,
-        background: "var(--bg-surface)",
-        borderBottom: "1px solid var(--border-subtle)",
-        zIndex: 20,
-      }}>
+      <div
+        className="glass"
+        style={{
+          height: 56, flexShrink: 0,
+          display: "flex", alignItems: "center",
+          padding: "0 24px", gap: 14,
+          zIndex: 20,
+          borderTop: "none",
+          borderLeft: "none",
+          borderRight: "none",
+        }}
+      >
         {/* Back */}
         <Link href={`/learn/${path.slug}`} style={{ textDecoration: "none" }}>
           <motion.div whileHover={{ x: -2 }} style={{

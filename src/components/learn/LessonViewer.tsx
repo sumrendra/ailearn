@@ -36,6 +36,7 @@ import {
   parseExcelFormula, parseExcelPivot, parseExcelQuiz,
 } from "@/lib/excel-blocks";
 import { parseJavaQuiz } from "@/lib/java-blocks";
+import { TableOfContents } from "./TableOfContents";
 import { type FixtureKey } from "@/lib/sql-fixtures";
 import Link from "next/link";
 
@@ -264,9 +265,15 @@ export function LessonViewer({
         onScroll={handleScroll}
         style={{
           flex: 1, overflowY: "auto", overflowX: "hidden",
-          padding: "48px 64px 120px",
+          padding: "56px 64px 140px",
+          display: "flex",
+          gap: 56,
+          justifyContent: "center",
         }}
       >
+
+        {/* Left: lesson body */}
+        <div style={{ flex: "1 1 720px", maxWidth: 800, minWidth: 0 }}>
 
         {/* ── Chapter header ────────────────────────────────────────────── */}
         <div style={{ marginBottom: 52, maxWidth: 740 }}>
@@ -398,7 +405,7 @@ export function LessonViewer({
         )}
 
         {/* ── Markdown content ──────────────────────────────────────────── */}
-        <div className="lesson-content">
+        <div className="lesson-content prose-reader">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight]}
@@ -786,6 +793,7 @@ export function LessonViewer({
             </div>
           )}
         </div>
+        </div>{/* /content body wrapper */}
       </div>
 
       {/* ── Table of Contents (when tutor is closed) ─────────────────────── */}
