@@ -19,6 +19,14 @@ import { JF_L1, JF_L2, JF_L3, JF_L4, JF_L5, JF_L6 } from "./java-frameworks-cont
 import { KF_L1, KF_L2, KF_L3, KF_L4, KF_L5, KF_L6 } from "./kafka-content";
 import { MS_L1, MS_L2, MS_L3, MS_L4, MS_L5, MS_L6 } from "./microservices-content";
 import { SD_L1, SD_L2, SD_L3, SD_L4, SD_L5, SD_L6 } from "./system-design-content";
+import {
+  JA_L1, JA_L2, JA_L3, JA_L4, JA_L5,
+  JA_L6, JA_L7, JA_L8, JA_L9, JA_L10,
+} from "./java-advanced-content";
+import {
+  FA_L1, FA_L2, FA_L3, FA_L4, FA_L5,
+  FA_L6, FA_L7, FA_L8, FA_L9, FA_L10,
+} from "./french-advanced-content";
 
 export const PATHS: LearningPath[] = [
   // ── LLM Foundations ───────────────────────────────────────────────────────
@@ -241,6 +249,54 @@ export const PATHS: LearningPath[] = [
       { slug: "system-design-async",         title: "Async architecture — queues, event streaming, CQRS", description: "Job queues vs Kafka, CQRS and event sourcing, when to reach for each pattern (and when not to).", content: SD_L4, order: 4, estimatedMins: 25, xpReward: 85, tags: ["Async", "CQRS", "Event Sourcing"] },
       { slug: "system-design-realtime",      title: "Real-time and distributed — push, geo, coordination", description: "WebSocket vs SSE, push notifications, multi-region patterns, distributed locking dangers, idempotency keys.", content: SD_L5, order: 5, estimatedMins: 26, xpReward: 90, tags: ["Real-time", "WebSocket", "Geo-distribution"] },
       { slug: "system-design-classic-problems", title: "Classic system design problems — applied", description: "Walk through URL shortener, news feed (Twitter), and ride-sharing (Uber) end-to-end — the framework + toolkit applied.", content: SD_L6, order: 6, estimatedMins: 28, xpReward: 100, tags: ["System Design", "Interview", "URL Shortener", "News Feed"] },
+    ],
+  },
+  // ── Java Advanced ─────────────────────────────────────────────────────────
+  {
+    slug: "java-advanced",
+    title: "Java Advanced",
+    description: "Senior Java: Spring Security, reactive, Spring Cloud, caching, messaging, GraphQL, native compilation, JVM performance, Project Loom in depth, and modern Java internals (FFM, Vector API, sealed protocols).",
+    icon: "shield",
+    color: "#7c2d12",
+    difficulty: "ADVANCED",
+    estimatedHours: 14,
+    tags: ["Java", "Spring Security", "Reactive", "Spring Cloud", "JVM", "Loom"],
+    order: 12,
+    lessons: [
+      { slug: "java-advanced-spring-security",       title: "Spring Security — the complete picture",       description: "The filter chain mental model, JWT vs sessions, method security with SpEL policies, OAuth2/OIDC providers — Spring Security 6+ done right.",                                                            content: JA_L1,  order: 1,  estimatedMins: 26, xpReward: 90,  tags: ["Spring Security", "JWT", "OAuth2"] },
+      { slug: "java-advanced-reactive",              title: "Reactive Java — WebFlux, Reactor, when it wins", description: "Mono/Flux operators, backpressure, R2DBC, when reactive still beats virtual threads (streaming + complex composition).",                                                                                  content: JA_L2,  order: 2,  estimatedMins: 26, xpReward: 90,  tags: ["WebFlux", "Reactor", "Reactive"] },
+      { slug: "java-advanced-spring-cloud",          title: "Spring Cloud — config, discovery, gateway",     description: "Config server, Eureka vs Consul vs k8s DNS, Spring Cloud Gateway, Spring Cloud Stream, Resilience4j integration, OpenTelemetry tracing.",                                                                    content: JA_L3,  order: 3,  estimatedMins: 24, xpReward: 85,  tags: ["Spring Cloud", "Gateway", "Service Discovery"] },
+      { slug: "java-advanced-caching",               title: "Caching — Caffeine, Redis, two-level patterns",  description: "Spring Cache annotations, Caffeine for L1, Redis for L2, invalidation strategies (TTL/explicit/CDC), defending against stampedes, and the proxy-bypass trap.",                                              content: JA_L4,  order: 4,  estimatedMins: 24, xpReward: 85,  tags: ["Caching", "Caffeine", "Redis"] },
+      { slug: "java-advanced-messaging",             title: "Spring Messaging — Kafka, RabbitMQ, retries",   description: "Spring Kafka producer + consumer config, DLT routing, retry topics with @RetryableTopic, Spring AMQP, picking Kafka vs RabbitMQ, the @Transactional-listener trap.",                                          content: JA_L5,  order: 5,  estimatedMins: 26, xpReward: 90,  tags: ["Spring Kafka", "RabbitMQ", "Messaging"] },
+      { slug: "java-advanced-graphql-ws",            title: "GraphQL and WebSockets in Spring",              description: "Spring GraphQL (schema, resolvers, mutations, subscriptions), DataLoader to defuse N+1, STOMP over WebSocket, scaling WebSocket fleets, GraphQL depth/complexity limits.",                                  content: JA_L6,  order: 6,  estimatedMins: 26, xpReward: 90,  tags: ["GraphQL", "WebSockets", "Real-time"] },
+      { slug: "java-advanced-native",                title: "Native compilation — GraalVM, Spring Native",   description: "GraalVM native-image, Spring Boot AOT processing, runtime hints, CDS as the conservative middle ground, when native vs JVM is the right call.",                                                              content: JA_L7,  order: 7,  estimatedMins: 24, xpReward: 85,  tags: ["GraalVM", "Native", "AOT"] },
+      { slug: "java-advanced-jvm-perf",              title: "JVM performance — GC, JIT, JFR",                description: "G1 vs ZGC vs Shenandoah, the flags that matter, JIT tiered compilation, Java Flight Recorder + Mission Control, heap dump analysis with MAT, Native Memory Tracking.",                                       content: JA_L8,  order: 8,  estimatedMins: 28, xpReward: 95,  tags: ["JVM", "GC", "Performance", "JFR"] },
+      { slug: "java-advanced-loom",                  title: "Project Loom advanced — virtual threads",       description: "Virtual thread internals, the pinning trap (synchronized + I/O), ScopedValue replacing ThreadLocal, Structured Concurrency patterns, unbounded concurrency hazards.",                                          content: JA_L9,  order: 9,  estimatedMins: 26, xpReward: 95,  tags: ["Loom", "Virtual Threads", "Structured Concurrency"] },
+      { slug: "java-advanced-modern-internals",      title: "Modern Java internals — FFM, Vector, sealed",    description: "Foreign Function & Memory API (JNI replacement), Vector API (SIMD), sealed classes as protocols, deep pattern-matching switch, Stream Gatherers.",                                                            content: JA_L10, order: 10, estimatedMins: 24, xpReward: 90,  tags: ["FFM", "Vector API", "Pattern Matching"] },
+    ],
+  },
+  // ── French Advanced ──────────────────────────────────────────────────────
+  {
+    slug: "french-advanced",
+    title: "French Advanced (TEF/TCF Canada)",
+    description: "Take French from A1 to B2 — the level required for Canadian Permanent Residence (TEF Canada / TCF Canada, NCLC 7). Past tenses, future tenses, pronouns, conditional, subjunctive, formal register, plus dedicated exam-strategy lessons.",
+    icon: "graduation-cap",
+    color: "#9d174d",
+    difficulty: "INTERMEDIATE",
+    estimatedHours: 12,
+    tags: ["French", "TEF", "TCF", "Canada PR", "B2", "NCLC 7"],
+    order: 13,
+    lessons: [
+      { slug: "french-advanced-past-tenses",       title: "Past tenses — passé composé vs imparfait",          description: "The single most-tested grammar point on TEF/TCF. Four-case rule, plus-que-parfait stacking, the storytelling combo of imparfait background + passé composé event.",                                  content: FA_L1,  order: 1,  estimatedMins: 22, xpReward: 80,  tags: ["French", "Past Tense", "Grammar"] },
+      { slug: "french-advanced-future-tenses",     title: "Future tenses — futur proche, simple, antérieur",   description: "All three future tenses, the 9 essential irregular stems, futur antérieur after \\\"quand/dès que/lorsque\\\", and the three si-clause patterns (drilled cold).",                                       content: FA_L2,  order: 2,  estimatedMins: 22, xpReward: 80,  tags: ["French", "Future Tense", "Grammar"] },
+      { slug: "french-advanced-pronouns",          title: "Pronouns — le/la/lui/en/y + the order rule",        description: "Direct vs indirect, y for places, en for quantities, the MTL → LLL → LL → Y → EN order rule. The imperative exception. The à-trap verbs (téléphoner, parler).",                                          content: FA_L3,  order: 3,  estimatedMins: 24, xpReward: 85,  tags: ["French", "Pronouns", "Grammar"] },
+      { slug: "french-advanced-conditional",       title: "Conditional mood — wishes, hypotheticals, si",      description: "Conditionnel présent for polite requests, conditionnel passé for past hypotheticals, the three si-clause patterns memorized cold (NEVER si + futur).",                                                    content: FA_L4,  order: 4,  estimatedMins: 22, xpReward: 85,  tags: ["French", "Conditional", "Grammar"] },
+      { slug: "french-advanced-subjunctive",       title: "The subjunctive — doubt, necessity, emotion",       description: "Present subjunctive conjugation, the 9 essential irregulars, the trigger list (il faut que, bien que, pour que…), the espérer-trap, B2 use of penser/croire + subjunctive when negated.",                content: FA_L5,  order: 5,  estimatedMins: 24, xpReward: 90,  tags: ["French", "Subjunctive", "Grammar"] },
+      { slug: "french-advanced-formal",            title: "Formal register — business French, letters",        description: "Tu vs vous (default vous in Canada), polite formulations with conditional, the structure of a formal letter, the right closing formula (cordialement → veuillez agréer…).",                              content: FA_L6,  order: 6,  estimatedMins: 22, xpReward: 80,  tags: ["French", "Register", "Business"] },
+      { slug: "french-advanced-argumentation",     title: "Argumentation — B2 connectors for TEF section B",   description: "The argumentative connector list (de plus, cependant, par conséquent…), absolute → nuanced phrasing, the 4-move structure, model TEF essay walk-through.",                                                  content: FA_L7,  order: 7,  estimatedMins: 22, xpReward: 85,  tags: ["French", "Argumentation", "TEF Writing"] },
+      { slug: "french-advanced-tef-reading",       title: "TEF/TCF reading — strategies and traps",            description: "The scan-then-read strategy, three question types (direct, inference, vocab in context), the almost-right answer trap, connector recognition, time management.",                                              content: FA_L8,  order: 8,  estimatedMins: 20, xpReward: 75,  tags: ["French", "TEF Reading", "Exam Strategy"] },
+      { slug: "french-advanced-tef-listening",     title: "TEF/TCF listening — accents and fast speech",       description: "Québécois vocabulary (char, magasiner, fin de semaine), fast-speech reductions (chuis, y'a, kestu), number recognition under speed, the scan-and-listen technique.",                                       content: FA_L9,  order: 9,  estimatedMins: 22, xpReward: 80,  tags: ["French", "Listening", "Québécois"] },
+      { slug: "french-advanced-tef-production",    title: "TEF writing + speaking — the production sections",  description: "Section A (continue a text, 200 words) + Section B (opinion essay) writing strategy. Expression orale across 3 sections. Score targets for Express Entry NCLC 7. Exam-day tips.",                              content: FA_L10, order: 10, estimatedMins: 22, xpReward: 90,  tags: ["French", "TEF Writing", "TEF Speaking"] },
     ],
   },
 ];

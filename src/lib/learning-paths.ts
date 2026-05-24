@@ -10,7 +10,7 @@
  */
 import {
   Brain, Database, Cpu, Table2, Server, Cloud, Code2, Box, Languages, FileSpreadsheet, Coffee,
-  Leaf, Share2, Network, Blocks,
+  Leaf, Share2, Network, Blocks, Shield, GraduationCap,
   type LucideIcon,
 } from "lucide-react";
 
@@ -132,6 +132,24 @@ const META: Record<string, PathMeta> = {
     gradient: "linear-gradient(135deg, #7f1d1d 0%, #dc2626 55%, #f87171 100%)",
     glow: "rgba(220,38,38,0.30)",
     tier: "advanced",
+  },
+  "java-advanced": {
+    Icon: Shield,
+    color: "#7c2d12",
+    tint: "rgba(124,45,18,0.08)",
+    ring: "rgba(124,45,18,0.22)",
+    gradient: "linear-gradient(135deg, #431407 0%, #7c2d12 55%, #c2410c 100%)",
+    glow: "rgba(124,45,18,0.30)",
+    tier: "advanced",
+  },
+  "french-advanced": {
+    Icon: GraduationCap,
+    color: "#9d174d",
+    tint: "rgba(157,23,77,0.08)",
+    ring: "rgba(157,23,77,0.22)",
+    gradient: "linear-gradient(135deg, #500724 0%, #9d174d 55%, #db2777 100%)",
+    glow: "rgba(157,23,77,0.30)",
+    tier: "specialization",
   },
 };
 
