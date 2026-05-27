@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Volume2, Sparkles, RotateCcw } from "lucide-react";
 import { speak } from "@/lib/french-tts";
 
@@ -21,11 +21,17 @@ interface MatchQuizProps {
  * every pair is matched. The French chip also speaks itself when selected.
  */
 export function MatchQuiz({ title, pairs }: MatchQuizProps) {
-  const [frOrder, enOrder] = useMemo(() => {
-    const fr = pairs.map((_, i) => i).sort(() => Math.random() - 0.5);
-    const en = pairs.map((_, i) => i).sort(() => Math.random() - 0.5);
-    return [fr, en];
-  }, [pairs]);
+  // Shuffle the two columns ONCE on mount. `pairs` is a fresh array reference
+  // on every parent re-render (the lesson markdown re-parses on each scroll
+  // for reading-progress updates), so useMemo would invalidate and reshuffle
+  // — making earlier match attempts point at the wrong chips. useState lazy
+  // initializer pins the order across the component's lifetime.
+  const [frOrder] = useState<number[]>(() =>
+    pairs.map((_, i) => i).sort(() => Math.random() - 0.5),
+  );
+  const [enOrder] = useState<number[]>(() =>
+    pairs.map((_, i) => i).sort(() => Math.random() - 0.5),
+  );
 
   const [selectedFr, setSelectedFr] = useState<number | null>(null);
   const [selectedEn, setSelectedEn] = useState<number | null>(null);

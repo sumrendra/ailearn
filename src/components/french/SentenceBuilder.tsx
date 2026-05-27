@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Check, X, RotateCcw, Volume2, Lightbulb } from "lucide-react";
 import { speak } from "@/lib/french-tts";
 
@@ -24,22 +24,21 @@ interface SentenceBuilderProps {
  * Pure client; no backend.
  */
 export function SentenceBuilder({ prompt, answer, distractors = [], hint }: SentenceBuilderProps) {
-  // Tokenize answer into words; preserve punctuation alongside the word it follows.
-  const answerTokens = useMemo(
-    () => answer.split(/\s+/).filter(Boolean),
-    [answer],
-  );
-
-  // Shuffle the full word pool once per mount (stable across re-renders).
-  const pool = useMemo(() => {
+  // Build the shuffled word pool ONCE, on mount. We can't use useMemo here
+  // because the parent (lesson markdown rendering) creates a fresh
+  // `distractors` array on every re-render — useMemo would invalidate, the
+  // pool would reshuffle, and any indexes the user had selected would now
+  // point at different words. useState lazy initializer runs exactly once.
+  const [pool] = useState<{ word: string; id: number }[]>(() => {
+    const answerTokens = answer.split(/\s+/).filter(Boolean);
     const all = [...answerTokens, ...distractors];
     return all
-      .map((w, i) => ({ word: w, id: i, key: Math.random() }))
-      .sort((a, b) => a.key - b.key)
+      .map((w, i) => ({ word: w, id: i, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
       .map(({ word, id }) => ({ word, id }));
-  }, [answerTokens, distractors]);
+  });
 
-  const [selected, setSelected] = useState<number[]>([]); // pool indexes in order
+  const [selected, setSelected] = useState<number[]>([]);
   const [result, setResult] = useState<"correct" | "wrong" | null>(null);
   const [revealHint, setRevealHint] = useState(false);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight, Search, FileText, Sparkles, Database, Layers } from "lucide-react";
 
 const DOCS = [
@@ -74,6 +74,24 @@ export function RAGFlowExplorer() {
   const [activeStep, setActiveStep] = useState(0);
 
   const q = QUESTIONS[questionIdx];
+
+  // Demo values that are random but STABLE per question. Without useMemo,
+  // the embedding vector + similarity scores would reroll on every render
+  // (every scroll / hover) — distracting and confusing.
+  const embeddingVector = useMemo(
+    () => Array.from({ length: 8 }, () => (Math.random() * 2 - 1).toFixed(3)),
+    [questionIdx],
+  );
+  const scoresByDocId = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const d of DOCS) {
+      const isMatch = q.relevant.includes(d.id);
+      map[d.id] = isMatch
+        ? (0.82 + Math.random() * 0.12).toFixed(2)
+        : (0.15 + Math.random() * 0.35).toFixed(2);
+    }
+    return map;
+  }, [q]);
 
   return (
     <div
@@ -220,7 +238,7 @@ export function RAGFlowExplorer() {
         {activeStep === 1 && (
           <StepBox label="Embedding vector (truncated to 8 of 1,536 dimensions)">
             <code style={vectorBox}>
-              [{Array.from({ length: 8 }, () => (Math.random() * 2 - 1).toFixed(3)).join(", ")}, …]
+              [{embeddingVector.join(", ")}, …]
             </code>
           </StepBox>
         )}
@@ -230,9 +248,7 @@ export function RAGFlowExplorer() {
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {DOCS.map((d) => {
                 const isMatch = q.relevant.includes(d.id);
-                const score = isMatch
-                  ? (0.82 + Math.random() * 0.12).toFixed(2)
-                  : (0.15 + Math.random() * 0.35).toFixed(2);
+                const score = scoresByDocId[d.id];
                 return (
                   <div
                     key={d.id}
