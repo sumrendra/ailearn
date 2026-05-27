@@ -180,6 +180,12 @@ interface LessonViewerProps {
   diagramComponent?: React.ReactNode;
   prevLesson?: { title: string; slug: string } | null;
   nextLesson?: { title: string; slug: string } | null;
+  /** Whether this lesson is already marked complete for the current user */
+  isCompleted?: boolean;
+  /** Handler that marks the lesson complete. Undefined for unauthenticated viewers. */
+  onMarkComplete?: () => void;
+  /** True while the mark-complete request is in flight */
+  marking?: boolean;
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -199,6 +205,9 @@ export function LessonViewer({
   diagramComponent,
   prevLesson,
   nextLesson,
+  isCompleted = false,
+  onMarkComplete,
+  marking = false,
 }: LessonViewerProps) {
   const [tutorOpen, setTutorOpen]   = useState(false);
   const [readPct,   setReadPct]     = useState(0);
@@ -664,13 +673,53 @@ export function LessonViewer({
           textAlign: "center",
           boxShadow: `0 8px 32px ${pathColor}10`,
         }}>
-          <div style={{ fontSize: 40, marginBottom: 12, lineHeight: 1 }}>🎉</div>
+          <div style={{ fontSize: 40, marginBottom: 12, lineHeight: 1 }}>{isCompleted ? "✅" : "🎉"}</div>
           <h3 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", marginBottom: 8, letterSpacing: "-0.02em" }}>
-            Lesson complete!
+            {isCompleted ? "You've completed this lesson" : "Finished reading?"}
           </h3>
-          <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.65, maxWidth: 380, margin: "0 auto 28px" }}>
-            Reinforce what you learned — practice with flashcards or test yourself with a quick quiz.
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.65, maxWidth: 380, margin: "0 auto 20px" }}>
+            {isCompleted
+              ? "Reinforce what you learned — practice with flashcards or test yourself with a quick quiz."
+              : "Mark this lesson complete to lock in your progress, then reinforce it with flashcards or a quiz."}
           </p>
+
+          {/* Primary CTA — Mark complete. Only rendered for authenticated
+              users (when a handler was provided). Hides once already done. */}
+          {onMarkComplete && !isCompleted && (
+            <button
+              onClick={onMarkComplete}
+              disabled={marking}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                padding: "12px 26px",
+                background: pathColor, color: "#fff",
+                border: "none", borderRadius: "var(--radius-md)",
+                fontSize: 14, fontWeight: 700,
+                cursor: marking ? "wait" : "pointer",
+                boxShadow: `0 6px 20px ${pathColor}55`,
+                marginBottom: 22,
+                opacity: marking ? 0.85 : 1,
+                transition: "all 0.18s",
+              }}
+            >
+              <Check size={16} strokeWidth={3} />
+              {marking ? "Saving…" : `Mark complete${xpReward ? ` · +${xpReward} XP` : ""}`}
+            </button>
+          )}
+          {isCompleted && (
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "10px 22px",
+              background: "color-mix(in srgb, var(--success) 12%, transparent)",
+              color: "var(--success)",
+              border: "1px solid color-mix(in srgb, var(--success) 28%, transparent)",
+              borderRadius: 999,
+              fontSize: 13, fontWeight: 700,
+              marginBottom: 22,
+            }}>
+              <Check size={14} strokeWidth={3} /> Marked complete
+            </div>
+          )}
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: prevLesson || nextLesson ? 24 : 0 }}>
             <Link href={`/flashcards?lesson=${lessonSlug}`} style={{ textDecoration: "none" }}>
               <div style={{

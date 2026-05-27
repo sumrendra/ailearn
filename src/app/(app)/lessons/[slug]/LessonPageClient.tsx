@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, BookOpen, ListOrdered,
-  CheckCircle2, Clock, X, ArrowLeft,
+  CheckCircle2, Clock, X, ArrowLeft, Check, Loader2,
 } from "lucide-react";
 import { LessonViewer } from "@/components/learn/LessonViewer";
 import dynamic from "next/dynamic";
@@ -61,16 +61,78 @@ interface Props {
   currentIdx: number;
   prevLesson: Lesson | null;
   nextLesson: Lesson | null;
+  /** Whether the current lesson is already marked COMPLETED for this user */
+  initialCompleted?: boolean;
+  /** Set of slugs in this path the current user has completed */
+  completedSlugs?: string[];
+  /** Whether the user is signed in (controls whether the Mark complete CTA is shown) */
+  isAuthed?: boolean;
 }
 
 export function LessonPageClient({
   lesson, path, pathColors, lessons, currentIdx, prevLesson, nextLesson,
+  initialCompleted = false, completedSlugs = [], isAuthed = false,
 }: Props) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [completed, setCompleted] = useState(initialCompleted);
+  const [completedSet, setCompletedSet] = useState<Set<string>>(() => new Set(completedSlugs));
+  const [marking, setMarking] = useState(false);
+  const [justCompleted, setJustCompleted] = useState<{ xp: number } | null>(null);
   const diagram = LESSON_DIAGRAMS[lesson.slug] ?? null;
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Resync when navigating between lessons (server re-renders with new props).
+  useEffect(() => {
+    setCompleted(initialCompleted);
+    setCompletedSet(new Set(completedSlugs));
+    setJustCompleted(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson.slug]);
+
+  // Mark the current lesson complete. Optimistic — flips local state first,
+  // then POSTs. Rolls back if the server rejects.
+  const markComplete = async () => {
+    if (completed || marking || !isAuthed) return;
+    setMarking(true);
+    setCompleted(true);
+    setCompletedSet((s) => {
+      const next = new Set(s);
+      next.add(lesson.slug);
+      return next;
+    });
+    try {
+      const res = await fetch("/api/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessonSlug: lesson.slug, status: "COMPLETED" }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setJustCompleted({ xp: data?.awardedXP ?? 0 });
+    } catch (err) {
+      // Roll back optimistic state on failure.
+      console.error("Failed to mark complete:", err);
+      setCompleted(false);
+      setCompletedSet((s) => {
+        const next = new Set(s);
+        next.delete(lesson.slug);
+        return next;
+      });
+    } finally {
+      setMarking(false);
+    }
+  };
+
+  // Auto-dismiss the XP confetti banner.
+  useEffect(() => {
+    if (!justCompleted) return;
+    const t = setTimeout(() => setJustCompleted(null), 4200);
+    return () => clearTimeout(t);
+  }, [justCompleted]);
+
+  const completedCount = completedSet.size;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", position: "relative" }}>
@@ -120,6 +182,46 @@ export function LessonPageClient({
           {lesson.title}
         </span>
 
+        {/* Mark complete — only shown when signed in. Becomes a static
+            "Completed" pill once marked. */}
+        {isAuthed && (
+          <motion.button
+            whileHover={completed ? {} : { scale: 1.03 }}
+            whileTap={completed ? {} : { scale: 0.97 }}
+            onClick={markComplete}
+            disabled={completed || marking}
+            title={completed ? "You've completed this lesson" : "Mark this lesson complete"}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 14px", borderRadius: 8, flexShrink: 0,
+              background: completed ? "var(--success)" : pathColors.color,
+              border: "none",
+              color: "#fff",
+              fontSize: 12.5, fontWeight: 600,
+              cursor: completed ? "default" : marking ? "wait" : "pointer",
+              boxShadow: completed
+                ? "0 2px 8px rgba(16,185,129,0.35)"
+                : `0 2px 8px ${pathColors.color}40`,
+              opacity: marking ? 0.85 : 1,
+              transition: "all 0.18s",
+            }}
+          >
+            {marking ? (
+              <>
+                <Loader2 size={13} className="spin-slow" /> Saving…
+              </>
+            ) : completed ? (
+              <>
+                <Check size={13} strokeWidth={3} /> Completed
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={13} /> Mark complete
+              </>
+            )}
+          </motion.button>
+        )}
+
         {/* Lessons toggle button */}
         <motion.button
           whileHover={{ scale: 1.03 }}
@@ -136,7 +238,7 @@ export function LessonPageClient({
           }}
         >
           <ListOrdered size={14} />
-          <span>{currentIdx + 1}/{lessons.length} lessons</span>
+          <span>{completedCount}/{lessons.length} done</span>
         </motion.button>
 
         {/* Prev/next compact */}
@@ -239,18 +341,18 @@ export function LessonPageClient({
                     </button>
                   </div>
 
-                  {/* Progress bar */}
+                  {/* Progress bar — uses real per-user completion data */}
                   <div style={{ marginTop: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "var(--text-tertiary)", marginBottom: 5 }}>
-                      <span>{currentIdx} of {lessons.length} done</span>
+                      <span>{completedCount} of {lessons.length} done</span>
                       <span style={{ fontWeight: 600, color: pathColors.color }}>
-                        {Math.round((currentIdx / lessons.length) * 100)}%
+                        {Math.round((completedCount / lessons.length) * 100)}%
                       </span>
                     </div>
                     <div style={{ height: 5, background: "rgba(0,0,0,0.08)", borderRadius: 99, overflow: "hidden" }}>
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${Math.round((currentIdx / lessons.length) * 100)}%` }}
+                        animate={{ width: `${Math.round((completedCount / lessons.length) * 100)}%` }}
                         transition={{ duration: 0.6, ease: "easeOut" }}
                         style={{ height: "100%", background: pathColors.color, borderRadius: 99 }}
                       />
@@ -262,8 +364,12 @@ export function LessonPageClient({
                 <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
                   {lessons.map((l, idx) => {
                     const isCurrent = l.slug === lesson.slug;
-                    const isPast    = idx < currentIdx;
-                    const isFuture  = idx > currentIdx;
+                    // "Done" is a per-user fact (completedSet) not a position
+                    // in the path. A user might skip ahead, or finish out of
+                    // order, and we want the green checkmark to reflect what
+                    // they've actually marked complete.
+                    const isDone   = completedSet.has(l.slug);
+                    const isFuture = idx > currentIdx && !isDone;
                     return (
                       <Link key={l.id} href={`/lessons/${l.slug}`} style={{ textDecoration: "none" }}
                         onClick={() => setPanelOpen(false)}>
@@ -282,17 +388,17 @@ export function LessonPageClient({
                           <div style={{
                             width: 24, height: 24, borderRadius: "50%", flexShrink: 0, marginTop: 1,
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            background: isPast ? "var(--success)" : isCurrent ? pathColors.color : "transparent",
-                            border: `2px solid ${isPast ? "var(--success)" : isCurrent ? pathColors.color : "var(--border-default)"}`,
+                            background: isDone ? "var(--success)" : isCurrent ? pathColors.color : "transparent",
+                            border: `2px solid ${isDone ? "var(--success)" : isCurrent ? pathColors.color : "var(--border-default)"}`,
                             fontSize: 10, fontWeight: 700,
-                            color: (isPast || isCurrent) ? "#fff" : "var(--text-tertiary)",
+                            color: (isDone || isCurrent) ? "#fff" : "var(--text-tertiary)",
                           }}>
-                            {isPast ? <CheckCircle2 size={13} strokeWidth={2.5} /> : <span>{idx + 1}</span>}
+                            {isDone ? <CheckCircle2 size={13} strokeWidth={2.5} /> : <span>{idx + 1}</span>}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{
                               fontSize: 12.5, lineHeight: 1.4,
-                              color: isCurrent ? pathColors.color : isPast ? "var(--text-secondary)" : "var(--text-tertiary)",
+                              color: isCurrent ? pathColors.color : isDone ? "var(--text-secondary)" : "var(--text-tertiary)",
                               fontWeight: isCurrent ? 600 : 400,
                               overflow: "hidden", textOverflow: "ellipsis",
                               display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
@@ -317,6 +423,50 @@ export function LessonPageClient({
         document.body
       )}
 
+      {/* XP celebration banner — appears for ~4s after marking complete */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {justCompleted && (
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 360, damping: 28 }}
+              style={{
+                position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
+                zIndex: 10000,
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "12px 20px",
+                background: "var(--bg-card)",
+                border: `1.5px solid var(--success)`,
+                borderRadius: 999,
+                boxShadow: "0 10px 32px rgba(16,185,129,0.30)",
+                fontSize: 13.5, fontWeight: 600, color: "var(--text-primary)",
+              }}
+            >
+              <div style={{
+                width: 24, height: 24, borderRadius: "50%",
+                background: "var(--success)", display: "flex",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Check size={14} color="#fff" strokeWidth={3} />
+              </div>
+              <span>Lesson complete!</span>
+              {justCompleted.xp > 0 && (
+                <span style={{
+                  padding: "2px 10px", borderRadius: 999,
+                  background: "color-mix(in srgb, var(--success) 12%, transparent)",
+                  color: "var(--success)", fontWeight: 700, fontSize: 12.5,
+                }}>
+                  +{justCompleted.xp} XP
+                </span>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
       {/* ── Main content ──────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         <LessonViewer
@@ -334,6 +484,9 @@ export function LessonPageClient({
           diagramComponent={diagram}
           prevLesson={prevLesson ? { title: prevLesson.title, slug: prevLesson.slug } : null}
           nextLesson={nextLesson ? { title: nextLesson.title, slug: nextLesson.slug } : null}
+          isCompleted={completed}
+          onMarkComplete={isAuthed ? markComplete : undefined}
+          marking={marking}
         />
       </div>
     </div>
