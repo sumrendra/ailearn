@@ -1,189 +1,150 @@
 "use client";
 
-import { Topbar } from "@/components/layout/Topbar";
 import Link from "next/link";
-import { Trophy, Zap, ArrowRight, Wand2, Brain, Database, Cpu, MessageSquare } from "lucide-react";
+import { useEffect } from "react";
+import { ArrowRight, Wand2 } from "lucide-react";
+import { Topbar } from "@/components/layout/Topbar";
+import { PracticeStage } from "@/components/practice/PracticeStage";
+import { Kbd } from "@/components/practice/Kbd";
 
-const quizSets = [
-  {
-    title: "LLM Fundamentals",
-    desc: "Pre-training, RLHF, context windows, and how LLMs actually work.",
-    icon: Brain,
-    questions: 5,
-    xp: 100,
-    difficulty: "BEGINNER",
-    tags: ["LLMs", "Transformers"],
-    topic: "LLM Fundamentals",
-    color: "#6c47ff",
-    colorLight: "rgba(108, 71, 255, 0.08)",
-  },
-  {
-    title: "RAG & Vector Search",
-    desc: "Embeddings, chunking, HNSW indexing, and retrieval-augmented generation.",
-    icon: Database,
-    questions: 5,
-    xp: 120,
-    difficulty: "INTERMEDIATE",
-    tags: ["RAG", "Embeddings", "pgvector"],
-    topic: "RAG & Vector Search",
-    color: "#0f766e",
-    colorLight: "rgba(15, 118, 110, 0.08)",
-  },
-  {
-    title: "AI Agents & Tool Use",
-    desc: "ReAct loops, function calling, agent memory, and multi-agent coordination.",
-    icon: Cpu,
-    questions: 5,
-    xp: 150,
-    difficulty: "ADVANCED",
-    tags: ["Agents", "ReAct", "Tool calling"],
-    topic: "AI Agents",
-    color: "#b45309",
-    colorLight: "rgba(180, 83, 9, 0.08)",
-  },
-  {
-    title: "Prompt Engineering",
-    desc: "Zero-shot, few-shot, chain-of-thought, structured output, and system prompts.",
-    icon: MessageSquare,
-    questions: 5,
-    xp: 130,
-    difficulty: "INTERMEDIATE",
-    tags: ["Prompting", "CoT"],
-    topic: "Prompt Engineering Mastery",
-    color: "#1a6bbf",
-    colorLight: "rgba(26, 107, 191, 0.08)",
-  },
+/**
+ * Quiz landing. The redesigned surface treats this as a *menu* — pick a
+ * starting topic, then jump into the focused quiz stage at /quiz/generate.
+ * The center-stage card holds the topic chooser; the surrounding mesh +
+ * grain do the atmospheric work.
+ *
+ * Keyboard:
+ *   1-5  → jump into a quick-start set
+ *   N    → "new custom quiz" (alias for clicking Generate)
+ */
+const QUICK_SETS = [
+  { label: "LLM Fundamentals", difficulty: "BEGINNER" as const },
+  { label: "RAG & Vector Search", difficulty: "INTERMEDIATE" as const },
+  { label: "AI Agents", difficulty: "ADVANCED" as const },
+  { label: "Prompt Engineering Mastery", difficulty: "INTERMEDIATE" as const },
+  { label: "Transformer Architecture", difficulty: "INTERMEDIATE" as const },
 ];
 
-const diffColor: Record<string, string> = {
-  BEGINNER: "var(--beginner)", INTERMEDIATE: "var(--intermediate)", ADVANCED: "var(--advanced)",
-};
-const diffLabel: Record<string, string> = {
-  BEGINNER: "Beginner", INTERMEDIATE: "Intermediate", ADVANCED: "Advanced",
+const DIFF_LABEL: Record<string, string> = {
+  BEGINNER: "Beginner",
+  INTERMEDIATE: "Intermediate",
+  ADVANCED: "Advanced",
 };
 
 export default function QuizPage() {
+  // Keyboard routing — 1..5 jumps to a quick-start, N opens the generator.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+
+      if (e.key >= "1" && e.key <= "5") {
+        const set = QUICK_SETS[Number(e.key) - 1];
+        if (set) {
+          e.preventDefault();
+          window.location.href = `/quiz/generate?topic=${encodeURIComponent(set.label)}&difficulty=${set.difficulty}`;
+        }
+      }
+      if (e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        window.location.href = "/quiz/generate";
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <>
-      <Topbar title="Quizzes" subtitle="AI-generated · Adaptive difficulty · Detailed explanations" />
-      <div style={{ padding: "24px", maxWidth: 900, width: "100%" }}>
+      <Topbar title="Quiz" subtitle="Pick a topic. Five questions, detailed explanations." />
+      <PracticeStage
+        above={
+          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 8 }}>
+            <span className="mono-overline">Practice · Quiz</span>
+          </div>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 28,
+              fontWeight: 400,
+              lineHeight: 1.2,
+              letterSpacing: "-0.01em",
+              color: "var(--text-primary)",
+              margin: 0,
+            }}
+          >
+            What do you want to be quizzed on?
+          </h1>
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.55, margin: 0 }}>
+            Press <Kbd>1</Kbd>–<Kbd>5</Kbd> to start a quick-set, or <Kbd>N</Kbd> to build a custom quiz.
+          </p>
+        </div>
 
-        {/* AI Generate banner */}
-        <div style={{
-          background: "linear-gradient(135deg, var(--accent-light) 0%, var(--info-light) 100%)",
-          border: "1px solid var(--accent)25",
-          borderRadius: "var(--radius-lg)", padding: "20px 24px",
-          marginBottom: 28, display: "flex", alignItems: "center", gap: 16,
-        }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: 13,
-            background: "var(--bg-card)",
-            border: "1.5px solid var(--accent)20",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "var(--shadow-sm)", flexShrink: 0,
-          }}>
-            <Wand2 size={22} color="var(--accent)" />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
-              Generate a custom quiz with AI
-            </div>
-            <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-              Pick any topic and difficulty — Claude generates 5 fresh questions with detailed explanations.
-            </div>
-          </div>
-          <Link href="/quiz/generate" style={{ textDecoration: "none" }}>
-            <div style={{
-              background: "var(--accent)", color: "#fff",
-              padding: "10px 20px", borderRadius: "var(--radius-md)",
-              fontSize: 13, fontWeight: 500, cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 6,
-              whiteSpace: "nowrap",
-            }}>
-              Build my quiz <ArrowRight size={13} />
-            </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {QUICK_SETS.map((set, idx) => (
+            <Link
+              key={set.label}
+              href={`/quiz/generate?topic=${encodeURIComponent(set.label)}&difficulty=${set.difficulty}`}
+              className="glow-ring"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                padding: "14px 16px",
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-md)",
+                textDecoration: "none",
+                color: "var(--text-primary)",
+                fontSize: 14,
+              }}
+            >
+              <Kbd tint="var(--accent-text)">{idx + 1}</Kbd>
+              <span style={{ flex: 1 }}>{set.label}</span>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10.5,
+                  fontWeight: 500,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "var(--text-tertiary)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {DIFF_LABEL[set.difficulty]}
+              </span>
+              <ArrowRight size={14} color="var(--text-tertiary)" />
+            </Link>
+          ))}
+        </div>
+
+        <div className="hairline-t" style={{ paddingTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
+          <Link
+            href="/quiz/generate"
+            style={{
+              flex: 1,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              padding: "12px 18px",
+              background: "var(--accent)",
+              color: "#fff",
+              borderRadius: "var(--radius-md)",
+              fontSize: 14,
+              fontWeight: 500,
+              textDecoration: "none",
+            }}
+          >
+            <Wand2 size={14} /> Build a custom quiz <Kbd tint="rgba(255,255,255,0.85)">N</Kbd>
           </Link>
         </div>
-
-        {/* Section label */}
-        <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-tertiary)", marginBottom: 14 }}>
-          Quick-start sets
-        </div>
-
-        {/* Quiz sets */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
-          {quizSets.map((q) => {
-            const Icon = q.icon;
-            return (
-              <Link key={q.title} href={`/quiz/generate?topic=${encodeURIComponent(q.topic)}&difficulty=${q.difficulty}`} style={{ textDecoration: "none" }}>
-                <div style={{
-                  background: "var(--bg-card)", borderRadius: "var(--radius-lg)",
-                  border: "1px solid var(--border-subtle)", padding: "22px",
-                  boxShadow: "var(--shadow-sm)", cursor: "pointer",
-                  transition: "all 0.15s", height: "100%", display: "flex", flexDirection: "column",
-                }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-md)";
-                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
-                    (e.currentTarget as HTMLDivElement).style.borderColor = q.color + "40";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-sm)";
-                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-                    (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)";
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-                    <div style={{
-                      width: 42, height: 42, borderRadius: 12,
-                      background: q.colorLight,
-                      border: `1.5px solid ${q.color}20`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      <Icon size={20} color={q.color} />
-                    </div>
-                    <span style={{
-                      fontSize: 11, fontWeight: 500, padding: "3px 9px",
-                      color: diffColor[q.difficulty],
-                      background: diffColor[q.difficulty] + "18",
-                      borderRadius: "var(--radius-full)",
-                    }}>
-                      {diffLabel[q.difficulty]}
-                    </span>
-                  </div>
-
-                  <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6, lineHeight: 1.3 }}>
-                    {q.title}
-                  </h3>
-                  <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, flex: 1, marginBottom: 14 }}>
-                    {q.desc}
-                  </p>
-
-                  <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                    {q.tags.map((t) => (
-                      <span key={t} style={{
-                        fontSize: 11, color: "var(--text-tertiary)",
-                        background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)",
-                        padding: "2px 7px", borderRadius: "var(--radius-full)",
-                      }}>{t}</span>
-                    ))}
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--border-subtle)", paddingTop: 12 }}>
-                    <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-                      <Trophy size={12} style={{ display: "inline", marginRight: 4, color: "var(--xp-gold)" }} />
-                      {q.questions} AI-generated questions
-                    </span>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--xp-gold)", display: "flex", alignItems: "center", gap: 3 }}>
-                      <Zap size={12} /> +{q.xp} XP
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+      </PracticeStage>
     </>
   );
 }

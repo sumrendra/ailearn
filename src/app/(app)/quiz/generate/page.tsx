@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Topbar } from "@/components/layout/Topbar";
-import { Zap, ChevronLeft, RotateCcw, Check, X, ArrowRight, Sparkles, Loader2, Trophy, Target, BookOpen } from "lucide-react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { ChevronLeft, Loader2, Sparkles, Check, X, ArrowRight } from "lucide-react";
+import { Topbar } from "@/components/layout/Topbar";
+import { PracticeStage } from "@/components/practice/PracticeStage";
+import { Kbd } from "@/components/practice/Kbd";
+import { ProgressDots, DotState } from "@/components/practice/ProgressDots";
 
 type Difficulty = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 
@@ -30,23 +34,58 @@ const TOPICS = [
 ];
 
 const DIFF_OPTIONS: { label: string; value: Difficulty; desc: string }[] = [
-  { label: "Beginner", value: "BEGINNER", desc: "Core concepts and definitions" },
-  { label: "Intermediate", value: "INTERMEDIATE", desc: "Design choices and tradeoffs" },
-  { label: "Advanced", value: "ADVANCED", desc: "System design and edge cases" },
+  { label: "Beginner", value: "BEGINNER", desc: "Core concepts" },
+  { label: "Intermediate", value: "INTERMEDIATE", desc: "Tradeoffs" },
+  { label: "Advanced", value: "ADVANCED", desc: "System design" },
 ];
 
+/**
+ * Quiz stage. Single center card carries the entire flow:
+ *   setup → generating → quiz (per-question) → results
+ *
+ * Per-question keyboard map:
+ *   1-4    select an option (or auto-submit for true/false)
+ *   Enter  submit selection (or advance after feedback)
+ *   S      skip to next question (counts as incorrect)
+ *
+ * Persistence shape (API contracts) is unchanged — we still POST to
+ * /api/quiz/generate with the same body and consume the same response.
+ */
 export default function QuizGeneratePage() {
+  // useSearchParams reads from the streaming search-params bailout in Next 16;
+  // wrapping the inner client component in Suspense keeps the route streamable.
+  return (
+    <Suspense fallback={null}>
+      <QuizGenerateInner />
+    </Suspense>
+  );
+}
+
+function QuizGenerateInner() {
+  const params = useSearchParams();
+  const initialTopic = useMemo(() => {
+    const t = params.get("topic");
+    return TOPICS.find((x) => x.label === t) ?? TOPICS[0];
+  }, [params]);
+  const initialDifficulty = useMemo<Difficulty>(() => {
+    const d = params.get("difficulty");
+    if (d === "BEGINNER" || d === "INTERMEDIATE" || d === "ADVANCED") return d;
+    return "INTERMEDIATE";
+  }, [params]);
+
   const [step, setStep] = useState<"setup" | "generating" | "quiz" | "results">("setup");
-  const [topic, setTopic] = useState(TOPICS[0]);
-  const [difficulty, setDifficulty] = useState<Difficulty>("INTERMEDIATE");
+  const [topic, setTopic] = useState(initialTopic);
+  const [difficulty, setDifficulty] = useState<Difficulty>(initialDifficulty);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
-  const [showExplanation, setShowExplanation] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [answers, setAnswers] = useState<boolean[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const generate = async () => {
+  const nextBtnRef = useRef<HTMLButtonElement>(null);
+
+  const generate = useCallback(async () => {
     setStep("generating");
     setError(null);
     try {
@@ -65,465 +104,574 @@ export default function QuizGeneratePage() {
       setQuestions(data.questions);
       setCurrent(0);
       setSelected(null);
-      setShowExplanation(false);
+      setSubmitted(false);
       setAnswers([]);
       setStep("quiz");
-    } catch (err: any) {
-      setError(err.message ?? "Something went wrong generating the quiz.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong generating the quiz.";
+      setError(msg);
       setStep("setup");
     }
-  };
+  }, [topic, difficulty]);
 
   const q = questions[current];
 
-  const handleSelect = (idx: number) => {
-    if (selected !== null) return;
-    setSelected(idx);
-    setShowExplanation(true);
-    const isCorrect = q.options?.[idx]?.isCorrect ?? false;
-    setAnswers((prev) => [...prev, isCorrect]);
-  };
+  // Coerce every question type into a uniform 4-option model so the keyboard
+  // map (1-4) stays consistent. True/False renders as two options. Short-
+  // answer is treated as a 1-option "Reveal" interaction.
+  const options = useMemo(() => {
+    if (!q) return [] as { text: string; isCorrect: boolean }[];
+    if ((q.type === "MCQ" || q.type === "SCENARIO") && q.options) return q.options;
+    if (q.type === "TRUE_FALSE") {
+      const correctIsTrue = q.correctAnswer?.toLowerCase() === "true";
+      return [
+        { text: "True",  isCorrect: correctIsTrue },
+        { text: "False", isCorrect: !correctIsTrue },
+      ];
+    }
+    if (q.type === "SHORT_ANSWER") {
+      return [{ text: q.correctAnswer ?? "Reveal model answer", isCorrect: true }];
+    }
+    return [];
+  }, [q]);
 
-  const handleTrueFalse = (answer: boolean) => {
-    if (selected !== null) return;
-    setSelected(answer ? 1 : 0);
-    setShowExplanation(true);
-    const isCorrect = q.correctAnswer?.toLowerCase() === (answer ? "true" : "false");
-    setAnswers((prev) => [...prev, isCorrect]);
-  };
+  const submit = useCallback(() => {
+    if (selected === null || submitted) return;
+    const correct = options[selected]?.isCorrect ?? false;
+    setAnswers((prev) => [...prev, correct]);
+    setSubmitted(true);
+  }, [selected, submitted, options]);
 
-  const next = () => {
+  const advance = useCallback(() => {
     if (current >= questions.length - 1) {
       setStep("results");
     } else {
       setCurrent((c) => c + 1);
       setSelected(null);
-      setShowExplanation(false);
+      setSubmitted(false);
     }
-  };
+  }, [current, questions.length]);
 
-  const restart = () => {
-    setStep("setup");
-    setQuestions([]);
-    setAnswers([]);
-    setCurrent(0);
-    setSelected(null);
-    setShowExplanation(false);
-  };
+  const skip = useCallback(() => {
+    if (submitted) return;
+    setAnswers((prev) => [...prev, false]);
+    setSubmitted(true);
+  }, [submitted]);
+
+  // Quiz-step keyboard map. We listen on window so the user can drive the
+  // whole flow without ever needing the mouse. Skip target inputs/textareas.
+  useEffect(() => {
+    if (step !== "quiz" || !q) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+
+      if (e.key >= "1" && e.key <= String(options.length)) {
+        e.preventDefault();
+        if (!submitted) setSelected(Number(e.key) - 1);
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (!submitted) submit();
+        else advance();
+        return;
+      }
+      if (e.key.toLowerCase() === "s" && !submitted) {
+        e.preventDefault();
+        skip();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [step, q, options.length, submitted, submit, advance, skip]);
+
+  // Focus the Next button as soon as feedback shows, so Enter feels natural.
+  useEffect(() => {
+    if (submitted) nextBtnRef.current?.focus();
+  }, [submitted]);
 
   const score = answers.filter(Boolean).length;
 
   return (
     <>
-      <Topbar title="Generate Quiz" subtitle="AI-generated questions tailored to your topic and level" />
-      <div style={{ padding: "24px", maxWidth: 760, width: "100%" }}>
+      <Topbar title="Quiz" subtitle={topic.label} />
 
-        <Link href="/quiz" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-tertiary)", marginBottom: 20 }}>
+      <div style={{ padding: "12px 16px 0", maxWidth: 760, margin: "0 auto", width: "100%" }}>
+        <Link
+          href="/quiz"
+          style={{
+            textDecoration: "none",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 13,
+            color: "var(--text-tertiary)",
+          }}
+        >
           <ChevronLeft size={14} /> Back to quizzes
         </Link>
+      </div>
 
-        {/* SETUP */}
-        {step === "setup" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            <div style={{
-              background: "var(--bg-card)", borderRadius: "var(--radius-lg)",
-              border: "1px solid var(--border-subtle)", padding: "28px",
-              boxShadow: "var(--shadow-sm)",
-            }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 6 }}>
-                Configure your quiz
-              </h2>
-              <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 28 }}>
-                Pick a topic and difficulty. Claude will generate 5 fresh questions with detailed explanations.
-              </p>
-
-              {/* Topic selector */}
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 10 }}>Topic</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {TOPICS.map((t) => (
-                    <button
-                      key={t.label}
-                      onClick={() => setTopic(t)}
-                      style={{
-                        padding: "10px 12px", textAlign: "left",
-                        borderRadius: "var(--radius-md)", cursor: "pointer",
-                        border: `1.5px solid ${topic.label === t.label ? "var(--accent)" : "var(--border-subtle)"}`,
-                        background: topic.label === t.label ? "var(--accent-light)" : "var(--bg-secondary)",
-                        fontSize: 13,
-                        color: topic.label === t.label ? "var(--accent)" : "var(--text-primary)",
-                        fontWeight: topic.label === t.label ? 600 : 400,
-                        transition: "all 0.12s",
-                      }}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Difficulty selector */}
-              <div style={{ marginBottom: 28 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 10 }}>Difficulty</div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  {DIFF_OPTIONS.map((d) => (
-                    <button
-                      key={d.value}
-                      onClick={() => setDifficulty(d.value)}
-                      style={{
-                        flex: 1, padding: "12px 16px", textAlign: "left",
-                        borderRadius: "var(--radius-md)", cursor: "pointer",
-                        border: `1.5px solid ${difficulty === d.value ? "var(--accent)" : "var(--border-subtle)"}`,
-                        background: difficulty === d.value ? "var(--accent-light)" : "var(--bg-secondary)",
-                        transition: "all 0.12s",
-                      }}
-                    >
-                      <div style={{ fontSize: 13, fontWeight: 600, color: difficulty === d.value ? "var(--accent)" : "var(--text-primary)", marginBottom: 2 }}>
-                        {d.label}
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{d.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {error && (
-                <div style={{
-                  padding: "12px 16px", borderRadius: "var(--radius-md)",
-                  background: "var(--danger-light)", border: "1px solid var(--danger)",
-                  color: "var(--danger)", fontSize: 13, marginBottom: 16,
-                }}>
-                  {error}
-                </div>
-              )}
-
-              <button
-                onClick={generate}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "13px 24px", background: "var(--accent)",
-                  color: "#fff", border: "none", borderRadius: "var(--radius-md)",
-                  fontSize: 15, fontWeight: 500, cursor: "pointer",
-                  width: "100%", justifyContent: "center",
-                }}
-              >
-                <Sparkles size={16} />
-                Generate 5 questions on {topic.label}
-              </button>
+      {step === "setup" && (
+        <PracticeStage
+          above={
+            <div style={{ textAlign: "center" }}>
+              <span className="mono-overline">Configure your quiz</span>
             </div>
-          </div>
-        )}
+          }
+        >
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 28,
+              fontWeight: 400,
+              lineHeight: 1.2,
+              letterSpacing: "-0.01em",
+              color: "var(--text-primary)",
+              margin: 0,
+            }}
+          >
+            Pick a topic and difficulty.
+          </h1>
 
-        {/* GENERATING */}
-        {step === "generating" && (
-          <div style={{
-            background: "var(--bg-card)", borderRadius: "var(--radius-lg)",
-            border: "1px solid var(--border-subtle)", padding: "60px 32px",
-            textAlign: "center", boxShadow: "var(--shadow-sm)",
-          }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-              <Loader2 size={40} color="var(--accent)" style={{ animation: "spin 1s linear infinite" }} />
-            </div>
-            <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>
-              Generating your quiz…
-            </h3>
-            <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
-              Claude is crafting 5 questions on <strong>{topic.label}</strong>
-            </p>
-            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-          </div>
-        )}
-
-        {/* QUIZ */}
-        {step === "quiz" && q && (
-          <div>
-            {/* Progress */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>
-                Question {current + 1} of {questions.length}
-              </span>
-              <div style={{
-                flex: 1, height: 5, background: "var(--bg-tertiary)",
-                borderRadius: "var(--radius-full)", overflow: "hidden",
-              }}>
-                <div style={{
-                  height: "100%", width: `${((current) / questions.length) * 100}%`,
-                  background: "var(--accent)", transition: "width 0.4s",
-                  borderRadius: "var(--radius-full)",
-                }} />
-              </div>
-              <span style={{ fontSize: 12, color: "var(--xp-gold)", fontWeight: 500 }}>
-                {answers.filter(Boolean).length}/{answers.length} correct
-              </span>
-            </div>
-
-            <div style={{
-              background: "var(--bg-card)", borderRadius: "var(--radius-lg)",
-              border: "1px solid var(--border-subtle)", padding: "28px",
-              boxShadow: "var(--shadow-sm)",
-            }}>
-              {/* Tags */}
-              <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-                <span style={{
-                  fontSize: 11, padding: "2px 8px", borderRadius: "var(--radius-full)",
-                  background: "var(--accent-light)", color: "var(--accent)", fontWeight: 500,
-                }}>
-                  {q.type.replace("_", " ")}
-                </span>
-                {q.tags?.slice(0, 2).map((tag) => (
-                  <span key={tag} style={{
-                    fontSize: 11, padding: "2px 8px", borderRadius: "var(--radius-full)",
-                    background: "var(--bg-tertiary)", color: "var(--text-tertiary)",
-                  }}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              {/* Question */}
-              <p style={{ fontSize: 17, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.5, marginBottom: 24 }}>
-                {q.question}
-              </p>
-
-              {/* MCQ + SCENARIO options (SCENARIO questions also have 4-option choices) */}
-              {(q.type === "MCQ" || q.type === "SCENARIO") && q.options && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {q.options.map((opt, idx) => {
-                    let bg = "var(--bg-secondary)";
-                    let border = "var(--border-subtle)";
-                    let color = "var(--text-primary)";
-                    if (selected !== null) {
-                      if (opt.isCorrect) { bg = "var(--success-light)"; border = "var(--success)"; color = "var(--success)"; }
-                      else if (idx === selected && !opt.isCorrect) { bg = "var(--danger-light)"; border = "var(--danger)"; color = "var(--danger)"; }
-                    }
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => handleSelect(idx)}
-                        disabled={selected !== null}
-                        style={{
-                          padding: "14px 16px", textAlign: "left",
-                          background: bg, border: `1.5px solid ${border}`,
-                          borderRadius: "var(--radius-md)", cursor: selected === null ? "pointer" : "default",
-                          fontSize: 14, color, fontWeight: 400, lineHeight: 1.5,
-                          transition: "all 0.15s",
-                          display: "flex", alignItems: "flex-start", gap: 10,
-                        }}
-                      >
-                        <span style={{
-                          width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
-                          background: selected !== null && opt.isCorrect ? "var(--success)" : selected === idx ? "var(--danger)" : "var(--bg-tertiary)",
-                          border: `2px solid ${selected !== null && opt.isCorrect ? "var(--success)" : selected === idx ? "var(--danger)" : "var(--border-default)"}`,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 11, fontWeight: 700, color: selected !== null && (opt.isCorrect || idx === selected) ? "#fff" : "var(--text-tertiary)",
-                        }}>
-                          {selected !== null && opt.isCorrect ? <Check size={12} /> : selected === idx ? <X size={12} /> : String.fromCharCode(65 + idx)}
-                        </span>
-                        {opt.text}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* True/False */}
-              {q.type === "TRUE_FALSE" && (
-                <div style={{ display: "flex", gap: 12 }}>
-                  {[true, false].map((val) => {
-                    const isCorrect = q.correctAnswer?.toLowerCase() === (val ? "true" : "false");
-                    const isSelected = selected !== null && (val ? selected === 1 : selected === 0);
-                    let bg = "var(--bg-secondary)";
-                    let border = "var(--border-subtle)";
-                    if (selected !== null) {
-                      if (isCorrect) { bg = "var(--success-light)"; border = "var(--success)"; }
-                      else if (isSelected) { bg = "var(--danger-light)"; border = "var(--danger)"; }
-                    }
-                    return (
-                      <button
-                        key={String(val)}
-                        onClick={() => handleTrueFalse(val)}
-                        disabled={selected !== null}
-                        style={{
-                          flex: 1, padding: "16px",
-                          background: bg, border: `1.5px solid ${border}`,
-                          borderRadius: "var(--radius-md)", cursor: selected === null ? "pointer" : "default",
-                          fontSize: 16, fontWeight: 600,
-                          color: selected !== null && isCorrect ? "var(--success)" : selected !== null && isSelected ? "var(--danger)" : "var(--text-primary)",
-                          transition: "all 0.15s",
-                        }}
-                      >
-                        {val ? "True" : "False"}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* SHORT_ANSWER — reveal & self-grade */}
-              {q.type === "SHORT_ANSWER" && selected === null && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div style={{
-                    padding: "14px 16px",
-                    background: "var(--bg-secondary)",
-                    border: "1.5px dashed var(--border-default)",
-                    borderRadius: "var(--radius-md)",
-                    fontSize: 13, color: "var(--text-tertiary)", fontStyle: "italic",
-                  }}>
-                    Think about your answer, then reveal the model answer below.
-                  </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="mono-overline" style={{ color: "var(--text-tertiary)" }}>Topic</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {TOPICS.map((t) => {
+                const active = topic.label === t.label;
+                return (
                   <button
-                    onClick={() => { setSelected(0); setShowExplanation(true); }}
+                    key={t.label}
+                    onClick={() => setTopic(t)}
+                    className="glow-ring"
                     style={{
-                      padding: "12px 16px",
-                      background: "var(--accent-light)",
-                      border: "1.5px solid var(--accent)",
+                      padding: "10px 12px",
+                      textAlign: "left",
                       borderRadius: "var(--radius-md)",
-                      fontSize: 14, fontWeight: 600, color: "var(--accent)",
                       cursor: "pointer",
+                      border: "1px solid var(--border-subtle)",
+                      outline: active ? "1.5px solid var(--accent)" : undefined,
+                      outlineOffset: active ? -1 : undefined,
+                      background: active ? "var(--accent-soft)" : "var(--bg-elevated)",
+                      color: active ? "var(--accent-text)" : "var(--text-primary)",
+                      fontSize: 13,
+                      fontWeight: active ? 500 : 400,
                     }}
                   >
-                    Reveal answer
+                    {t.label}
                   </button>
-                </div>
-              )}
-              {q.type === "SHORT_ANSWER" && selected !== null && (
-                <div style={{
-                  padding: "14px 16px",
-                  background: "var(--bg-secondary)",
-                  border: "1.5px solid var(--border-default)",
-                  borderRadius: "var(--radius-md)",
-                  fontSize: 14, lineHeight: 1.6,
-                }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Model answer
-                  </div>
-                  <div style={{ color: "var(--text-primary)" }}>{q.correctAnswer}</div>
-                  <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                    <button
-                      onClick={() => setAnswers((prev) => [...prev, true])}
-                      disabled={answers.length > current}
-                      style={{
-                        flex: 1, padding: "10px",
-                        background: answers[current] === true ? "var(--success-light)" : "var(--bg-tertiary)",
-                        border: `1.5px solid ${answers[current] === true ? "var(--success)" : "var(--border-subtle)"}`,
-                        borderRadius: "var(--radius-md)", fontSize: 13, fontWeight: 600,
-                        color: answers[current] === true ? "var(--success)" : "var(--text-secondary)",
-                        cursor: answers.length > current ? "default" : "pointer",
-                      }}
-                    >
-                      ✓ Got it right
-                    </button>
-                    <button
-                      onClick={() => setAnswers((prev) => [...prev, false])}
-                      disabled={answers.length > current}
-                      style={{
-                        flex: 1, padding: "10px",
-                        background: answers[current] === false ? "var(--danger-light)" : "var(--bg-tertiary)",
-                        border: `1.5px solid ${answers[current] === false ? "var(--danger)" : "var(--border-subtle)"}`,
-                        borderRadius: "var(--radius-md)", fontSize: 13, fontWeight: 600,
-                        color: answers[current] === false ? "var(--danger)" : "var(--text-secondary)",
-                        cursor: answers.length > current ? "default" : "pointer",
-                      }}
-                    >
-                      ✗ Missed it
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Explanation */}
-              {showExplanation && (
-                <div style={{
-                  marginTop: 20, padding: "16px",
-                  background: answers[answers.length - 1] ? "var(--success-light)" : "var(--info-light)",
-                  border: `1px solid ${answers[answers.length - 1] ? "var(--success)" : "var(--info)"}`,
-                  borderRadius: "var(--radius-md)",
-                }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
-                    {answers[answers.length - 1] ? <Check size={14} color="var(--success)" /> : <X size={14} color="var(--danger)" />}
-                    {answers[answers.length - 1] ? "Correct!" : "Not quite"}
-                  </div>
-                  <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, margin: 0 }}>
-                    {q.explanation}
-                  </p>
-                </div>
-              )}
-
-              {/* Next button — for SHORT_ANSWER wait for self-grade; others show immediately */}
-              {showExplanation && answers.length > current && (
-                <button
-                  onClick={next}
-                  style={{
-                    marginTop: 16, width: "100%",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                    padding: "13px", background: "var(--accent)", color: "#fff",
-                    border: "none", borderRadius: "var(--radius-md)",
-                    fontSize: 14, fontWeight: 500, cursor: "pointer",
-                  }}
-                >
-                  {current >= questions.length - 1 ? "See results" : "Next question"}
-                  <ArrowRight size={15} />
-                </button>
-              )}
+                );
+              })}
             </div>
           </div>
-        )}
 
-        {/* RESULTS */}
-        {step === "results" && (
-          <div style={{
-            background: "var(--bg-card)", borderRadius: "var(--radius-lg)",
-            border: "1px solid var(--border-subtle)", padding: "48px 32px",
-            textAlign: "center", boxShadow: "var(--shadow-sm)",
-          }}>
-            <div style={{
-              width: 88, height: 88, margin: "0 auto 18px",
-              borderRadius: "50%",
-              background: score >= 4 ? "var(--xp-gold-light)" : score >= 3 ? "var(--accent-light)" : "var(--bg-secondary)",
-              border: `1.5px solid ${score >= 4 ? "var(--xp-gold)" : score >= 3 ? "var(--accent)" : "var(--border-default)"}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              {score >= 4
-                ? <Trophy size={36} color="var(--xp-gold)" strokeWidth={2.2} />
-                : score >= 3
-                ? <Target size={36} color="var(--accent)" strokeWidth={2.2} />
-                : <BookOpen size={36} color="var(--text-secondary)" strokeWidth={2.2} />}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="mono-overline" style={{ color: "var(--text-tertiary)" }}>Difficulty</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {DIFF_OPTIONS.map((d) => {
+                const active = difficulty === d.value;
+                return (
+                  <button
+                    key={d.value}
+                    onClick={() => setDifficulty(d.value)}
+                    className="glow-ring"
+                    style={{
+                      flex: 1,
+                      padding: "12px 14px",
+                      textAlign: "left",
+                      borderRadius: "var(--radius-md)",
+                      cursor: "pointer",
+                      border: "1px solid var(--border-subtle)",
+                      outline: active ? "1.5px solid var(--accent)" : undefined,
+                      outlineOffset: active ? -1 : undefined,
+                      background: active ? "var(--accent-soft)" : "var(--bg-elevated)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: active ? "var(--accent-text)" : "var(--text-primary)",
+                        marginBottom: 2,
+                      }}
+                    >
+                      {d.label}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{d.desc}</div>
+                  </button>
+                );
+              })}
             </div>
-            <h2 style={{ fontSize: 24, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
-              {score}/{questions.length} correct
-            </h2>
-            <p style={{ fontSize: 15, color: "var(--text-secondary)", marginBottom: 8 }}>
-              {score >= 4 ? "Excellent! You've mastered this topic." : score >= 3 ? "Good work — a few more passes and you'll nail it." : "Keep studying — the tutor can help you fill the gaps."}
-            </p>
-            <div style={{ fontSize: 14, color: "var(--xp-gold)", fontWeight: 500, marginBottom: 32 }}>
-              +{score * 20} XP earned
+          </div>
+
+          {error && (
+            <div
+              role="alert"
+              style={{
+                padding: "12px 14px",
+                borderRadius: "var(--radius-md)",
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--danger)",
+                color: "var(--danger)",
+                fontSize: 13,
+              }}
+            >
+              {error}
             </div>
-            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-              <button
-                onClick={restart}
+          )}
+
+          <button
+            onClick={generate}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              padding: "13px 22px",
+              background: "var(--accent)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "var(--radius-md)",
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: "pointer",
+              width: "100%",
+            }}
+          >
+            <Sparkles size={14} /> Generate 5 questions
+          </button>
+        </PracticeStage>
+      )}
+
+      {step === "generating" && (
+        <PracticeStage
+          above={
+            <div style={{ textAlign: "center" }}>
+              <span className="mono-overline">Generating · {topic.label}</span>
+            </div>
+          }
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 18,
+              padding: "32px 0 16px",
+            }}
+          >
+            <Loader2 size={32} color="var(--accent)" style={{ animation: "spin 1s linear infinite" }} />
+            <div style={{ textAlign: "center" }}>
+              <div
                 style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "12px 20px", background: "var(--bg-secondary)",
-                  border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)",
-                  fontSize: 14, color: "var(--text-primary)", fontWeight: 500, cursor: "pointer",
+                  fontFamily: "var(--font-display)",
+                  fontSize: 24,
+                  fontWeight: 400,
+                  color: "var(--text-primary)",
+                  marginBottom: 6,
                 }}
               >
-                <RotateCcw size={14} /> Try another quiz
-              </button>
-              <Link href="/tutor" style={{ textDecoration: "none" }}>
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "12px 20px", background: "var(--accent)", color: "#fff",
-                  border: "none", borderRadius: "var(--radius-md)",
-                  fontSize: 14, fontWeight: 500, cursor: "pointer",
-                }}>
-                  <Sparkles size={14} /> Ask tutor about this topic
-                </div>
-              </Link>
+                Writing your quiz…
+              </div>
+              <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                Claude is drafting five questions on {topic.label}.
+              </div>
             </div>
           </div>
-        )}
-      </div>
+          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        </PracticeStage>
+      )}
+
+      {step === "quiz" && q && (
+        <PracticeStage
+          above={
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+              <span className="mono-overline">
+                Question {current + 1} of {questions.length} · {topic.label}
+              </span>
+              <ProgressDots
+                states={Array.from({ length: questions.length }).map<DotState>((_, i) => {
+                  if (i < answers.length) return answers[i] ? "correct" : "incorrect";
+                  if (i === current) return "current";
+                  return "remaining";
+                })}
+              />
+            </div>
+          }
+        >
+          {/* Question */}
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 28,
+              fontWeight: 400,
+              lineHeight: 1.25,
+              letterSpacing: "-0.005em",
+              color: "var(--text-primary)",
+              margin: 0,
+            }}
+          >
+            {q.question}
+          </h1>
+
+          {/* Options */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {options.map((opt, idx) => {
+              const isSelected = selected === idx;
+              const isCorrect = opt.isCorrect;
+              let outline = "1px solid var(--border-subtle)";
+              let background = "var(--bg-elevated)";
+              let color = "var(--text-primary)";
+              let icon: React.ReactNode = null;
+
+              if (!submitted && isSelected) {
+                outline = "1.5px solid var(--accent)";
+                background = "var(--accent-soft)";
+              }
+              if (submitted) {
+                if (isCorrect) {
+                  outline = "1.5px solid var(--success)";
+                  color = "var(--text-primary)";
+                  icon = <Check size={14} color="var(--success)" />;
+                } else if (isSelected) {
+                  outline = "1.5px solid var(--danger)";
+                  color = "var(--text-secondary)";
+                  icon = <X size={14} color="var(--danger)" />;
+                } else {
+                  color = "var(--text-tertiary)";
+                }
+              }
+
+              return (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    if (submitted) return;
+                    setSelected(idx);
+                  }}
+                  disabled={submitted}
+                  className={!submitted ? "glow-ring" : undefined}
+                  style={{
+                    padding: "13px 14px",
+                    textAlign: "left",
+                    background,
+                    border: "1px solid transparent",
+                    outline,
+                    outlineOffset: -1,
+                    borderRadius: "var(--radius-md)",
+                    cursor: submitted ? "default" : "pointer",
+                    fontSize: 14,
+                    color,
+                    fontWeight: 400,
+                    lineHeight: 1.5,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    width: "100%",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <Kbd tint={isSelected && !submitted ? "var(--accent-text)" : undefined}>{idx + 1}</Kbd>
+                  <span style={{ flex: 1 }}>{opt.text}</span>
+                  {icon}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Feedback */}
+          {submitted && (
+            <div
+              style={{
+                padding: "14px 16px",
+                background: "var(--bg-elevated)",
+                border: `1px solid ${answers[answers.length - 1] ? "var(--success)" : "var(--danger)"}`,
+                borderRadius: "var(--radius-md)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  color: answers[answers.length - 1] ? "var(--success)" : "var(--danger)",
+                }}
+              >
+                {answers[answers.length - 1] ? "Correct" : "Not quite"}
+              </div>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 13.5,
+                  color: "var(--text-secondary)",
+                  lineHeight: 1.6,
+                }}
+              >
+                {q.explanation}
+              </p>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {!submitted ? (
+              <>
+                <button
+                  onClick={submit}
+                  disabled={selected === null}
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    padding: "12px 18px",
+                    background: selected === null ? "var(--bg-overlay)" : "var(--accent)",
+                    color: selected === null ? "var(--text-tertiary)" : "#fff",
+                    border: "none",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    cursor: selected === null ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Submit <Kbd tint="rgba(255,255,255,0.85)">↵</Kbd>
+                </button>
+                <button
+                  onClick={skip}
+                  style={{
+                    padding: "12px 14px",
+                    background: "transparent",
+                    color: "var(--text-tertiary)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  Skip <Kbd>S</Kbd>
+                </button>
+              </>
+            ) : (
+              <button
+                ref={nextBtnRef}
+                onClick={advance}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  padding: "12px 18px",
+                  background: "var(--accent)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                {current >= questions.length - 1 ? "See results" : "Next question"}{" "}
+                <ArrowRight size={14} /> <Kbd tint="rgba(255,255,255,0.85)">↵</Kbd>
+              </button>
+            )}
+          </div>
+        </PracticeStage>
+      )}
+
+      {step === "results" && (
+        <PracticeStage
+          above={
+            <div style={{ textAlign: "center" }}>
+              <span className="mono-overline">{topic.label}</span>
+            </div>
+          }
+        >
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, paddingTop: 8 }}>
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 56,
+                lineHeight: 1,
+                fontWeight: 500,
+                fontVariantNumeric: "tabular-nums",
+                color: "var(--text-primary)",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              <span style={{ color: "var(--accent)" }}>{score}</span>
+              <span style={{ color: "var(--text-tertiary)" }}> / {questions.length}</span>
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+              {score === questions.length
+                ? "Clean sweep."
+                : score >= Math.ceil(questions.length * 0.7)
+                ? "Solid run."
+                : "Worth a second pass."}
+            </div>
+          </div>
+
+          {/* Per-question recap */}
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <ProgressDots
+              states={answers.map<DotState>((a) => (a ? "correct" : "incorrect"))}
+            />
+          </div>
+
+          <div className="hairline-t" style={{ paddingTop: 16, display: "flex", gap: 10 }}>
+            <button
+              onClick={() => {
+                setStep("setup");
+                setQuestions([]);
+                setAnswers([]);
+                setCurrent(0);
+                setSelected(null);
+                setSubmitted(false);
+              }}
+              style={{
+                flex: 1,
+                padding: "12px 16px",
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-primary)",
+                borderRadius: "var(--radius-md)",
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              Review answers
+            </button>
+            <button
+              onClick={generate}
+              style={{
+                flex: 1,
+                padding: "12px 16px",
+                background: "var(--accent)",
+                color: "#fff",
+                border: "none",
+                borderRadius: "var(--radius-md)",
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              Take another quiz
+            </button>
+          </div>
+        </PracticeStage>
+      )}
     </>
   );
 }
