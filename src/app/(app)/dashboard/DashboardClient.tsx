@@ -1,59 +1,35 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { motion, useInView, AnimatePresence } from "framer-motion";
 import {
-  Brain, BookOpen, Zap, Flame, Trophy, ArrowRight,
-  Play, BarChart3, Clock, Star, LogIn,
+  Flame, Trophy, Zap, ArrowRight, Clock, Play,
+  CheckCircle2, Circle,
 } from "lucide-react";
 
-// ── Animated counter ──────────────────────────────────────────────────────────
-function Counter({ to, suffix = "" }: { to: number; suffix?: string }) {
-  const [val, setVal] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true });
-
-  useEffect(() => {
-    if (!inView) return;
-    const start = Date.now();
-    const duration = 1200;
-    const raf = requestAnimationFrame(function tick() {
-      const elapsed = Date.now() - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const ease = 1 - Math.pow(1 - progress, 3);
-      setVal(Math.round(ease * to));
-      if (progress < 1) requestAnimationFrame(tick);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [inView, to]);
-
-  return <span ref={ref}>{val.toLocaleString()}{suffix}</span>;
-}
-
-// ── Animated progress ring ────────────────────────────────────────────────────
-function ProgressRing({ pct, color, size = 80 }: { pct: number; color: string; size?: number }) {
-  const r = (size - 8) / 2;
-  const circ = 2 * Math.PI * r;
-  const ref = useRef<SVGCircleElement>(null);
-  const inView = useInView(ref, { once: true });
-
-  return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border-subtle)" strokeWidth={6} />
-      <circle
-        ref={ref}
-        cx={size / 2} cy={size / 2} r={r}
-        fill="none" stroke={color} strokeWidth={6}
-        strokeLinecap="round"
-        strokeDasharray={circ}
-        strokeDashoffset={inView ? circ * (1 - pct / 100) : circ}
-        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1)" }}
-      />
-    </svg>
-  );
-}
-
 // ── Types ─────────────────────────────────────────────────────────────────────
+interface RecentSession {
+  title: string; slug: string;
+  pathTitle: string; pathSlug: string; pathColor: string;
+  status: "IN_PROGRESS" | "COMPLETED";
+  updatedAt: string;
+  timeSpentMins: number;
+  estimatedMins: number;
+}
+
+interface CurrentLesson {
+  title: string; slug: string;
+  pathTitle: string; pathSlug: string; pathColor: string;
+  timeSpentMins: number;
+  estimatedMins: number;
+  lastAccessedISO: string;
+}
+
+interface QueueItem {
+  title: string; slug: string;
+  estimatedMins: number;
+  pathTitle: string; pathColor: string;
+}
+
 interface Props {
   isLoggedIn: boolean;
   userStats: {
@@ -63,501 +39,884 @@ interface Props {
   };
   totalLessons: number;
   totalXP: number;
-  recentLessons: { title: string; slug: string; pathTitle: string; pathSlug: string; pathColor: string }[];
-  pathProgress: Record<string, number>;
-  continuePath: {
-    title: string; slug: string; color: string;
-    lesson: { title: string; slug: string } | null;
-  } | null;
-  paths: {
-    title: string; slug: string; color: string;
-    totalLessons: number; xpAvailable: number;
-    firstLesson: { slug: string } | null;
-  }[];
+  recentSessions: RecentSession[];
+  pathProgress: { slug: string; title: string; color: string; pct: number }[];
+  currentLesson: CurrentLesson | null;
+  queue: QueueItem[];
 }
 
-// Framer-motion v12 needs explicit typing for Variants
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const stagger: any = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const fadeUp: any  = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.45 } } };
+// ── Shared style snippets ─────────────────────────────────────────────────────
+const monoNumeral: React.CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontVariantNumeric: "tabular-nums",
+};
+
+// Format a number in mono with thousands separator (no localization quirks)
+function num(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
+// "X min ago" / "X h ago" / "Y days ago"
+function relativeTime(iso: string, nowMs: number): string {
+  const then = new Date(iso).getTime();
+  const sec = Math.max(0, Math.round((nowMs - then) / 1000));
+  if (sec < 60) return "just now";
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} h ago`;
+  const days = Math.round(hr / 24);
+  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  const mo = Math.round(days / 30);
+  return `${mo} mo ago`;
+}
+
+// Hydration-safe client clock via useSyncExternalStore. SSR snapshot is 0;
+// hydrated client snapshot is Date.now(); we tick once a minute and notify.
+function subscribeNow(cb: () => void): () => void {
+  const t = window.setInterval(cb, 60_000);
+  return () => window.clearInterval(t);
+}
+function useNow(): number {
+  return useSyncExternalStore(
+    subscribeNow,
+    () => Date.now(),
+    () => 0,
+  );
+}
+
+// Stable, server-safe fallback: short ISO date (YYYY-MM-DD)
+function isoShort(iso: string): string {
+  return iso.slice(0, 10);
+}
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function DashboardClient({
-  isLoggedIn, userStats, totalLessons, totalXP,
-  recentLessons, pathProgress, continuePath, paths,
+  isLoggedIn,
+  userStats,
+  totalLessons,
+  totalXP,
+  recentSessions,
+  pathProgress,
+  currentLesson,
+  queue,
 }: Props) {
+  const now = useNow();
+
   const overallPct = totalLessons > 0
     ? Math.round((userStats.completedLessons / totalLessons) * 100)
     : 0;
 
-  const xpForNextLevel = 500;
-  const xpInLevel = userStats.xp % xpForNextLevel;
-  const levelPct = Math.round((xpInLevel / xpForNextLevel) * 100);
-
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  // Section heading copy — no greeting, just orient the user
+  const overlineCopy = currentLesson ? "Currently learning" : "Begin";
+  const headlineCopy = currentLesson
+    ? currentLesson.pathTitle
+    : "Choose a path to begin";
 
   return (
-    <div style={{ padding: "32px 36px", maxWidth: 1100, width: "100%" }}>
-
-      {/* ── Greeting ── */}
-      <motion.div
-        variants={stagger} initial="hidden" animate="show"
-        style={{ marginBottom: 32 }}
-      >
-        <motion.h1 variants={fadeUp} style={{
-          fontSize: 30, fontWeight: 800,
-          color: "var(--text-primary)",
-          letterSpacing: "-0.03em", lineHeight: 1.2,
-          marginBottom: 6,
-        }}>
-          {greeting}, {userStats.name} 👋
-        </motion.h1>
-        <motion.p variants={fadeUp} style={{ fontSize: 15, color: "var(--text-tertiary)" }}>
-          {isLoggedIn
-            ? `You've completed ${userStats.completedLessons} of ${totalLessons} lessons. Keep it up!`
-            : "Sign in to track your progress, earn XP, and build streaks."}
-        </motion.p>
-      </motion.div>
-
-      {/* ── Guest CTA banner ── */}
-      <AnimatePresence>
-        {!isLoggedIn && (
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            style={{
-              marginBottom: 28,
-              padding: "16px 22px",
-              background: "linear-gradient(135deg, rgba(108,71,255,0.08), rgba(167,139,255,0.05))",
-              border: "1px solid rgba(108,71,255,0.2)",
-              borderRadius: 16,
-              display: "flex", alignItems: "center", gap: 16,
-            }}
-          >
-            <Brain size={24} color="var(--accent)" style={{ flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>
-                Track your progress — it&apos;s free!
-              </div>
-              <div style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
-                Create an account to earn XP, maintain streaks, and unlock achievements.
-              </div>
-            </div>
-            <Link href="/signup" style={{ textDecoration: "none" }}>
-              <motion.div
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 7,
-                  padding: "9px 18px",
-                  background: "var(--accent)", color: "#fff",
-                  borderRadius: 10, fontSize: 13, fontWeight: 700,
-                  whiteSpace: "nowrap", cursor: "pointer",
-                  boxShadow: "0 6px 20px rgba(108,71,255,0.35)",
-                }}
-              >
-                <LogIn size={15} /> Sign up free
-              </motion.div>
-            </Link>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Top stats row ── */}
-      <motion.div
-        variants={stagger} initial="hidden" animate="show"
-        style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}
-      >
-        {[
-          {
-            icon: <Zap size={20} color="#eab308" />,
-            label: "Total XP",
-            value: <Counter to={userStats.xp} />,
-            sub: `${totalXP.toLocaleString()} available`,
-            bg: "rgba(234,179,8,0.08)",
-            border: "rgba(234,179,8,0.15)",
-          },
-          {
-            icon: <Flame size={20} color="#ef4444" />,
-            label: "Streak",
-            value: <Counter to={userStats.currentStreak} suffix="d" />,
-            sub: `Best: ${userStats.longestStreak}d`,
-            bg: "rgba(239,68,68,0.08)",
-            border: "rgba(239,68,68,0.15)",
-          },
-          {
-            icon: <BookOpen size={20} color="var(--accent)" />,
-            label: "Lessons done",
-            value: <Counter to={userStats.completedLessons} />,
-            sub: `of ${totalLessons} total`,
-            bg: "rgba(108,71,255,0.08)",
-            border: "rgba(108,71,255,0.15)",
-          },
-          {
-            icon: <Trophy size={20} color="#f97316" />,
-            label: "Level",
-            value: <Counter to={userStats.level} />,
-            sub: `${xpInLevel}/${xpForNextLevel} to next`,
-            bg: "rgba(249,115,22,0.08)",
-            border: "rgba(249,115,22,0.15)",
-          },
-        ].map(stat => (
-          <motion.div
-            key={stat.label}
-            variants={fadeUp}
-            whileHover={{ y: -3, boxShadow: "0 12px 32px rgba(0,0,0,0.1)" }}
-            style={{
-              background: "var(--bg-surface)",
-              border: `1px solid ${stat.border}`,
-              borderRadius: 16,
-              padding: "18px 20px",
-              display: "flex", flexDirection: "column", gap: 10,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-              transition: "box-shadow 0.2s",
-            }}
-          >
-            <div style={{
-              width: 40, height: 40, borderRadius: 12,
-              background: stat.bg,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              {stat.icon}
-            </div>
-            <div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1, letterSpacing: "-0.03em" }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 4 }}>
-                {stat.label}
-              </div>
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: -4 }}>
-              {stat.sub}
-            </div>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* ── Middle: Continue + Progress ring + Recent ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 18, marginBottom: 28 }}>
-
-        {/* Continue learning hero */}
-        {continuePath?.lesson && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            style={{
-              borderRadius: 20,
-              background: `linear-gradient(135deg, ${continuePath.color}18, ${continuePath.color}08)`,
-              border: `1px solid ${continuePath.color}30`,
-              padding: "28px 32px",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            {/* Decorative circles */}
-            <div style={{
-              position: "absolute", right: -30, top: -30,
-              width: 180, height: 180, borderRadius: "50%",
-              background: `${continuePath.color}10`,
-            }} />
-            <div style={{
-              position: "absolute", right: 40, bottom: -60,
-              width: 120, height: 120, borderRadius: "50%",
-              background: `${continuePath.color}08`,
-            }} />
-
-            <div style={{ position: "relative" }}>
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                fontSize: 11, fontWeight: 700, textTransform: "uppercase",
-                letterSpacing: "0.08em", color: continuePath.color,
-                background: `${continuePath.color}18`,
-                padding: "4px 10px", borderRadius: 99,
-                marginBottom: 14,
-              }}>
-                <Play size={10} /> Continue learning
-              </div>
-
-              <h2 style={{
-                fontSize: 22, fontWeight: 800,
-                color: "var(--text-primary)",
-                lineHeight: 1.25, marginBottom: 8,
-                letterSpacing: "-0.02em",
-              }}>
-                {continuePath.lesson.title}
-              </h2>
-              <p style={{ fontSize: 14, color: "var(--text-tertiary)", marginBottom: 22 }}>
-                {continuePath.title}
-              </p>
-
-              <Link href={`/lessons/${continuePath.lesson.slug}`} style={{ textDecoration: "none" }}>
-                <motion.div
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 8,
-                    padding: "12px 24px",
-                    background: continuePath.color, color: "#fff",
-                    borderRadius: 12, fontSize: 15, fontWeight: 700,
-                    cursor: "pointer",
-                    boxShadow: `0 8px 24px ${continuePath.color}40`,
-                  }}
-                >
-                  Start lesson <ArrowRight size={16} />
-                </motion.div>
-              </Link>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Progress ring card */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
+    <div
+      style={{
+        padding: "40px clamp(24px, 4vw, 48px) 80px",
+        maxWidth: 1200,
+        width: "100%",
+        margin: "0 auto",
+        color: "var(--text-primary)",
+      }}
+    >
+      {/* ── Header: overline + serif headline (no greeting) ───────────────── */}
+      <header style={{ marginBottom: 36 }}>
+        <div className="mono-overline" style={{ marginBottom: 12 }}>
+          {overlineCopy}
+        </div>
+        <h1
+          className="display-md"
           style={{
-            background: "var(--bg-surface)",
-            borderRadius: 20,
-            border: "1px solid var(--border-subtle)",
-            padding: "24px 20px",
-            display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center",
-            gap: 12, textAlign: "center",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+            margin: 0,
+            color: "var(--text-primary)",
+            maxWidth: 900,
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            Overall progress
-          </div>
+          {headlineCopy}
+        </h1>
+      </header>
 
-          <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-            <ProgressRing pct={overallPct} color="var(--accent)" size={100} />
-            <div style={{ position: "absolute", textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>
-                {overallPct}%
-              </div>
-            </div>
-          </div>
+      {/* Responsive: stack the hero + path-progress on narrow screens.
+          Inline media-query via a scoped <style> — no new tokens required. */}
+      <style>{`
+        @media (max-width: 880px) {
+          .studio-hero { grid-template-columns: 1fr !important; }
+          .studio-path-row { grid-template-columns: minmax(0,1fr) 100px auto !important; }
+        }
+      `}</style>
 
-          <div>
-            <div style={{ fontSize: 14, color: "var(--text-secondary)", fontWeight: 600 }}>
-              {userStats.completedLessons}/{totalLessons} lessons
-            </div>
-          </div>
-
-          {/* XP level bar */}
-          <div style={{ width: "100%", marginTop: 4 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "var(--text-tertiary)", marginBottom: 5 }}>
-              <span>Level {userStats.level}</span>
-              <span>{xpInLevel} / {xpForNextLevel} XP</span>
-            </div>
-            <div style={{ height: 5, background: "var(--border-subtle)", borderRadius: 99, overflow: "hidden" }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${levelPct}%` }}
-                transition={{ delay: 0.6, duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                style={{ height: "100%", background: "var(--accent)", borderRadius: 99 }}
-              />
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* ── Learning paths ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        style={{ marginBottom: 28 }}
+      {/* ── Hero: 2-col studio (continue panel + stats panel) ─────────────── */}
+      <section
+        className="studio-hero"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
+          gap: 20,
+          marginBottom: 48,
+        }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
-            Learning paths
-          </h2>
-          <Link href="/learn" style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}>
-            View all →
-          </Link>
-        </div>
+        {/* LEFT: Continue learning panel */}
+        <ContinuePanel
+          isLoggedIn={isLoggedIn}
+          currentLesson={currentLesson}
+          now={now}
+        />
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-          {paths.map((path, i) => {
-            const prog = pathProgress[path.slug] ?? 0;
-            return (
-              <motion.div
-                key={path.slug}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + i * 0.08, duration: 0.4 }}
-                whileHover={{ y: -4, boxShadow: "0 16px 40px rgba(0,0,0,0.1)" }}
-                style={{
-                  background: "var(--bg-surface)",
-                  borderRadius: 16,
-                  border: "1px solid var(--border-subtle)",
-                  padding: "20px",
-                  cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                  transition: "box-shadow 0.2s",
-                }}
-              >
-                {/* Color bar top */}
-                <div style={{
-                  height: 4, borderRadius: 99,
-                  background: `linear-gradient(90deg, ${path.color}, ${path.color}60)`,
-                  marginBottom: 16,
-                }} />
+        {/* RIGHT: Streak · XP · Level stat trio */}
+        <StatsPanel
+          isLoggedIn={isLoggedIn}
+          streak={userStats.currentStreak}
+          longestStreak={userStats.longestStreak}
+          xp={userStats.xp}
+          totalXP={totalXP}
+          level={userStats.level}
+          overallPct={overallPct}
+        />
+      </section>
 
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 6, lineHeight: 1.3 }}>
-                  {path.title}
-                </div>
+      {/* ── Recent sessions feed ──────────────────────────────────────────── */}
+      <RecentSessionsFeed sessions={recentSessions} isLoggedIn={isLoggedIn} now={now} />
 
-                <div style={{ display: "flex", gap: 14, marginBottom: 14 }}>
-                  <span style={{ fontSize: 12, color: "var(--text-tertiary)", display: "flex", alignItems: "center", gap: 4 }}>
-                    <BookOpen size={11} /> {path.totalLessons} lessons
-                  </span>
-                  <span style={{ fontSize: 12, color: "var(--text-tertiary)", display: "flex", alignItems: "center", gap: 4 }}>
-                    <Zap size={11} /> {path.xpAvailable.toLocaleString()} XP
-                  </span>
-                </div>
+      {/* ── Today's queue ─────────────────────────────────────────────────── */}
+      <TodaysQueue queue={queue} hasFocus={!!currentLesson} />
 
-                {/* Progress bar */}
-                <div style={{ height: 4, background: "var(--border-subtle)", borderRadius: 99, overflow: "hidden", marginBottom: 12 }}>
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${prog}%` }}
-                    transition={{ delay: 0.6 + i * 0.1, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                    style={{ height: "100%", background: path.color, borderRadius: 99 }}
-                  />
-                </div>
-                <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 14 }}>
-                  {prog}% complete
-                </div>
-
-                {path.firstLesson && (
-                  <Link href={`/lessons/${path.firstLesson.slug}`} style={{ textDecoration: "none" }}>
-                    <div style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      fontSize: 12.5, fontWeight: 600, color: path.color,
-                      padding: "7px 14px",
-                      background: `${path.color}12`,
-                      borderRadius: 8,
-                      border: `1px solid ${path.color}25`,
-                      cursor: "pointer",
-                    }}>
-                      {prog > 0 ? "Continue" : "Start"} <ArrowRight size={12} />
-                    </div>
-                  </Link>
-                )}
-              </motion.div>
-            );
-          })}
-        </div>
-      </motion.div>
-
-      {/* ── Recent activity ── */}
-      {recentLessons.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.01em", marginBottom: 14 }}>
-            Recently completed
-          </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {recentLessons.map((lesson, i) => (
-              <motion.div
-                key={lesson.slug}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.55 + i * 0.06 }}
-              >
-                <Link href={`/lessons/${lesson.slug}`} style={{ textDecoration: "none" }}>
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 14,
-                    padding: "12px 16px",
-                    background: "var(--bg-surface)",
-                    borderRadius: 12,
-                    border: "1px solid var(--border-subtle)",
-                    transition: "border-color 0.15s, background 0.15s",
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = lesson.pathColor; (e.currentTarget as HTMLDivElement).style.background = `${lesson.pathColor}06`; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-subtle)"; (e.currentTarget as HTMLDivElement).style.background = "var(--bg-surface)"; }}
-                  >
-                    <div style={{
-                      width: 32, height: 32, borderRadius: 8,
-                      background: `${lesson.pathColor}15`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0,
-                    }}>
-                      <Star size={15} color={lesson.pathColor} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {lesson.title}
-                      </div>
-                      <div style={{ fontSize: 11.5, color: "var(--text-tertiary)" }}>{lesson.pathTitle}</div>
-                    </div>
-                    <ArrowRight size={14} color="var(--text-tertiary)" />
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── Quick links when no recent activity ── */}
-      {recentLessons.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          style={{
-            padding: "24px 28px",
-            background: "var(--bg-surface)",
-            borderRadius: 16,
-            border: "1px solid var(--border-subtle)",
-            display: "flex", alignItems: "center", gap: 20,
-          }}
-        >
-          <div style={{
-            width: 52, height: 52, borderRadius: 14,
-            background: "var(--accent-light)",
-            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-          }}>
-            <Brain size={26} color="var(--accent)" />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
-              Ready to start learning?
-            </div>
-            <div style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
-              Pick a path and begin your AI engineering journey today.
-            </div>
-          </div>
-          <Link href="/learn" style={{ textDecoration: "none" }}>
-            <motion.div
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              style={{
-                display: "flex", alignItems: "center", gap: 7,
-                padding: "11px 22px",
-                background: "var(--accent)", color: "#fff",
-                borderRadius: 10, fontSize: 14, fontWeight: 700,
-                cursor: "pointer", flexShrink: 0,
-                boxShadow: "0 6px 20px rgba(108,71,255,0.35)",
-              }}
-            >
-              Browse paths <ArrowRight size={14} />
-            </motion.div>
-          </Link>
-        </motion.div>
+      {/* ── Path progress — secondary, mono numerals only ─────────────────── */}
+      {isLoggedIn && pathProgress.length > 0 && (
+        <PathProgressList pathProgress={pathProgress} />
       )}
     </div>
+  );
+}
+
+// ── Continue panel (LEFT of hero) ─────────────────────────────────────────────
+function ContinuePanel({
+  isLoggedIn,
+  currentLesson,
+  now,
+}: {
+  isLoggedIn: boolean;
+  currentLesson: CurrentLesson | null;
+  now: number;
+}) {
+  // Empty / unauthed state — keep it sparse, single CTA
+  if (!isLoggedIn || !currentLesson) {
+    return (
+      <article
+        className="glass-pane"
+        style={{
+          borderRadius: "var(--radius-xl)",
+          padding: "28px 32px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+          minHeight: 220,
+        }}
+      >
+        <div className="mono-overline" style={{ color: "var(--text-tertiary)" }}>
+          {isLoggedIn ? "No lesson in progress" : "Get started"}
+        </div>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 18,
+            color: "var(--text-secondary)",
+            lineHeight: 1.5,
+            maxWidth: 460,
+          }}
+        >
+          {isLoggedIn
+            ? "Pick a path to begin."
+            : "Browse the paths and start a session. Sign in to track time, streak, and XP."}
+        </p>
+        <div style={{ marginTop: "auto", display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <PrimaryCTA href="/learn" label="Browse paths" />
+          {!isLoggedIn && (
+            <SecondaryCTA href="/signup" label="Create account" />
+          )}
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <article
+      className="glass-pane glow-ring"
+      style={{
+        borderRadius: "var(--radius-xl)",
+        padding: "28px 32px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 18,
+        minHeight: 220,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Path-color hairline at top edge — ambient identity, not a "bar" */}
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: 24,
+          right: 24,
+          top: 0,
+          height: 1,
+          background: `linear-gradient(90deg, transparent, ${currentLesson.pathColor}, transparent)`,
+          opacity: 0.6,
+        }}
+      />
+
+      <header style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span
+          aria-hidden
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: currentLesson.pathColor,
+            boxShadow: `0 0 12px ${currentLesson.pathColor}`,
+          }}
+        />
+        <span
+          className="mono-overline"
+          style={{ color: "var(--text-tertiary)" }}
+        >
+          {currentLesson.pathTitle}
+        </span>
+      </header>
+
+      <h2
+        style={{
+          margin: 0,
+          fontSize: 24,
+          fontWeight: 600,
+          letterSpacing: "-0.015em",
+          color: "var(--text-primary)",
+          lineHeight: 1.25,
+        }}
+      >
+        {currentLesson.title}
+      </h2>
+
+      {/* Lesson facts — mono numerals, hairline-divided */}
+      <dl
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "8px 24px",
+          margin: 0,
+          color: "var(--text-tertiary)",
+          fontSize: 13,
+        }}
+      >
+        <FactPair label="Time spent">
+          <span style={monoNumeral}>{num(currentLesson.timeSpentMins)}</span>
+          {" min"}
+        </FactPair>
+        <FactPair label="Estimated">
+          <span style={monoNumeral}>{num(currentLesson.estimatedMins)}</span>
+          {" min"}
+        </FactPair>
+        <FactPair label="Last opened">
+          <span style={monoNumeral}>
+            {now > 0 ? relativeTime(currentLesson.lastAccessedISO, now) : isoShort(currentLesson.lastAccessedISO)}
+          </span>
+        </FactPair>
+      </dl>
+
+      <div style={{ marginTop: "auto", display: "flex", gap: 12, alignItems: "center" }}>
+        <PrimaryCTA
+          href={`/lessons/${currentLesson.slug}`}
+          label="Resume"
+          icon={<Play size={15} strokeWidth={2.5} />}
+        />
+      </div>
+    </article>
+  );
+}
+
+// Small label/value pair for the lesson-facts row
+function FactPair({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <span
+        className="mono-overline"
+        style={{
+          color: "var(--text-muted)",
+          fontSize: 9.5,
+          letterSpacing: "0.16em",
+        }}
+      >
+        {label}
+      </span>
+      <span style={{ color: "var(--text-secondary)", fontSize: 14 }}>{children}</span>
+    </div>
+  );
+}
+
+// ── Stats panel (RIGHT of hero) ───────────────────────────────────────────────
+function StatsPanel({
+  isLoggedIn,
+  streak,
+  longestStreak,
+  xp,
+  totalXP,
+  level,
+  overallPct,
+}: {
+  isLoggedIn: boolean;
+  streak: number;
+  longestStreak: number;
+  xp: number;
+  totalXP: number;
+  level: number;
+  overallPct: number;
+}) {
+  return (
+    <article
+      className="glass-pane"
+      style={{
+        borderRadius: "var(--radius-xl)",
+        padding: "24px 28px",
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 220,
+      }}
+    >
+      <div
+        className="mono-overline"
+        style={{ color: "var(--text-tertiary)", marginBottom: 4 }}
+      >
+        Studio · facts
+      </div>
+
+      {/* Three large mono numerals, hairline-divided between rows */}
+      <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+        <StatRow
+          icon={<Flame size={18} strokeWidth={2} color="var(--streak-orange)" />}
+          label="Day streak"
+          value={streak}
+          sub={`Best ${num(longestStreak)}`}
+          isLoggedIn={isLoggedIn}
+        />
+        <StatRow
+          icon={<Zap size={18} strokeWidth={2} />}
+          label="XP earned"
+          value={xp}
+          sub={`of ${num(totalXP)} available`}
+          isLoggedIn={isLoggedIn}
+        />
+        <StatRow
+          icon={<Trophy size={18} strokeWidth={2} />}
+          label="Level"
+          value={level}
+          sub={`${overallPct}% across all paths`}
+          isLoggedIn={isLoggedIn}
+          isLast
+        />
+      </div>
+    </article>
+  );
+}
+
+function StatRow({
+  icon,
+  label,
+  value,
+  sub,
+  isLoggedIn,
+  isLast = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  sub: string;
+  isLoggedIn: boolean;
+  isLast?: boolean;
+}) {
+  return (
+    <div
+      className={isLast ? "" : "hairline-b"}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "20px 1fr auto",
+        gap: 14,
+        alignItems: "center",
+        padding: "16px 0",
+      }}
+    >
+      <span style={{ color: "var(--text-tertiary)", display: "flex" }}>{icon}</span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+        <span
+          className="mono-overline"
+          style={{ color: "var(--text-tertiary)" }}
+        >
+          {label}
+        </span>
+        <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+          {isLoggedIn ? sub : "Sign in to track"}
+        </span>
+      </div>
+      <span
+        style={{
+          ...monoNumeral,
+          fontSize: 30,
+          fontWeight: 500,
+          color: "var(--text-primary)",
+          letterSpacing: "-0.02em",
+          lineHeight: 1,
+        }}
+      >
+        {num(value)}
+      </span>
+    </div>
+  );
+}
+
+// ── Recent sessions feed (rows, not cards) ────────────────────────────────────
+function RecentSessionsFeed({
+  sessions,
+  isLoggedIn,
+  now,
+}: {
+  sessions: RecentSession[];
+  isLoggedIn: boolean;
+  now: number;
+}) {
+  return (
+    <section style={{ marginBottom: 48 }}>
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          marginBottom: 14,
+        }}
+      >
+        <div className="mono-overline" style={{ color: "var(--text-tertiary)" }}>
+          Recent sessions
+        </div>
+        {isLoggedIn && sessions.length > 0 && (
+          <Link
+            href="/learn"
+            style={{
+              fontSize: 13,
+              color: "var(--accent-text)",
+              textDecoration: "none",
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            All paths →
+          </Link>
+        )}
+      </header>
+
+      {sessions.length === 0 ? (
+        <div
+          style={{
+            padding: "28px 4px",
+            color: "var(--text-tertiary)",
+            fontSize: 15,
+            lineHeight: 1.6,
+            maxWidth: 540,
+          }}
+        >
+          {isLoggedIn
+            ? "No sessions yet. Today is a good day to start one."
+            : "Sign in to see your sessions here. Until then — your first lesson is one click away."}
+        </div>
+      ) : (
+        <ul
+          style={{
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+            borderTop: "1px solid var(--hairline-bottom)",
+          }}
+        >
+          {sessions.map((s) => (
+            <li key={s.slug + s.updatedAt} className="hairline-b">
+              <Link
+                href={`/lessons/${s.slug}`}
+                className="glow-ring"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "16px minmax(0, 1fr) auto auto",
+                  gap: 16,
+                  alignItems: "center",
+                  padding: "16px 12px",
+                  textDecoration: "none",
+                  color: "inherit",
+                  borderRadius: "var(--radius-sm)",
+                }}
+              >
+                {/* path color dot */}
+                <span
+                  aria-hidden
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: s.pathColor,
+                    boxShadow: `0 0 8px ${s.pathColor}`,
+                  }}
+                />
+
+                {/* title + path */}
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 14.5,
+                      fontWeight: 500,
+                      color: "var(--text-primary)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {s.title}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--text-tertiary)",
+                      marginTop: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <span>{s.pathTitle}</span>
+                    {s.status === "COMPLETED" ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--success)" }}>
+                        <CheckCircle2 size={11} strokeWidth={2.5} />
+                        Completed
+                      </span>
+                    ) : (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <Circle size={11} strokeWidth={2.5} />
+                        In progress
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* time spent */}
+                <span
+                  style={{
+                    ...monoNumeral,
+                    fontSize: 12,
+                    color: "var(--text-tertiary)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <Clock size={11} strokeWidth={2} />
+                  {num(s.timeSpentMins)} min
+                </span>
+
+                {/* relative timestamp — mono */}
+                <span
+                  style={{
+                    ...monoNumeral,
+                    fontSize: 12,
+                    color: "var(--text-muted)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {now > 0 ? relativeTime(s.updatedAt, now) : isoShort(s.updatedAt)}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// ── Today's queue ─────────────────────────────────────────────────────────────
+function TodaysQueue({ queue, hasFocus }: { queue: QueueItem[]; hasFocus: boolean }) {
+  if (queue.length === 0) return null;
+
+  return (
+    <section style={{ marginBottom: 48 }}>
+      <header style={{ marginBottom: 14 }}>
+        <div className="mono-overline" style={{ color: "var(--text-tertiary)" }}>
+          {hasFocus ? "Up next on this path" : "Today's queue"}
+        </div>
+      </header>
+
+      <div
+        className="glass-pane"
+        style={{
+          borderRadius: "var(--radius-xl)",
+          padding: 8,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {queue.map((q, i) => (
+          <Link
+            key={q.slug}
+            href={`/lessons/${q.slug}`}
+            className="glow-ring"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "auto minmax(0, 1fr) auto auto",
+              gap: 16,
+              alignItems: "center",
+              padding: "14px 18px",
+              textDecoration: "none",
+              color: "inherit",
+              borderRadius: "var(--radius-md)",
+              borderTop: i === 0 ? "none" : "1px solid var(--hairline-bottom)",
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: q.pathColor,
+                opacity: 0.85,
+              }}
+            />
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 14.5,
+                  fontWeight: 500,
+                  color: "var(--text-primary)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {q.title}
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--text-tertiary)",
+                  marginTop: 2,
+                }}
+              >
+                {q.pathTitle}
+              </div>
+            </div>
+            <span
+              style={{
+                ...monoNumeral,
+                fontSize: 12,
+                color: "var(--text-tertiary)",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <Clock size={11} strokeWidth={2} />
+              {num(q.estimatedMins)} min
+            </span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 13,
+                fontWeight: 600,
+                color: "var(--accent)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Start
+              <ArrowRight size={13} strokeWidth={2.5} />
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ── Path progress — list of facts, not cards ──────────────────────────────────
+function PathProgressList({
+  pathProgress,
+}: {
+  pathProgress: { slug: string; title: string; color: string; pct: number }[];
+}) {
+  // Only show paths with ANY progress; sort by % desc; cap at 6
+  const entries = pathProgress
+    .filter((p) => p.pct > 0)
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 6);
+
+  if (entries.length === 0) return null;
+
+  return (
+    <section>
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          marginBottom: 14,
+        }}
+      >
+        <div className="mono-overline" style={{ color: "var(--text-tertiary)" }}>
+          Path progress
+        </div>
+        <Link
+          href="/learn"
+          style={{
+            fontSize: 13,
+            color: "var(--accent-text)",
+            textDecoration: "none",
+            fontFamily: "var(--font-mono)",
+          }}
+        >
+          All paths →
+        </Link>
+      </header>
+
+      <ul
+        style={{
+          margin: 0,
+          padding: 0,
+          listStyle: "none",
+          borderTop: "1px solid var(--hairline-bottom)",
+        }}
+      >
+        {entries.map((p) => (
+          <li
+            key={p.slug}
+            className="hairline-b studio-path-row"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1fr) 180px auto",
+              gap: 16,
+              alignItems: "center",
+              padding: "14px 12px",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 14,
+                color: "var(--text-secondary)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: p.color,
+                  flexShrink: 0,
+                }}
+              />
+              {p.title}
+            </span>
+            <div
+              aria-hidden
+              style={{
+                height: 2,
+                background: "var(--border-subtle)",
+                borderRadius: 99,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${p.pct}%`,
+                  background: "var(--accent)",
+                  borderRadius: 99,
+                }}
+              />
+            </div>
+            <span
+              style={{
+                ...monoNumeral,
+                fontSize: 13,
+                color: "var(--text-tertiary)",
+                textAlign: "right",
+                minWidth: 44,
+              }}
+            >
+              {p.pct}%
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// ── CTAs ──────────────────────────────────────────────────────────────────────
+function PrimaryCTA({
+  href, label, icon,
+}: { href: string; label: string; icon?: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "11px 20px",
+        background: "var(--accent)",
+        color: "var(--text-on-accent)",
+        borderRadius: "var(--radius-md)",
+        fontSize: 14,
+        fontWeight: 600,
+        textDecoration: "none",
+        letterSpacing: "-0.005em",
+        boxShadow:
+          "0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent)",
+        transition: "box-shadow 0.18s ease, background 0.18s ease",
+      }}
+    >
+      {icon}
+      {label}
+    </Link>
+  );
+}
+
+function SecondaryCTA({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "11px 20px",
+        background: "transparent",
+        color: "var(--text-secondary)",
+        borderRadius: "var(--radius-md)",
+        fontSize: 14,
+        fontWeight: 500,
+        textDecoration: "none",
+        border: "1px solid var(--border-default)",
+        transition: "border-color 0.18s ease, color 0.18s ease",
+      }}
+    >
+      {label}
+    </Link>
   );
 }
