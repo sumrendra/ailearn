@@ -36,7 +36,6 @@ import {
   parseExcelFormula, parseExcelPivot, parseExcelQuiz,
 } from "@/lib/excel-blocks";
 import { parseJavaQuiz } from "@/lib/java-blocks";
-import { TableOfContents } from "./TableOfContents";
 import { type FixtureKey } from "@/lib/sql-fixtures";
 import Link from "next/link";
 
@@ -93,6 +92,15 @@ function parseHeadings(content: string) {
 }
 
 // ── CodeBlock ─────────────────────────────────────────────────────────────────
+//
+// Code blocks are rendered as their own elevation surface, deeper than the
+// reading canvas (`--bg-sunken`). A hairline-top catches ambient light along
+// the upper edge — mimicking how the rest of the frosted shell reads on the
+// dark canvas. Header strip carries a mono-overline language label and a
+// Copy button (12px Lucide icon, flashes Check for 1.6s after click).
+//
+// Long lines scroll horizontally rather than wrap — code reads better when
+// you can see structure at a glance, even if it costs a swipe.
 
 function CodeBlock({
   language,
@@ -106,56 +114,67 @@ function CodeBlock({
   const copy = () => {
     navigator.clipboard.writeText(extractText(children));
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // 1.6s flash — long enough to register, short enough not to linger.
+    setTimeout(() => setCopied(false), 1600);
   };
 
   return (
     <div style={{
-      margin: "6px 0 28px",
-      borderRadius: 10,
+      margin: "24px 0 28px",
+      borderRadius: "var(--radius-md)",
       overflow: "hidden",
-      border: "1px solid rgba(255,255,255,0.06)",
-      boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+      background: "var(--bg-sunken)",
+      border: "1px solid var(--border-subtle)",
+      boxShadow: "inset 0 1px 0 var(--hairline-top)",
     }}>
-      {/* Header: language + copy button */}
+      {/* Header strip: mono-overline language label + Copy button */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        background: "var(--bg-code-header)",
-        padding: "8px 16px",
-        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        padding: "8px 14px",
+        borderBottom: "1px solid var(--border-subtle)",
       }}>
-        <span style={{
-          fontSize: 11, fontWeight: 600,
-          color: "#5b6a8a",
-          letterSpacing: "0.07em",
-          textTransform: "uppercase",
-          userSelect: "none",
-        }}>
+        <span
+          className="mono-overline"
+          style={{
+            fontSize: 10.5,
+            color: "var(--text-tertiary)",
+            userSelect: "none",
+          }}
+        >
           {language || "code"}
         </span>
         <button
           onClick={copy}
+          aria-label={copied ? "Code copied to clipboard" : "Copy code to clipboard"}
           style={{
-            display: "flex", alignItems: "center", gap: 5,
-            background: copied ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.06)",
-            border: `1px solid ${copied ? "rgba(52,211,153,0.3)" : "rgba(255,255,255,0.1)"}`,
-            borderRadius: 6, padding: "3px 10px", cursor: "pointer",
-            fontSize: 11, color: copied ? "#34d399" : "#7b8eaa", fontWeight: 500,
-            transition: "all 0.15s",
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: "transparent",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: 6,
+            padding: "4px 9px",
+            cursor: "pointer",
+            fontFamily: "var(--font-mono)",
+            fontSize: 10.5, fontWeight: 600,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            color: copied ? "var(--success)" : "var(--text-tertiary)",
+            transition: "color 0.15s, border-color 0.15s",
           }}
         >
-          {copied ? <Check size={11} /> : <Copy size={11} />}
-          {copied ? "Copied!" : "Copy"}
+          {copied ? <Check size={12} strokeWidth={2.5} /> : <Copy size={12} strokeWidth={2} />}
+          {copied ? "Copied" : "Copy"}
         </button>
       </div>
 
-      {/* Code body */}
+      {/* Code body — overflowX scrolls; never wrap (long lines stay legible) */}
       <pre style={{
-        background: "var(--bg-code)", margin: 0,
-        padding: "22px 26px", overflowX: "auto",
-        fontSize: 13.5, lineHeight: 1.75,
+        background: "transparent",
+        margin: 0,
+        padding: "14px 18px",
+        overflowX: "auto",
+        fontSize: 13.5, lineHeight: 1.7,
         fontFamily: "var(--font-mono)",
-        color: "#abb2bf",
+        color: "var(--text-primary)",
       }}>
         {children}
       </pre>
@@ -328,20 +347,26 @@ const MD_COMPONENTS = {
     return <CodeBlock language={lang}>{children}</CodeBlock>;
   },
 
+  // Notes / callouts. On the new drenched-dark canvas, `--bg-subtle` reads
+  // too close to canvas — we bump to `--bg-elevated` so the pill catches a
+  // hint of ambient light. Inline lightbulb + violet rule preserved from
+  // the prior sprint.
   blockquote: ({ children }: { children?: React.ReactNode }) => (
     <blockquote
       style={{
         display: "flex",
         gap: 14,
         margin: "28px 0",
-        padding: "18px 20px",
-        background: "color-mix(in srgb, var(--accent) 5%, transparent)",
+        padding: "16px 20px",
+        background: "var(--bg-elevated)",
+        border: "1px solid var(--border-subtle)",
         borderLeft: "3px solid var(--accent)",
         borderRadius: `0 var(--radius-md) var(--radius-md) 0`,
+        boxShadow: "inset 0 1px 0 var(--hairline-top)",
       }}
     >
       <Lightbulb
-        size={20}
+        size={18}
         strokeWidth={2}
         color="var(--accent)"
         style={{ flexShrink: 0, marginTop: 4 }}
@@ -449,13 +474,15 @@ export function LessonViewer({
   content,
   lessonTitle,
   lessonSlug,
-  pathName,
+  // pathName, pathColor, lessonIndex, totalLessons are accepted by the prop
+  // type for backwards-compat with callers, but no longer drive any visuals
+  // — per DESIGN.md, path identity is ambient (mesh tint, slide-over
+  // progress) and never colors primary actions in the reader. They're left
+  // out of this destructure deliberately so ESLint doesn't flag them as
+  // unused locals.
   pathSlug,
-  pathColor = "#6c47ff",
   estimatedMins,
   xpReward,
-  lessonIndex,
-  totalLessons,
   tags,
   diagramComponent,
   prevLesson,
@@ -530,49 +557,85 @@ export function LessonViewer({
   return (
     <div style={{ flex: 1, display: "flex", position: "relative", overflow: "hidden" }}>
 
-      {/* ── Reading progress bar ──────────────────────────────────────────── */}
+      {/* TOC rail hides on small viewports — slide-over panel covers navigation
+          there. Mark-complete button gets a hover/active tune that the design
+          system can't express purely via tokens. Component-scoped styles. */}
+      <style>{`
+        @media (max-width: 1023px) {
+          .lesson-toc-rail { display: none !important; }
+        }
+        .mark-complete-btn:hover:not(:disabled) {
+          background: var(--accent-hover);
+          box-shadow: 0 6px 32px var(--accent-glow);
+        }
+        .mark-complete-btn:active:not(:disabled) {
+          box-shadow: inset 0 2px 6px var(--hairline-bottom), 0 4px 24px var(--accent-glow);
+        }
+      `}</style>
+
+      {/* ── Reading progress bar ──────────────────────────────────────────────
+          Sits at the very top, always visible. On the new drenched-dark canvas
+          a 2px violet rule reads as ambient — but the empty track needed to
+          come up to `--border-subtle` (was `--bg-tertiary`, which now blends
+          almost perfectly into the canvas mesh). The fill is solid accent
+          (no path-color gradient — accent stays universal per DESIGN.md). */}
       <div style={{
-        position: "fixed", top: 0, left: 0, right: 0, height: 3, zIndex: 100,
-        background: "var(--bg-tertiary)",
+        position: "fixed", top: 0, left: 0, right: 0, height: 2, zIndex: 100,
+        background: "var(--border-subtle)",
       }}>
         <div style={{
           height: "100%", width: `${readPct}%`,
-          background: `linear-gradient(90deg, ${pathColor}, #c084fc)`,
+          background: "var(--accent)",
+          boxShadow: readPct > 0 ? "0 0 12px var(--accent-glow)" : "none",
           transition: "width 0.25s ease",
         }} />
       </div>
 
-      {/* ── Content scroll area ──────────────────────────────────────────── */}
+      {/* ── Content scroll area ──────────────────────────────────────────────
+          Reading column is constrained to 720px and centered. The TOC rail
+          floats as a sticky right sidebar (240–280px) — it's NOT part of the
+          reading column's max-width, just lives in the same scroll container.
+          Mobile collapses the rail (the slide-over panel handles navigation
+          on small viewports). */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
         style={{
           flex: 1, overflowY: "auto", overflowX: "hidden",
-          padding: "56px 64px 140px",
-          display: "flex",
-          gap: 56,
-          justifyContent: "center",
+          position: "relative",
         }}
       >
+        <div style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 48,
+          paddingBlock: "56px 140px",
+          paddingInline: "clamp(24px, 5vw, 56px)",
+          maxWidth: 1200,
+          marginInline: "auto",
+        }}>
 
-        {/* Left: lesson body */}
-        <div style={{ flex: "1 1 720px", maxWidth: 800, minWidth: 0 }}>
+        {/* Left: lesson body — capped at 720px reading column */}
+        <div style={{ flex: "1 1 720px", maxWidth: 720, minWidth: 0 }}>
 
         {/* ── Chapter header ────────────────────────────────────────────── */}
-        <div style={{ marginBottom: 36, maxWidth: 800 }}>
+        <div style={{ marginBottom: 36 }}>
 
           {/* Lesson title — breadcrumb lives in the lesson topbar above.
-              Instrument Serif (display) paired with Inter body for an
-              editorial feel. The serif is set at 400 (its only weight) and
-              sized up to carry hierarchy via the typeface, not the weight. */}
+              Instrument Serif at 400 (its only weight) — hierarchy comes from
+              the typeface, never synthesized bold. A soft accent-glow text
+              shadow lets the serif headline feel lit from behind on the new
+              dark canvas, matching the atmospheric vocabulary of the rest of
+              the redesign. */}
           <h1 style={{
             fontFamily: "var(--font-display)",
-            fontSize: 52,
+            fontSize: "clamp(40px, 5vw, 64px)",
             fontWeight: 400,
             color: "var(--text-primary)",
             lineHeight: 1.05,
             letterSpacing: "-0.015em",
             marginBottom: 18,
+            textShadow: "0 0 40px var(--accent-glow)",
           }}>
             {lessonTitle}
           </h1>
@@ -584,7 +647,7 @@ export function LessonViewer({
                 <span style={{
                   display: "inline-flex", alignItems: "center", gap: 5,
                   fontSize: 12.5, color: "var(--text-secondary)",
-                  background: "var(--bg-secondary)",
+                  background: "var(--bg-elevated)",
                   border: "1px solid var(--border-subtle)",
                   padding: "4px 11px", borderRadius: 999,
                 }}>
@@ -605,7 +668,7 @@ export function LessonViewer({
               {tags?.map((tag) => (
                 <span key={tag} style={{
                   fontSize: 11.5, color: "var(--text-tertiary)",
-                  background: "var(--bg-tertiary)",
+                  background: "var(--bg-elevated)",
                   border: "1px solid var(--border-subtle)",
                   padding: "3px 9px", borderRadius: 4, fontWeight: 500,
                 }}>
@@ -628,10 +691,10 @@ export function LessonViewer({
                 display: "inline-flex", alignItems: "center", gap: 7,
                 padding: "7px 14px", border: "none",
                 borderRadius: 999,
-                background: tutorOpen ? "var(--bg-tertiary)" : "var(--accent)",
-                color: tutorOpen ? "var(--text-secondary)" : "#fff",
+                background: tutorOpen ? "var(--bg-elevated)" : "var(--accent)",
+                color: tutorOpen ? "var(--text-secondary)" : "var(--text-on-accent)",
                 fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-                boxShadow: tutorOpen ? "none" : "0 4px 14px hsl(258 87% 64% / 0.35)",
+                boxShadow: tutorOpen ? "none" : "0 4px 24px var(--accent-glow)",
                 transition: "all 0.15s",
               }}
             >
@@ -643,7 +706,7 @@ export function LessonViewer({
 
         {/* ── Visual diagram ────────────────────────────────────────────── */}
         {diagramComponent && (
-          <div style={{ maxWidth: 740, marginBottom: 8 }}>
+          <div style={{ marginBottom: 8 }}>
             {diagramComponent}
           </div>
         )}
@@ -655,13 +718,12 @@ export function LessonViewer({
 
         {/* ── Lesson complete CTA ───────────────────────────────────────── */}
         <div style={{
-          maxWidth: 740,
           marginTop: 72, padding: "36px 40px",
-          background: `linear-gradient(135deg, ${pathColor}10, ${pathColor}04)`,
+          background: "var(--bg-elevated)",
           borderRadius: "var(--radius-xl)",
-          border: `1px solid ${pathColor}20`,
+          border: "1px solid var(--border-subtle)",
+          boxShadow: "inset 0 1px 0 var(--hairline-top)",
           textAlign: "center",
-          boxShadow: `0 8px 32px ${pathColor}10`,
         }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, lineHeight: 1 }}>
             {isCompleted
@@ -677,23 +739,27 @@ export function LessonViewer({
               : "Mark this lesson complete to lock in your progress, then reinforce it with flashcards or a quiz."}
           </p>
 
-          {/* Primary CTA — Mark complete. Only rendered for authenticated
-              users (when a handler was provided). Hides once already done. */}
+          {/* Primary CTA — Mark complete. Locked to var(--accent) per design
+              system contract (path color NEVER on primary actions). Hover
+              brightens to --accent-hover; active flashes a brief inset
+              shadow. Only rendered for authenticated users. */}
           {onMarkComplete && !isCompleted && (
             <button
               onClick={onMarkComplete}
               disabled={marking}
+              className="mark-complete-btn"
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 padding: "12px 26px",
-                background: "var(--accent)", color: "#fff",
+                background: "var(--accent)",
+                color: "var(--text-on-accent)",
                 border: "none", borderRadius: "var(--radius-md)",
                 fontSize: 14, fontWeight: 700,
                 cursor: marking ? "wait" : "pointer",
-                boxShadow: "0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent)",
+                boxShadow: "0 4px 24px var(--accent-glow)",
                 marginBottom: 22,
                 opacity: marking ? 0.85 : 1,
-                transition: "all 0.18s",
+                transition: "background 0.15s, box-shadow 0.18s",
               }}
             >
               <Check size={16} strokeWidth={3} />
@@ -704,9 +770,12 @@ export function LessonViewer({
             <Link href={`/flashcards?lesson=${lessonSlug}`} style={{ textDecoration: "none" }}>
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 7,
-                padding: "11px 22px", background: pathColor, color: "#fff",
+                padding: "11px 22px",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border-default)",
+                color: "var(--text-primary)",
                 borderRadius: "var(--radius-md)", fontSize: 13.5, fontWeight: 600,
-                boxShadow: `0 4px 14px ${pathColor}40`, cursor: "pointer",
+                cursor: "pointer",
               }}>
                 <BookOpen size={15} /> Review flashcards
               </div>
@@ -715,7 +784,7 @@ export function LessonViewer({
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 7,
                 padding: "11px 22px", border: "1px solid var(--border-default)",
-                background: "var(--bg-card)", borderRadius: "var(--radius-md)",
+                background: "var(--bg-surface)", borderRadius: "var(--radius-md)",
                 fontSize: 13.5, color: "var(--text-primary)", fontWeight: 500, cursor: "pointer",
               }}>
                 <Trophy size={15} /> Take a quiz
@@ -727,7 +796,7 @@ export function LessonViewer({
           {(prevLesson || nextLesson) && (
             <div style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              borderTop: `1px solid ${pathColor}15`, paddingTop: 20, gap: 12,
+              borderTop: "1px solid var(--border-subtle)", paddingTop: 20, gap: 12,
             }}>
               {prevLesson ? (
                 <Link href={`/lessons/${prevLesson.slug}`} style={{ textDecoration: "none" }}>
@@ -735,7 +804,7 @@ export function LessonViewer({
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "9px 16px", borderRadius: "var(--radius-md)",
                     border: "1px solid var(--border-default)",
-                    background: "var(--bg-secondary)", cursor: "pointer",
+                    background: "var(--bg-surface)", cursor: "pointer",
                   }}>
                     <ChevronLeft size={14} color="var(--text-tertiary)" />
                     <div style={{ textAlign: "left" }}>
@@ -753,11 +822,16 @@ export function LessonViewer({
                   <div style={{
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "9px 16px", borderRadius: "var(--radius-md)",
-                    background: pathColor, color: "#fff", cursor: "pointer",
-                    boxShadow: `0 4px 14px ${pathColor}40`,
+                    background: "var(--accent)",
+                    color: "var(--text-on-accent)", cursor: "pointer",
+                    boxShadow: "0 4px 24px var(--accent-glow)",
                   }}>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", marginBottom: 1 }}>Next lesson</div>
+                      <div style={{
+                        fontSize: 10,
+                        color: "color-mix(in srgb, var(--text-on-accent) 70%, transparent)",
+                        marginBottom: 1,
+                      }}>Next lesson</div>
                       <div style={{ fontSize: 12.5, fontWeight: 600, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {nextLesson.title}
                       </div>
@@ -770,8 +844,11 @@ export function LessonViewer({
                   <div style={{
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "9px 18px", borderRadius: "var(--radius-md)",
-                    background: pathColor, color: "#fff", fontSize: 12.5, fontWeight: 600,
-                    cursor: "pointer", boxShadow: `0 4px 14px ${pathColor}40`,
+                    background: "var(--accent)",
+                    color: "var(--text-on-accent)",
+                    fontSize: 12.5, fontWeight: 600,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 24px var(--accent-glow)",
                   }}>
                     <BookOpen size={13} /> Path complete — view overview
                   </div>
@@ -781,114 +858,150 @@ export function LessonViewer({
           )}
         </div>
         </div>{/* /content body wrapper */}
-      </div>
 
-      {/* ── Table of Contents (when tutor is closed) ─────────────────────── */}
-      {!tutorOpen && headings.length > 2 && (
-        <div style={{
-          width: 216, flexShrink: 0,
-          borderLeft: "1px solid var(--border-subtle)",
-          background: "var(--bg-card)",
-          padding: "36px 0 36px 0",
-          position: "sticky", top: 0,
-          height: "calc(100vh - 115px)",
-          overflowY: "auto",
-        }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
-            textTransform: "uppercase", color: "var(--text-tertiary)",
-            marginBottom: 14, padding: "0 20px",
-          }}>
-            On this page
-          </div>
-
-          {headings.map(({ level, text, id }) => (
-            <button
-              key={id}
-              onClick={() => scrollTo(id)}
+        {/* ── TOC right rail ─────────────────────────────────────────────────
+            Renders ONLY h2/h3. Sticks under the topbar as the user scrolls.
+            Active section is tracked by IntersectionObserver against the
+            scroll container (see effect above) — that's more accurate than
+            a scroll listener since it knows actual viewport coverage and
+            avoids state churn on every scroll tick. Hidden on small viewports
+            (under 1024px) — the slide-over panel handles navigation there. */}
+        {!tutorOpen && headings.length > 2 && (
+          <aside
+            className="lesson-toc-rail"
+            aria-label="On this page"
+            style={{
+              width: 256, flexShrink: 0,
+              position: "sticky", top: 24,
+              alignSelf: "flex-start",
+              maxHeight: "calc(100vh - 80px - 48px)",
+              overflowY: "auto",
+              paddingTop: 8,
+            }}
+          >
+            <div
+              className="mono-overline"
               style={{
-                display: "block", width: "100%", textAlign: "left",
-                background: activeId === id ? "color-mix(in srgb, var(--accent) 6%, transparent)" : "transparent",
-                border: "none",
-                borderLeft: activeId === id ? "2px solid var(--accent)" : "2px solid transparent",
-                cursor: "pointer",
-                padding: `5px 18px 5px ${level === 3 ? 28 : 18}px`,
-                fontSize: level === 2 ? 12 : 11,
-                fontWeight: activeId === id ? 600 : 400,
-                color: activeId === id ? "var(--accent)" : "var(--text-tertiary)",
-                lineHeight: 1.5,
-                transition: "all 0.12s",
-                marginBottom: 2,
+                color: "var(--text-tertiary)",
+                marginBottom: 14,
+                padding: "0 12px",
+                fontSize: 10.5,
               }}
             >
-              {text}
-            </button>
-          ))}
+              On this page
+            </div>
 
-          {/* Reading progress — only show once the user has actually started scrolling */}
-          {readPct > 0 && (
-            <div style={{
-              marginTop: 24, padding: "16px 20px 0",
-              borderTop: "1px solid var(--border-subtle)",
-            }}>
+            <nav>
+              {headings.map(({ level, text, id }) => {
+                const active = activeId === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => scrollTo(id)}
+                    aria-current={active ? "location" : undefined}
+                    style={{
+                      display: "block", width: "100%", textAlign: "left",
+                      background: "transparent",
+                      border: "none",
+                      borderLeft: active
+                        ? "2px solid var(--accent)"
+                        : "2px solid transparent",
+                      cursor: "pointer",
+                      paddingTop: 6, paddingBottom: 6,
+                      paddingLeft: active ? 12 : (level === 3 ? 22 : 12),
+                      paddingRight: 12,
+                      // Mono on TOC rows per DESIGN.md typography rules.
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                      color: active ? "var(--text-primary)" : "var(--text-tertiary)",
+                      lineHeight: 1.5,
+                      transition: "color 0.15s, padding-left 0.15s",
+                    }}
+                  >
+                    {text}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Reading progress — only once scrolling has begun */}
+            {readPct > 0 && (
               <div style={{
-                display: "flex", justifyContent: "space-between",
-                alignItems: "center", marginBottom: 8,
-              }}>
-                <span className="text-eyebrow" style={{ color: "var(--text-quaternary)" }}>
-                  Progress
-                </span>
-                <span style={{
-                  fontSize: 10, fontWeight: 700,
-                  color: readPct === 100 ? "var(--success)" : "var(--accent)",
-                }}>
-                  {readPct}%
-                </span>
-              </div>
-              <div style={{
-                height: 4, background: "var(--bg-tertiary)",
-                borderRadius: "var(--radius-full)", overflow: "hidden",
+                marginTop: 24, padding: "16px 12px 0",
+                borderTop: "1px solid var(--border-subtle)",
               }}>
                 <div style={{
-                  height: "100%", width: `${readPct}%`,
-                  background: readPct === 100
-                    ? "var(--success)"
-                    : `linear-gradient(90deg, ${pathColor}, hsl(258 87% 72%))`,
-                  transition: "width 0.3s ease",
+                  display: "flex", justifyContent: "space-between",
+                  alignItems: "center", marginBottom: 8,
+                }}>
+                  <span
+                    className="mono-overline"
+                    style={{ color: "var(--text-tertiary)", fontSize: 10 }}
+                  >
+                    Progress
+                  </span>
+                  <span style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 10, fontWeight: 700,
+                    color: readPct === 100 ? "var(--success)" : "var(--accent)",
+                  }}>
+                    {readPct}%
+                  </span>
+                </div>
+                <div style={{
+                  height: 3,
+                  background: "var(--border-subtle)",
                   borderRadius: "var(--radius-full)",
-                }} />
+                  overflow: "hidden",
+                }}>
+                  <div style={{
+                    height: "100%", width: `${readPct}%`,
+                    background: readPct === 100 ? "var(--success)" : "var(--accent)",
+                    transition: "width 0.3s ease",
+                    borderRadius: "var(--radius-full)",
+                  }} />
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </aside>
+        )}
+
+        </div>{/* /content row */}
+      </div>
 
       {/* ── AI Tutor side panel ──────────────────────────────────────────── */}
       {tutorOpen && (
-        <div style={{
-          width: 380, flexShrink: 0,
-          borderLeft: "1px solid var(--border-subtle)",
-          background: "var(--bg-card)",
-          display: "flex", flexDirection: "column",
-          height: "calc(100vh - 115px)",
-          position: "sticky", top: 0,
-        }}>
+        <aside
+          aria-label="AI Tutor"
+          style={{
+            width: 380, flexShrink: 0,
+            borderLeft: "1px solid var(--border-subtle)",
+            background: "var(--bg-surface)",
+            display: "flex", flexDirection: "column",
+            height: "100%",
+          }}
+        >
           {/* Panel header */}
           <div style={{
             padding: "14px 16px",
             borderBottom: "1px solid var(--border-subtle)",
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            background: "var(--bg-secondary)",
+            background: "var(--bg-elevated)",
+            boxShadow: "inset 0 1px 0 var(--hairline-top)",
             flexShrink: 0,
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
               <div style={{
                 width: 30, height: 30, borderRadius: 8,
-                background: "linear-gradient(135deg, var(--accent), #9b6dff)",
+                background: "var(--accent)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0,
+                boxShadow: "0 0 24px var(--accent-glow)",
               }}>
-                <Sparkles size={14} color="#fff" />
+                <Sparkles size={14} color="var(--text-on-accent)" />
               </div>
               <div>
                 <div style={{
@@ -904,9 +1017,11 @@ export function LessonViewer({
             </div>
             <button
               onClick={() => setTutorOpen(false)}
+              aria-label="Close AI Tutor"
               style={{
-                background: "var(--bg-tertiary)", border: "none", cursor: "pointer",
-                padding: 6, borderRadius: 6, color: "var(--text-tertiary)",
+                background: "var(--bg-overlay)", border: "1px solid var(--border-subtle)",
+                cursor: "pointer",
+                padding: 6, borderRadius: 6, color: "var(--text-secondary)",
                 display: "flex", alignItems: "center",
                 transition: "background 0.12s",
               }}
@@ -922,7 +1037,7 @@ export function LessonViewer({
               compact
             />
           </div>
-        </div>
+        </aside>
       )}
     </div>
   );
