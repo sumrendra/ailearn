@@ -4,7 +4,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Brain, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,108 +36,112 @@ export default function LoginPage() {
     router.push("/dashboard");
   }
 
+  const errorId = "login-error";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       style={{ width: "100%", maxWidth: 420, padding: "0 24px" }}
     >
-      {/* Logo */}
-      <div style={{ textAlign: "center", marginBottom: 40 }}>
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
+      {/* Brand mark */}
+      <div style={{ textAlign: "center", marginBottom: 36 }}>
+        <h1
           style={{
-            width: 56, height: 56, borderRadius: 16,
-            background: "linear-gradient(135deg, #6c47ff, #a78bff)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 16px",
-            boxShadow: "0 12px 32px rgba(108,71,255,0.35)",
+            fontFamily: "var(--font-display)",
+            fontSize: 56,
+            fontWeight: 400,
+            letterSpacing: "-0.02em",
+            lineHeight: 1.02,
+            color: "var(--text-primary)",
+            margin: 0,
+            marginBottom: 10,
           }}
         >
-          <Brain size={28} color="#fff" />
-        </motion.div>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: "var(--text-primary)", marginBottom: 6 }}>
-          Welcome back
+          AILearn
         </h1>
-        <p style={{ fontSize: 14, color: "var(--text-tertiary)" }}>
-          Sign in to track your progress
-        </p>
+        <span className="mono-overline">Premium technical learning</span>
       </div>
 
-      {/* Card */}
-      <div style={{
-        background: "var(--bg-surface)",
-        borderRadius: 20,
-        border: "1px solid var(--border-subtle)",
-        padding: "32px 28px",
-        boxShadow: "0 4px 32px rgba(0,0,0,0.06)",
-      }}>
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Form card */}
+      <div
+        className="glass-pane"
+        style={{
+          padding: "32px 28px",
+          borderRadius: "var(--radius-xl)",
+          boxShadow: "0 0 100px var(--accent-glow), var(--shadow-2xl)",
+        }}
+      >
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: 18 }}
+          noValidate
+        >
           {/* Email */}
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 6, display: "block" }}>
+            <label
+              htmlFor="login-email"
+              className="mono-overline"
+              style={{ marginBottom: 8, display: "block" }}
+            >
               Email
             </label>
-            <div style={{ position: "relative" }}>
-              <Mail size={16} color="var(--text-tertiary)" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-                style={{
-                  width: "100%", boxSizing: "border-box",
-                  padding: "11px 14px 11px 42px",
-                  background: "var(--bg-sunken)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: 10, fontSize: 14,
-                  color: "var(--text-primary)",
-                  outline: "none",
-                  transition: "border-color 0.15s",
-                }}
-                onFocus={e => e.target.style.borderColor = "var(--accent)"}
-                onBlur={e => e.target.style.borderColor = "var(--border-subtle)"}
-              />
-            </div>
+            <input
+              id="login-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              aria-invalid={!!error}
+              aria-describedby={error ? errorId : undefined}
+              style={inputStyle}
+            />
           </div>
 
           {/* Password */}
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 6, display: "block" }}>
-              Password
-            </label>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 8,
+              }}
+            >
+              <label
+                htmlFor="login-password"
+                className="mono-overline"
+                style={{ display: "block" }}
+              >
+                Password
+              </label>
+              <Link href="/login" style={secondaryLinkStyle}>
+                Forgot?
+              </Link>
+            </div>
             <div style={{ position: "relative" }}>
-              <Lock size={16} color="var(--text-tertiary)" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
               <input
+                id="login-password"
+                name="password"
                 type={showPw ? "text" : "password"}
+                autoComplete="current-password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Your password"
                 required
-                style={{
-                  width: "100%", boxSizing: "border-box",
-                  padding: "11px 42px 11px 42px",
-                  background: "var(--bg-sunken)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: 10, fontSize: 14,
-                  color: "var(--text-primary)",
-                  outline: "none",
-                  transition: "border-color 0.15s",
-                }}
-                onFocus={e => e.target.style.borderColor = "var(--accent)"}
-                onBlur={e => e.target.style.borderColor = "var(--border-subtle)"}
+                aria-invalid={!!error}
+                aria-describedby={error ? errorId : undefined}
+                style={{ ...inputStyle, paddingRight: 44 }}
               />
               <button
                 type="button"
-                onClick={() => setShowPw(v => !v)}
-                style={{
-                  position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)",
-                  background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--text-tertiary)",
-                }}
+                onClick={() => setShowPw((v) => !v)}
+                aria-label={showPw ? "Hide password" : "Show password"}
+                style={revealButtonStyle}
               >
                 {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -147,14 +151,15 @@ export default function LoginPage() {
           {/* Error */}
           {error && (
             <motion.div
-              initial={{ opacity: 0, y: -8 }}
+              id={errorId}
+              role="alert"
+              initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               style={{
-                padding: "10px 14px",
-                background: "var(--danger-light)",
-                border: "1px solid var(--danger)",
-                borderRadius: 8,
-                fontSize: 13, color: "var(--danger)", fontWeight: 500,
+                fontSize: 12.5,
+                color: "var(--danger)",
+                fontFamily: "var(--font-mono)",
+                letterSpacing: "0.02em",
               }}
             >
               {error}
@@ -162,62 +167,178 @@ export default function LoginPage() {
           )}
 
           {/* Submit */}
-          <motion.button
-            type="submit"
-            disabled={loading}
-            whileHover={{ scale: loading ? 1 : 1.01 }}
-            whileTap={{ scale: loading ? 1 : 0.98 }}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              padding: "13px 20px",
-              background: loading ? "var(--accent-2)" : "var(--accent)",
-              color: "#fff", border: "none", borderRadius: 10,
-              fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
-              boxShadow: "0 6px 20px rgba(108,71,255,0.35)",
-              transition: "background 0.15s",
-              marginTop: 4,
-            }}
-          >
-            {loading ? "Signing in…" : <><span>Sign in</span><ArrowRight size={16} /></>}
-          </motion.button>
+          <PrimaryButton loading={loading} label="Sign in" loadingLabel="Signing in…" />
         </form>
 
         {/* Divider */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
-          <div style={{ flex: 1, height: 1, background: "var(--border-subtle)" }} />
-          <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>or</span>
-          <div style={{ flex: 1, height: 1, background: "var(--border-subtle)" }} />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            margin: "22px 0 18px",
+          }}
+        >
+          <div style={{ flex: 1, height: 1, background: "var(--hairline-top)" }} />
+          <span
+            className="mono-overline"
+            style={{ color: "var(--text-tertiary)" }}
+          >
+            or
+          </span>
+          <div style={{ flex: 1, height: 1, background: "var(--hairline-top)" }} />
         </div>
 
         {/* Guest */}
-        <motion.button
+        <button
+          type="button"
           onClick={guestLogin}
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
           style={{
             width: "100%",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
             padding: "11px 20px",
             background: "transparent",
             border: "1px solid var(--border-default)",
-            borderRadius: 10, fontSize: 14, fontWeight: 600,
-            color: "var(--text-secondary)", cursor: "pointer",
-            transition: "all 0.15s",
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 500,
+            color: "var(--text-secondary)",
+            cursor: "pointer",
+            transition: "background 0.15s, color 0.15s, border-color 0.15s",
+            fontFamily: "var(--font-sans)",
           }}
-          onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-sunken)")}
-          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--bg-overlay)";
+            e.currentTarget.style.color = "var(--text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = "var(--text-secondary)";
+          }}
         >
           Continue as guest
-        </motion.button>
+        </button>
       </div>
 
       {/* Sign up link */}
-      <p style={{ textAlign: "center", marginTop: 24, fontSize: 14, color: "var(--text-tertiary)" }}>
+      <p
+        style={{
+          textAlign: "center",
+          marginTop: 24,
+          fontSize: 13,
+          color: "var(--text-tertiary)",
+        }}
+      >
         No account?{" "}
-        <Link href="/signup" style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "none" }}>
-          Create one free →
+        <Link href="/signup" style={secondaryLinkStyle}>
+          Create one free
         </Link>
       </p>
     </motion.div>
+  );
+}
+
+/* ── styles & subcomponents ──────────────────────────────────────────── */
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "12px 14px",
+  background: "var(--bg-sunken)",
+  border: "1px solid var(--border-default)",
+  borderRadius: 10,
+  fontSize: 14,
+  fontFamily: "var(--font-sans)",
+  color: "var(--text-primary)",
+  outline: "none",
+  transition: "border-color 0.15s",
+};
+
+const revealButtonStyle: React.CSSProperties = {
+  position: "absolute",
+  right: 12,
+  top: "50%",
+  transform: "translateY(-50%)",
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  padding: 4,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "var(--text-tertiary)",
+  borderRadius: 6,
+};
+
+const secondaryLinkStyle: React.CSSProperties = {
+  color: "var(--accent-text)",
+  fontSize: 12.5,
+  fontWeight: 500,
+  textDecoration: "none",
+  fontFamily: "var(--font-sans)",
+};
+
+function PrimaryButton({
+  loading,
+  label,
+  loadingLabel,
+}: {
+  loading: boolean;
+  label: string;
+  loadingLabel: string;
+}) {
+  const [hover, setHover] = useState(false);
+  const [pressed, setPressed] = useState(false);
+
+  return (
+    <button
+      type="submit"
+      disabled={loading}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => {
+        setHover(false);
+        setPressed(false);
+      }}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        width: "100%",
+        padding: "12px 20px",
+        background: "var(--accent)",
+        color: "var(--text-on-accent)",
+        border: "none",
+        borderRadius: 10,
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: loading ? "not-allowed" : "pointer",
+        opacity: loading ? 0.7 : 1,
+        boxShadow: pressed
+          ? "inset 0 2px 6px hsl(0 0% 0% / 0.25)"
+          : hover
+            ? "0 0 40px var(--accent-glow)"
+            : "none",
+        transition: pressed
+          ? "box-shadow 80ms ease"
+          : "box-shadow 0.2s ease, opacity 0.15s ease",
+        marginTop: 4,
+        fontFamily: "var(--font-sans)",
+      }}
+    >
+      {loading ? (
+        <span>{loadingLabel}</span>
+      ) : (
+        <>
+          <span>{label}</span>
+          <ArrowRight size={16} />
+        </>
+      )}
+    </button>
   );
 }
