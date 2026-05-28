@@ -576,15 +576,18 @@ export function LessonViewer({
         {/* ── Chapter header ────────────────────────────────────────────── */}
         <div style={{ marginBottom: 36, maxWidth: 800 }}>
 
-          {/* Lesson title — breadcrumb lives in the lesson topbar above */}
+          {/* Lesson title — breadcrumb lives in the lesson topbar above.
+              Instrument Serif (display) paired with Inter body for an
+              editorial feel. The serif is set at 400 (its only weight) and
+              sized up to carry hierarchy via the typeface, not the weight. */}
           <h1 style={{
             fontFamily: "var(--font-display)",
-            fontSize: 42,
-            fontWeight: 800,
+            fontSize: 52,
+            fontWeight: 400,
             color: "var(--text-primary)",
-            lineHeight: 1.1,
-            letterSpacing: "-0.035em",
-            marginBottom: 16,
+            lineHeight: 1.05,
+            letterSpacing: "-0.015em",
+            marginBottom: 18,
           }}>
             {lessonTitle}
           </h1>
