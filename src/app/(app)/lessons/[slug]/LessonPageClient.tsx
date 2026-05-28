@@ -194,14 +194,14 @@ export function LessonPageClient({
             style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 14px", borderRadius: 8, flexShrink: 0,
-              background: completed ? "var(--success)" : pathColors.color,
+              background: completed ? "var(--success)" : "var(--accent)",
               border: "none",
               color: "#fff",
               fontSize: 12.5, fontWeight: 600,
               cursor: completed ? "default" : marking ? "wait" : "pointer",
               boxShadow: completed
-                ? "0 2px 8px rgba(16,185,129,0.35)"
-                : `0 2px 8px ${pathColors.color}40`,
+                ? "0 2px 8px color-mix(in srgb, var(--success) 35%, transparent)"
+                : "0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent)",
               opacity: marking ? 0.85 : 1,
               transition: "all 0.18s",
             }}
@@ -349,7 +349,7 @@ export function LessonPageClient({
                         {Math.round((completedCount / lessons.length) * 100)}%
                       </span>
                     </div>
-                    <div style={{ height: 5, background: "rgba(0,0,0,0.08)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ height: 5, background: "var(--bg-tertiary)", borderRadius: 99, overflow: "hidden" }}>
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.round((completedCount / lessons.length) * 100)}%` }}
@@ -440,7 +440,7 @@ export function LessonPageClient({
                 background: "var(--bg-card)",
                 border: `1.5px solid var(--success)`,
                 borderRadius: 999,
-                boxShadow: "0 10px 32px rgba(16,185,129,0.30)",
+                boxShadow: "0 10px 32px color-mix(in srgb, var(--success) 30%, transparent)",
                 fontSize: 13.5, fontWeight: 600, color: "var(--text-primary)",
               }}
             >
