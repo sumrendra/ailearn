@@ -163,6 +163,276 @@ function CodeBlock({
   );
 }
 
+// ── Stable references for react-markdown ─────────────────────────────────────
+//
+// These MUST be module-level constants, not inline arrays/objects in the JSX.
+// react-markdown@10 calls `React.createElement(components[tag], props, ...)`
+// for every tag in the markdown AST — meaning each *value* in `components`
+// becomes the element TYPE. If those values are fresh function refs on every
+// render (which they are when defined inline), React sees a new type at the
+// same tree position and unmounts/remounts the entire subtree. For
+// interactive children like SentenceBuilder / MatchQuiz, that re-runs their
+// useState lazy initializer and reshuffles the word order on every parent
+// re-render. Since LessonViewer re-renders on every scroll (for the reading-
+// progress bar), the puzzle pieces literally jumble as you scroll.
+//
+// Hoisting the plugin arrays and the `components` map to module scope makes
+// them reference-stable across renders. The components below only depend on
+// module-level imports and the pure `slugify` / `extractText` helpers, so
+// none of them need to close over LessonViewer's state.
+
+const REMARK_PLUGINS = [remarkGfm];
+const REHYPE_PLUGINS = [rehypeHighlight];
+
+const headingId = (children: React.ReactNode) =>
+  slugify(String(children ?? "").replace(/\s+/g, " ").trim());
+
+// Components map for react-markdown. Hoisted to module scope so it's a
+// stable reference across LessonViewer renders. (See the long comment with
+// REMARK_PLUGINS above for why this matters — TL;DR: react-markdown@10
+// uses these function refs as React element types, and changing refs
+// remount the entire subtree.)
+const MD_COMPONENTS = {
+
+  // h1 is shown in chapter header — suppress the in-content one
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  h1: (_props: unknown) => null,
+
+  h2: ({ children }: { children?: React.ReactNode }) => (
+    <h2 id={headingId(children)} style={{ scrollMarginTop: 24 }}>
+      {children}
+    </h2>
+  ),
+
+  h3: ({ children }: { children?: React.ReactNode }) => (
+    <h3 id={headingId(children)} style={{ scrollMarginTop: 24 }}>
+      {children}
+    </h3>
+  ),
+
+  p: ({ children }: { children?: React.ReactNode }) => <p>{children}</p>,
+  strong: ({ children }: { children?: React.ReactNode }) => <strong>{children}</strong>,
+
+  // Inline code
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  code: ({ className, children, ...props }: any) => {
+    if (!className) {
+      return <code {...props}>{children}</code>;
+    }
+    return <code className={className} {...props}>{children}</code>;
+  },
+
+  // Code block — either an interactive block or the CodeBlock fallback
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  pre: ({ children }: any) => {
+    // rehype-highlight prepends "hljs " to className — extract lang via regex.
+    const className = children?.props?.className ?? "";
+    const langMatch = /language-([\w-]+)/.exec(className);
+    const lang = langMatch ? langMatch[1] : "code";
+
+    if (lang === "sql-playground") {
+      const raw = extractTextContent(children);
+      const { meta, challenges, body } = parseLessonBlock(raw);
+      const fixture = (meta.fixture as FixtureKey) || "ecommerce";
+      return (
+        <SqlPlayground
+          fixture={fixture}
+          initial={body}
+          hint={meta.hint}
+          challenges={challenges.length ? challenges : undefined}
+        />
+      );
+    }
+
+    if (lang === "diagram-attention") return <AttentionVisualizer />;
+    if (lang === "diagram-embeddings") return <EmbeddingExplorer />;
+    if (lang === "diagram-tokenization") return <TokenizationVisualizer />;
+    if (lang === "diagram-rag") return <RAGFlowExplorer />;
+    if (lang === "diagram-agent-loop") return <AgentLoopInteractive />;
+
+    if (lang === "french-vocab") {
+      const items = parseFrenchVocab(extractTextContent(children));
+      return items.length ? <VocabList items={items} /> : null;
+    }
+    if (lang === "french-sentence") {
+      const data = parseFrenchSentence(extractTextContent(children));
+      return data ? (
+        <SentenceBuilder
+          prompt={data.prompt}
+          answer={data.answer}
+          distractors={data.distractors}
+          hint={data.hint}
+        />
+      ) : null;
+    }
+    if (lang === "french-dialogue") {
+      const data = parseFrenchDialogue(extractTextContent(children));
+      return data.lines.length ? (
+        <ConversationScene title={data.title} scene={data.scene} lines={data.lines} />
+      ) : null;
+    }
+    if (lang === "french-match") {
+      const data = parseFrenchMatch(extractTextContent(children));
+      return data.pairs.length ? <MatchQuiz title={data.title} pairs={data.pairs} /> : null;
+    }
+    if (lang === "french-grammar") {
+      const data = parseFrenchGrammar(extractTextContent(children));
+      return data ? (
+        <GrammarTable title={data.title} note={data.note} headers={data.headers} rows={data.rows} />
+      ) : null;
+    }
+
+    if (lang === "excel-formula") {
+      const data = parseExcelFormula(extractTextContent(children));
+      return <FormulaPlayground fixture={data.fixture} initial={data.formula ?? ""} hint={data.hint} />;
+    }
+    if (lang === "excel-pivot") {
+      const data = parseExcelPivot(extractTextContent(children));
+      return (
+        <PivotSimulator
+          fixture={data.fixture}
+          initialRows={data.rows}
+          initialCols={data.cols}
+          initialValues={data.values}
+        />
+      );
+    }
+    if (lang === "excel-quiz") {
+      const data = parseExcelQuiz(extractTextContent(children));
+      return data ? (
+        <FormulaQuiz
+          question={data.question}
+          options={data.options}
+          correct={data.correct}
+          explanation={data.explanation}
+        />
+      ) : null;
+    }
+
+    if (lang === "java-hashmap") return <HashMapVisualizer />;
+    if (lang === "java-collections") return <CollectionsHierarchy />;
+    if (lang === "java-quiz") {
+      const data = parseJavaQuiz(extractTextContent(children));
+      return data ? (
+        <JavaQuiz
+          question={data.question}
+          code={data.code}
+          options={data.options}
+          correct={data.correct}
+          explanation={data.explanation}
+          level={data.level}
+        />
+      ) : null;
+    }
+
+    return <CodeBlock language={lang}>{children}</CodeBlock>;
+  },
+
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
+    <blockquote
+      style={{
+        position: "relative",
+        margin: "28px 0",
+        padding: "20px 20px 16px 20px",
+        background: "rgba(108,71,255,0.05)",
+        borderLeft: "4px solid var(--accent)",
+        borderRadius: `0 var(--radius-md) var(--radius-md) 0`,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: -11,
+          left: 14,
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          color: "var(--accent)",
+          textTransform: "uppercase",
+          background: "var(--bg-card)",
+          padding: "2px 9px",
+          borderRadius: "var(--radius-full)",
+          border: "1px solid rgba(108,71,255,0.2)",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+        }}
+      >
+        <Lightbulb size={10} strokeWidth={2.4} /> Note
+      </div>
+      <div style={{ marginTop: 6 }}>{children}</div>
+    </blockquote>
+  ),
+
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <div style={{ overflowX: "auto", marginBottom: 28 }}>
+      <table style={{ margin: 0 }}>{children}</table>
+    </div>
+  ),
+
+  thead: ({ children }: { children?: React.ReactNode }) => (
+    <thead style={{ background: "var(--accent-light)" }}>{children}</thead>
+  ),
+
+  th: ({ children }: { children?: React.ReactNode }) => (
+    <th
+      style={{
+        padding: "11px 16px",
+        textAlign: "left",
+        fontSize: 11,
+        fontWeight: 700,
+        color: "var(--accent-text)",
+        textTransform: "uppercase",
+        letterSpacing: "0.07em",
+        borderBottom: "1px solid rgba(108,71,255,0.2)",
+      }}
+    >
+      {children}
+    </th>
+  ),
+
+  td: ({ children }: { children?: React.ReactNode }) => (
+    <td
+      style={{
+        padding: "11px 16px",
+        borderBottom: "1px solid var(--border-subtle)",
+        color: "var(--text-secondary)",
+        fontSize: 14.5,
+        lineHeight: 1.6,
+      }}
+    >
+      {children}
+    </td>
+  ),
+
+  hr: () => (
+    <div
+      style={{
+        margin: "44px 0",
+        height: 1,
+        background: "linear-gradient(90deg, var(--accent), transparent)",
+        opacity: 0.2,
+      }}
+    />
+  ),
+
+  a: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
+    <a
+      href={href}
+      target={href?.startsWith("http") ? "_blank" : undefined}
+      rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
+      style={{
+        color: "var(--accent)",
+        textDecoration: "underline",
+        textDecorationColor: "rgba(108,71,255,0.3)",
+        textUnderlineOffset: 3,
+      }}
+    >
+      {children}
+    </a>
+  ),
+};
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface LessonViewerProps {
@@ -250,8 +520,27 @@ export function LessonViewer({
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const headingId = (children: React.ReactNode) =>
-    slugify(String(children ?? "").replace(/\s+/g, " ").trim());
+  // Memoize the ReactMarkdown element so its subtree is reference-stable
+  // across re-renders. LessonViewer re-renders on every scroll (to update
+  // readPct for the progress bar). Without this memo, the inline
+  // `components={{...}}` object below is rebuilt every render — every
+  // function ref inside changes — and react-markdown@10 uses those
+  // function refs as React element TYPES when rendering the AST. New types
+  // at the same tree position make React unmount + remount each child, which
+  // would tear down SentenceBuilder / MatchQuiz state every scroll and
+  // reshuffle the word bank. Pinning the element by [content] means the
+  // entire markdown subtree (and the captured components prop inside it)
+  // is reused as long as content doesn't change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const markdownElement = useMemo(() => (
+    <ReactMarkdown
+      remarkPlugins={REMARK_PLUGINS}
+      rehypePlugins={REHYPE_PLUGINS}
+      components={MD_COMPONENTS}
+    >
+      {content}
+    </ReactMarkdown>
+  ), [content]);
 
   return (
     <div style={{ flex: 1, display: "flex", position: "relative", overflow: "hidden" }}>
@@ -373,294 +662,7 @@ export function LessonViewer({
 
         {/* ── Markdown content ──────────────────────────────────────────── */}
         <div className="lesson-content prose-reader">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeHighlight]}
-            components={{
-
-              // h1 is shown in chapter header — suppress the in-content one
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              h1: (_props) => null,
-
-              h2: ({ children }) => (
-                <h2
-                  id={headingId(children)}
-                  style={{ scrollMarginTop: 24 }}
-                >
-                  {children}
-                </h2>
-              ),
-
-              h3: ({ children }) => (
-                <h3
-                  id={headingId(children)}
-                  style={{ scrollMarginTop: 24 }}
-                >
-                  {children}
-                </h3>
-              ),
-
-              // Paragraph — let globals.css handle sizing/spacing, just add margin reset
-              p: ({ children }) => (
-                <p>{children}</p>
-              ),
-
-              // Bold — highlighted background
-              strong: ({ children }) => (
-                <strong>{children}</strong>
-              ),
-
-              // ul, ol, li → NOT overridden — globals.css handles all styling
-
-              // Inline code
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              code: ({ className, children, ...props }: any) => {
-                if (!className) {
-                  return (
-                    <code {...props}>{children}</code>
-                  );
-                }
-                return <code className={className} {...props}>{children}</code>;
-              },
-
-              // Code block → either an interactive block or the CodeBlock component
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              pre: ({ children }: any) => {
-                // rehype-highlight runs before this and prepends "hljs " to the
-                // className, so we must extract the language token via regex rather
-                // than a naive `.replace("language-", "")` — which leaves "hljs " in
-                // place and breaks our equality checks below.
-                const className = children?.props?.className ?? "";
-                const langMatch = /language-([\w-]+)/.exec(className);
-                const lang = langMatch ? langMatch[1] : "code";
-
-                // Interactive SQL playground — fenced as ```sql-playground
-                if (lang === "sql-playground") {
-                  const raw = extractTextContent(children);
-                  const { meta, challenges, body } = parseLessonBlock(raw);
-                  const fixture = (meta.fixture as FixtureKey) || "ecommerce";
-                  return (
-                    <SqlPlayground
-                      fixture={fixture}
-                      initial={body}
-                      hint={meta.hint}
-                      challenges={challenges.length ? challenges : undefined}
-                    />
-                  );
-                }
-
-                // Interactive diagrams — fenced as ```diagram-attention etc.
-                if (lang === "diagram-attention") {
-                  return <AttentionVisualizer />;
-                }
-                if (lang === "diagram-embeddings") {
-                  return <EmbeddingExplorer />;
-                }
-                if (lang === "diagram-tokenization") {
-                  return <TokenizationVisualizer />;
-                }
-                if (lang === "diagram-rag") {
-                  return <RAGFlowExplorer />;
-                }
-                if (lang === "diagram-agent-loop") {
-                  return <AgentLoopInteractive />;
-                }
-
-                // French course interactive blocks
-                if (lang === "french-vocab") {
-                  const items = parseFrenchVocab(extractTextContent(children));
-                  return items.length ? <VocabList items={items} /> : null;
-                }
-                if (lang === "french-sentence") {
-                  const data = parseFrenchSentence(extractTextContent(children));
-                  return data ? (
-                    <SentenceBuilder
-                      prompt={data.prompt}
-                      answer={data.answer}
-                      distractors={data.distractors}
-                      hint={data.hint}
-                    />
-                  ) : null;
-                }
-                if (lang === "french-dialogue") {
-                  const data = parseFrenchDialogue(extractTextContent(children));
-                  return data.lines.length ? (
-                    <ConversationScene
-                      title={data.title}
-                      scene={data.scene}
-                      lines={data.lines}
-                    />
-                  ) : null;
-                }
-                if (lang === "french-match") {
-                  const data = parseFrenchMatch(extractTextContent(children));
-                  return data.pairs.length ? (
-                    <MatchQuiz title={data.title} pairs={data.pairs} />
-                  ) : null;
-                }
-                if (lang === "french-grammar") {
-                  const data = parseFrenchGrammar(extractTextContent(children));
-                  return data ? (
-                    <GrammarTable
-                      title={data.title}
-                      note={data.note}
-                      headers={data.headers}
-                      rows={data.rows}
-                    />
-                  ) : null;
-                }
-
-                // Excel course interactive blocks
-                if (lang === "excel-formula") {
-                  const data = parseExcelFormula(extractTextContent(children));
-                  return (
-                    <FormulaPlayground
-                      fixture={data.fixture}
-                      initial={data.formula ?? ""}
-                      hint={data.hint}
-                    />
-                  );
-                }
-                if (lang === "excel-pivot") {
-                  const data = parseExcelPivot(extractTextContent(children));
-                  return (
-                    <PivotSimulator
-                      fixture={data.fixture}
-                      initialRows={data.rows}
-                      initialCols={data.cols}
-                      initialValues={data.values}
-                    />
-                  );
-                }
-                if (lang === "excel-quiz") {
-                  const data = parseExcelQuiz(extractTextContent(children));
-                  return data ? (
-                    <FormulaQuiz
-                      question={data.question}
-                      options={data.options}
-                      correct={data.correct}
-                      explanation={data.explanation}
-                    />
-                  ) : null;
-                }
-
-                // Java course interactive blocks
-                if (lang === "java-hashmap") {
-                  return <HashMapVisualizer />;
-                }
-                if (lang === "java-collections") {
-                  return <CollectionsHierarchy />;
-                }
-                if (lang === "java-quiz") {
-                  const data = parseJavaQuiz(extractTextContent(children));
-                  return data ? (
-                    <JavaQuiz
-                      question={data.question}
-                      code={data.code}
-                      options={data.options}
-                      correct={data.correct}
-                      explanation={data.explanation}
-                      level={data.level}
-                    />
-                  ) : null;
-                }
-
-                return (
-                  <CodeBlock language={lang}>{children}</CodeBlock>
-                );
-              },
-
-              // Blockquote → styled callout card
-              blockquote: ({ children }) => (
-                <blockquote style={{
-                  position: "relative",
-                  margin: "28px 0",
-                  padding: "20px 20px 16px 20px",
-                  background: "rgba(108,71,255,0.05)",
-                  borderLeft: "4px solid var(--accent)",
-                  borderRadius: `0 var(--radius-md) var(--radius-md) 0`,
-                }}>
-                  <div style={{
-                    position: "absolute", top: -11, left: 14,
-                    fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
-                    color: "var(--accent)", textTransform: "uppercase",
-                    background: "var(--bg-card)", padding: "2px 9px",
-                    borderRadius: "var(--radius-full)",
-                    border: "1px solid rgba(108,71,255,0.2)",
-                    display: "inline-flex", alignItems: "center", gap: 5,
-                  }}>
-                    <Lightbulb size={10} strokeWidth={2.4} /> Note
-                  </div>
-                  <div style={{ marginTop: 6 }}>
-                    {children}
-                  </div>
-                </blockquote>
-              ),
-
-              // Table — overflow wrapper only; CSS handles border/radius/shadow
-              table: ({ children }) => (
-                <div style={{ overflowX: "auto", marginBottom: 28 }}>
-                  <table style={{ margin: 0 }}>
-                    {children}
-                  </table>
-                </div>
-              ),
-
-              thead: ({ children }) => (
-                <thead style={{ background: "var(--accent-light)" }}>
-                  {children}
-                </thead>
-              ),
-
-              th: ({ children }) => (
-                <th style={{
-                  padding: "11px 16px", textAlign: "left",
-                  fontSize: 11, fontWeight: 700, color: "var(--accent-text)",
-                  textTransform: "uppercase", letterSpacing: "0.07em",
-                  borderBottom: "1px solid rgba(108,71,255,0.2)",
-                }}>
-                  {children}
-                </th>
-              ),
-
-              td: ({ children }) => (
-                <td style={{
-                  padding: "11px 16px",
-                  borderBottom: "1px solid var(--border-subtle)",
-                  color: "var(--text-secondary)", fontSize: 14.5, lineHeight: 1.6,
-                }}>
-                  {children}
-                </td>
-              ),
-
-              // Divider
-              hr: () => (
-                <div style={{
-                  margin: "44px 0", height: 1,
-                  background: "linear-gradient(90deg, var(--accent), transparent)",
-                  opacity: 0.2,
-                }} />
-              ),
-
-              // Links
-              a: ({ children, href }) => (
-                <a
-                  href={href}
-                  target={href?.startsWith("http") ? "_blank" : undefined}
-                  rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
-                  style={{
-                    color: "var(--accent)", textDecoration: "underline",
-                    textDecorationColor: "rgba(108,71,255,0.3)",
-                    textUnderlineOffset: 3,
-                  }}
-                >
-                  {children}
-                </a>
-              ),
-            }}
-          >
-            {content}
-          </ReactMarkdown>
+          {markdownElement}
         </div>
 
         {/* ── Lesson complete CTA ───────────────────────────────────────── */}
