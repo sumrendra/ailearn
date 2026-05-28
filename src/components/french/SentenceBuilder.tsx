@@ -29,21 +29,30 @@ export function SentenceBuilder({ prompt, answer, distractors = [], hint }: Sent
   // `distractors` array on every re-render — useMemo would invalidate, the
   // pool would reshuffle, and any indexes the user had selected would now
   // point at different words. useState lazy initializer runs exactly once.
-  const [pool] = useState<{ word: string; id: number }[]>(() => {
+  //
+  // `pool` is the SHUFFLED word bank. The user's selection — and every other
+  // pool lookup — uses the array index into this shuffled array. Earlier
+  // versions tried to store a stable "id" (original pre-shuffle position) and
+  // then did `pool[id]` to look up the word — which is wrong, because after
+  // shuffle the array index and the id don't agree. That caused "I click 'le'
+  // and 'avec' shows up in the answer box" — the textbook symptom. Using the
+  // shuffled array index throughout is both simpler and correct.
+  const [pool] = useState<string[]>(() => {
     const answerTokens = answer.split(/\s+/).filter(Boolean);
     const all = [...answerTokens, ...distractors];
     return all
-      .map((w, i) => ({ word: w, id: i, sort: Math.random() }))
+      .map((w) => ({ word: w, sort: Math.random() }))
       .sort((a, b) => a.sort - b.sort)
-      .map(({ word, id }) => ({ word, id }));
+      .map((x) => x.word);
   });
 
+  /** Indices into `pool` (the shuffled word bank) that the user has tapped. */
   const [selected, setSelected] = useState<number[]>([]);
   const [result, setResult] = useState<"correct" | "wrong" | null>(null);
   const [revealHint, setRevealHint] = useState(false);
 
   const usedSet = new Set(selected);
-  const built = selected.map((id) => pool[id].word).join(" ");
+  const built = selected.map((i) => pool[i]).join(" ");
 
   const check = async () => {
     const normalize = (s: string) => s.replace(/[.,!?;:]/g, "").trim().toLowerCase();
@@ -124,7 +133,7 @@ export function SentenceBuilder({ prompt, answer, distractors = [], hint }: Sent
             Tap words below to build your sentence…
           </span>
         )}
-        {selected.map((poolId, i) => (
+        {selected.map((poolIdx, i) => (
           <button
             key={i}
             onClick={() => setSelected((s) => s.filter((_, idx) => idx !== i))}
@@ -140,19 +149,19 @@ export function SentenceBuilder({ prompt, answer, distractors = [], hint }: Sent
               cursor: result === "correct" ? "default" : "pointer",
             }}
           >
-            {pool[poolId].word}
+            {pool[poolIdx]}
           </button>
         ))}
       </div>
 
       {/* Word bank */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-        {pool.map((p) =>
-          usedSet.has(p.id) ? null : (
+        {pool.map((word, idx) =>
+          usedSet.has(idx) ? null : (
             <button
-              key={p.id}
+              key={idx}
               onClick={() => {
-                setSelected((s) => [...s, p.id]);
+                setSelected((s) => [...s, idx]);
                 setResult(null);
               }}
               disabled={result === "correct"}
@@ -167,7 +176,7 @@ export function SentenceBuilder({ prompt, answer, distractors = [], hint }: Sent
                 cursor: result === "correct" ? "default" : "pointer",
               }}
             >
-              {p.word}
+              {word}
             </button>
           ),
         )}
