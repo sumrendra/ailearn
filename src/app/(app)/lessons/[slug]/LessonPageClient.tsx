@@ -101,6 +101,26 @@ export function LessonPageClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson.slug]);
 
+  // ── Per-path mesh tint ─────────────────────────────────────────────────────
+  // The CanvasBackdrop reads `--path-tint` to bias its primary gradient blob
+  // toward this path's color while the user is reading. We set it on
+  // documentElement (so it cascades through to the fixed-position backdrop
+  // which is outside this component's tree) and restore the default on
+  // unmount / when the lesson navigates to a different path.
+  useEffect(() => {
+    const prev = document.documentElement.style.getPropertyValue("--path-tint");
+    document.documentElement.style.setProperty("--path-tint", pathColors.color);
+    return () => {
+      // Restore previous inline value (if any), otherwise clear so the
+      // stylesheet default (`--mesh-violet`) takes over again.
+      if (prev) {
+        document.documentElement.style.setProperty("--path-tint", prev);
+      } else {
+        document.documentElement.style.removeProperty("--path-tint");
+      }
+    };
+  }, [pathColors.color]);
+
   // Mark the current lesson complete. Optimistic — flips local state first,
   // then POSTs. Rolls back if the server rejects.
   const markComplete = async () => {
@@ -178,9 +198,12 @@ export function LessonPageClient({
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", position: "relative" }}>
 
-      {/* ── Slim lesson topbar ─────────────────────────────────────────────── */}
+      {/* ── Slim lesson topbar ───────────────────────────────────────────────
+          Uses the shared `.glass-pane` utility — frosted blur, hairline-top
+          highlight, no solid background tint. Reads as glass on the canvas
+          mesh below; the mesh drifts into view through it. */}
       <div
-        className="glass"
+        className="glass-pane"
         style={{
           height: 56, flexShrink: 0,
           display: "flex", alignItems: "center",
@@ -367,7 +390,7 @@ export function LessonPageClient({
                 aria-label="Close lesson list"
                 style={{
                   position: "fixed", inset: 0, zIndex: 9990,
-                  background: "rgba(0,0,0,0.45)",
+                  background: "hsl(220 20% 2% / 0.55)",
                   backdropFilter: "blur(4px)",
                 }}
               />
@@ -387,7 +410,7 @@ export function LessonPageClient({
                   width: 320,
                   background: "var(--bg-surface)",
                   borderRight: "1px solid var(--border-subtle)",
-                  boxShadow: "12px 0 48px rgba(0,0,0,0.25)",
+                  boxShadow: "12px 0 48px hsl(220 30% 2% / 0.45)",
                   display: "flex", flexDirection: "column",
                   overflowY: "auto",
                 }}
