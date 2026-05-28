@@ -6,7 +6,7 @@ import { getAllPaths } from "@/lib/content";
 import { Topbar } from "@/components/layout/Topbar";
 import { LearnHero } from "@/components/learn/LearnHero";
 import { PathBentoGrid } from "@/components/learn/PathBentoGrid";
-import { PathCard, type PathCardData } from "@/components/learn/PathCard";
+import type { PathCardData } from "@/components/learn/PathCard";
 
 export default async function LearnPage() {
   const session = await auth();
@@ -56,12 +56,13 @@ export default async function LearnPage() {
     };
   });
 
-  // Featured: most-progressed-but-incomplete; fall back to first
-  const featured =
-    cardData
-      .filter((p) => (p.completedLessons ?? 0) > 0 && (p.completedLessons ?? 0) < p.lessonCount)
-      .sort((a, b) => (b.completedLessons ?? 0) - (a.completedLessons ?? 0))[0] ??
-    cardData[0];
+  // Featured: most-progressed-but-incomplete. Falls back to the first
+  // foundation path so a fresh user still gets a real CTA (no "0/0" tiles).
+  const inProgress = cardData
+    .filter((p) => (p.completedLessons ?? 0) > 0 && (p.completedLessons ?? 0) < p.lessonCount)
+    .sort((a, b) => (b.completedLessons ?? 0) - (a.completedLessons ?? 0))[0];
+
+  const featured = inProgress ?? cardData[0];
 
   const totalHrs = Math.round((totalMins / 60) * 10) / 10;
 
@@ -69,8 +70,15 @@ export default async function LearnPage() {
     <>
       <Topbar title="Learn" subtitle="Choose your next path" />
 
-      <div style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: "0 32px 80px" }}>
-        {/* Hero */}
+      <div
+        className="stage"
+        style={{
+          width: "100%",
+          // The .stage utility provides the responsive max-width + side
+          // gutters; bottom padding gives the last bento row breathing room.
+          paddingBottom: 96,
+        }}
+      >
         <LearnHero
           stats={{
             paths: paths.length,
@@ -83,29 +91,7 @@ export default async function LearnPage() {
           featured={featured}
         />
 
-        {/* Bento grid of all paths grouped by tier */}
         <PathBentoGrid paths={cardData} />
-
-        {/* Detailed all-paths list */}
-        <div style={{ marginTop: 64 }}>
-          <h2
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: "var(--text-tertiary)",
-              marginBottom: 18,
-            }}
-          >
-            All paths
-          </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {cardData.map((data) => (
-              <PathCard key={data.slug} data={data} variant="row" />
-            ))}
-          </div>
-        </div>
       </div>
     </>
   );
