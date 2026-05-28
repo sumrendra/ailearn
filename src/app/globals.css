@@ -35,13 +35,130 @@
   --radius-full: 9999px;
 }
 
-/* ── Light theme (default) ──────────────────────────────────────────────── */
+/* ── Drenched dark (default) ─────────────────────────────────────────────
+ * Per DESIGN.md, the canvas is a deep near-black; surfaces layer up through
+ * four tonal steps. The product looks like it's lit by a single floor lamp
+ * in a dim room — not a fluorescent classroom. Light theme is a deliberate
+ * opt-in via [data-theme="light"] below; not a fallback. */
 :root {
-  /* Surfaces */
+  color-scheme: dark;
+
+  /* Canvas — five surface elevations, deepest to highest. */
+  --bg-app:        hsl(220 20% 4%);     /* the void */
+  --bg-sunken:     hsl(220 22% 3%);     /* DEEPER than canvas: inputs, code */
+  --bg-surface:    hsl(220 17% 7%);     /* primary surfaces */
+  --bg-elevated:   hsl(220 16% 10%);    /* cards, modals */
+  --bg-overlay:    hsl(220 15% 13%);    /* hover, popovers */
+
+  /* Backward-compat aliases so existing components keep rendering. The
+   * redesign migrates them away from these names over time; for now we
+   * map old → new without touching component source. */
+  --bg-subtle:     hsl(220 17% 8%);     /* old name → near-surface */
+  --bg-tertiary:   hsl(220 15% 13%);    /* old name → overlay */
+  --bg-primary:    hsl(220 17% 7%);     /* old name → surface */
+  --bg-secondary:  hsl(220 22% 3%);     /* old name → sunken */
+  --bg-card:       hsl(220 16% 10%);    /* old name → elevated */
+  --bg-sidebar:    hsl(220 17% 7%);     /* old name → surface */
+
+  /* Text — premium tonal range, not pure white. */
+  --text-primary:    hsl(220 15% 96%);
+  --text-secondary:  hsl(220 12% 72%);
+  --text-tertiary:   hsl(220 10% 52%);
+  --text-muted:      hsl(220 8% 38%);
+  --text-quaternary: hsl(220 8% 38%);   /* legacy alias */
+  --text-inverse:    hsl(220 20% 4%);
+  --text-on-accent:  hsl(220 20% 4%);
+
+  /* Borders — hairlines on dark canvas. */
+  --border-subtle:   hsl(220 14% 14%);
+  --border-default:  hsl(220 14% 20%);
+  --border-strong:   hsl(220 12% 32%);
+
+  /* Hairline highlights — top edge of elevated surfaces, like a real
+   * material catching ambient light. Pairs with deep drop shadows below. */
+  --hairline-top:    hsl(0 0% 100% / 0.05);
+  --hairline-bottom: hsl(0 0% 0% / 0.4);
+
+  /* Accent — violet, retuned for dark canvas. Brighter than the light
+   * variant so it holds presence against deep backgrounds. */
+  --accent:        hsl(258 92% 72%);
+  --accent-hover:  hsl(258 92% 76%);
+  --accent-active: hsl(258 92% 80%);
+  --accent-soft:   hsl(258 60% 16%);    /* filled chip backgrounds */
+  --accent-light:  hsl(258 60% 16%);    /* legacy alias */
+  --accent-text:   hsl(258 80% 80%);
+  --accent-glow:   hsl(258 100% 65% / 0.35);  /* ambient glow rings */
+  --accent-2:      hsl(258 90% 82%);
+
+  /* Semantic — luminance lifted for dark canvas. */
+  --success:       hsl(152 60% 60%);
+  --success-light: hsl(152 35% 12%);
+  --warning:       hsl(30 95% 60%);
+  --warning-light: hsl(30 35% 12%);
+  --danger:        hsl(0 75% 62%);
+  --danger-light:  hsl(0 40% 12%);
+  --info:          hsl(217 91% 70%);
+  --info-light:    hsl(217 40% 12%);
+
+  /* Gamification */
+  --xp-gold:       hsl(38 92% 62%);
+  --xp-gold-light: hsl(38 40% 12%);
+  --streak-orange: hsl(20 91% 62%);
+  --streak-light:  hsl(20 40% 12%);
+
+  /* Difficulty */
+  --beginner:           hsl(152 60% 60%);
+  --beginner-light:     hsl(152 35% 12%);
+  --intermediate:       hsl(30 95% 60%);
+  --intermediate-light: hsl(30 35% 12%);
+  --advanced:           hsl(0 75% 62%);
+  --advanced-light:     hsl(0 40% 12%);
+
+  /* Shadows — deep and atmospheric. Reserved for modals/heroes; everyday
+   * elevation is communicated by background hue + hairline-top, not by
+   * casting shadows. */
+  --shadow-xs:  0 1px 2px hsl(0 0% 0% / 0.4);
+  --shadow-sm:  0 1px 3px hsl(0 0% 0% / 0.5), 0 1px 2px hsl(0 0% 0% / 0.3);
+  --shadow-md:  0 4px 12px hsl(0 0% 0% / 0.5), 0 2px 4px hsl(0 0% 0% / 0.3);
+  --shadow-lg:  0 16px 32px hsl(0 0% 0% / 0.6), 0 4px 8px hsl(0 0% 0% / 0.3);
+  --shadow-xl:  0 24px 56px hsl(0 0% 0% / 0.7);
+  --shadow-2xl: 0 32px 80px hsl(0 0% 0% / 0.8);
+  --shadow-glow: 0 0 80px var(--accent-glow);
+
+  /* Frosted glass — chrome surfaces. Sits ABOVE atmosphere, BELOW modals. */
+  --glass-bg:     hsl(220 17% 7% / 0.6);
+  --glass-border: hsl(0 0% 100% / 0.06);
+  --glass-blur:   saturate(180%) blur(16px);
+
+  /* Mesh palette — raw colors for gradient mesh backdrops. The legacy
+   * --mesh-1..4 are kept (with new alpha curves) so any old code that
+   * referenced them still renders. */
+  --mesh-violet: hsl(258 100% 60%);
+  --mesh-teal:   hsl(180 100% 50%);
+  --mesh-pink:   hsl(330 100% 60%);
+  --mesh-amber:  hsl(40 100% 55%);
+  --mesh-1: hsl(258 100% 60% / 0.22);
+  --mesh-2: hsl(180 100% 50% / 0.16);
+  --mesh-3: hsl(330 100% 60% / 0.14);
+  --mesh-4: hsl(40 100% 55% / 0.14);
+
+  /* Path tint — defaults to violet; per-path layouts override with the
+   * course's color so the mesh subtly biases toward that hue. */
+  --path-tint: var(--mesh-violet);
+}
+
+/* ── Light theme (opt-in, not default) ──────────────────────────────────
+ * Deliberate alternate. Designed for daylight reading on bright displays.
+ * Triggered by ThemeProvider setting [data-theme="light"] on <html>. */
+[data-theme="light"] {
+  color-scheme: light;
+
   --bg-app:        hsl(0 0% 99%);
+  --bg-sunken:     hsl(220 14% 94%);
   --bg-surface:    hsl(0 0% 100%);
   --bg-elevated:   hsl(0 0% 100%);
-  --bg-sunken:     hsl(220 14% 96%);
+  --bg-overlay:    hsl(220 14% 96%);
+
   --bg-subtle:     hsl(220 14% 97%);
   --bg-tertiary:   hsl(220 13% 91%);
   --bg-primary:    hsl(0 0% 100%);
@@ -49,28 +166,30 @@
   --bg-card:       hsl(0 0% 100%);
   --bg-sidebar:    hsl(0 0% 100%);
 
-  /* Text */
   --text-primary:    hsl(222 27% 11%);
   --text-secondary:  hsl(220 13% 36%);
   --text-tertiary:   hsl(220 10% 55%);
+  --text-muted:      hsl(220 8% 68%);
   --text-quaternary: hsl(220 8% 68%);
   --text-inverse:    hsl(0 0% 100%);
   --text-on-accent:  hsl(0 0% 100%);
 
-  /* Borders */
   --border-subtle:   hsl(220 13% 91%);
   --border-default:  hsl(220 13% 82%);
   --border-strong:   hsl(220 10% 64%);
 
-  /* Accent — violet */
+  --hairline-top:    hsl(0 0% 0% / 0.04);
+  --hairline-bottom: hsl(0 0% 0% / 0.06);
+
   --accent:        hsl(258 87% 64%);
   --accent-hover:  hsl(258 87% 58%);
   --accent-active: hsl(258 87% 52%);
+  --accent-soft:   hsl(258 93% 96%);
   --accent-light:  hsl(258 93% 96%);
   --accent-text:   hsl(258 60% 40%);
+  --accent-glow:   hsl(258 87% 64% / 0.22);
   --accent-2:      hsl(258 80% 72%);
 
-  /* Semantic */
   --success:       hsl(152 60% 42%);
   --success-light: hsl(142 76% 95%);
   --warning:       hsl(30 95% 50%);
@@ -80,13 +199,11 @@
   --info:          hsl(217 91% 60%);
   --info-light:    hsl(214 100% 96%);
 
-  /* Gamification */
   --xp-gold:       hsl(38 92% 50%);
   --xp-gold-light: hsl(48 100% 96%);
   --streak-orange: hsl(20 91% 48%);
   --streak-light:  hsl(20 100% 96%);
 
-  /* Difficulty */
   --beginner:           hsl(152 60% 42%);
   --beginner-light:     hsl(142 76% 95%);
   --intermediate:       hsl(30 95% 50%);
@@ -94,98 +211,36 @@
   --advanced:           hsl(0 72% 51%);
   --advanced-light:     hsl(0 84% 96%);
 
-  /* Shadow */
   --shadow-xs:  0 1px 2px hsl(220 30% 12% / 0.05);
   --shadow-sm:  0 1px 3px hsl(220 30% 12% / 0.06), 0 1px 2px hsl(220 30% 12% / 0.04);
   --shadow-md:  0 4px 6px hsl(220 30% 12% / 0.07), 0 2px 4px hsl(220 30% 12% / 0.05);
   --shadow-lg:  0 10px 15px hsl(220 30% 12% / 0.08), 0 4px 6px hsl(220 30% 12% / 0.04);
   --shadow-xl:  0 20px 25px hsl(220 30% 12% / 0.10), 0 10px 10px hsl(220 30% 12% / 0.04);
   --shadow-2xl: 0 25px 50px hsl(220 30% 12% / 0.15);
+  --shadow-glow: 0 0 60px var(--accent-glow);
 
-  /* Glass surfaces */
   --glass-bg:     hsl(0 0% 100% / 0.72);
   --glass-border: hsl(0 0% 100% / 0.6);
   --glass-blur:   saturate(180%) blur(20px);
 
-  /* Mesh accent dots */
+  --mesh-violet: hsl(258 100% 75%);
+  --mesh-teal:   hsl(196 100% 70%);
+  --mesh-pink:   hsl(330 100% 75%);
+  --mesh-amber:  hsl(40 100% 65%);
   --mesh-1: hsl(258 100% 75% / 0.4);
   --mesh-2: hsl(196 100% 70% / 0.35);
   --mesh-3: hsl(330 100% 75% / 0.30);
   --mesh-4: hsl(258 100% 80% / 0.25);
+
+  --path-tint: var(--mesh-violet);
 }
 
-/* ── Dark theme ──────────────────────────────────────────────────────────── */
+/* [data-theme="dark"] explicitly re-applies :root values for when a user
+ * had toggled to light and toggles back to dark. ThemeProvider sets the
+ * attribute either way. The block is intentionally a no-op pointing at
+ * :root values via custom-prop inheritance — included for selector clarity. */
 [data-theme="dark"] {
-  --bg-app:        hsl(222 25% 8%);
-  --bg-surface:    hsl(222 21% 11%);
-  --bg-elevated:   hsl(222 21% 14%);
-  --bg-sunken:     hsl(222 27% 7%);
-  --bg-subtle:     hsl(222 21% 13%);
-  --bg-tertiary:   hsl(222 20% 17%);
-  --bg-primary:    hsl(222 21% 11%);
-  --bg-secondary:  hsl(222 27% 7%);
-  --bg-card:       hsl(222 21% 11%);
-  --bg-sidebar:    hsl(222 21% 14%);
-
-  --text-primary:    hsl(220 14% 96%);
-  --text-secondary:  hsl(220 13% 75%);
-  --text-tertiary:   hsl(220 10% 58%);
-  --text-quaternary: hsl(220 8% 45%);
-  --text-inverse:    hsl(222 27% 11%);
-  --text-on-accent:  hsl(0 0% 100%);
-
-  --border-subtle:   hsl(220 14% 18%);
-  --border-default:  hsl(220 14% 25%);
-  --border-strong:   hsl(220 13% 40%);
-
-  --accent:        hsl(258 87% 68%);
-  --accent-hover:  hsl(258 87% 72%);
-  --accent-active: hsl(258 87% 76%);
-  --accent-light:  hsl(258 50% 18%);
-  --accent-text:   hsl(258 80% 78%);
-  --accent-2:      hsl(258 85% 78%);
-
-  --success:       hsl(152 55% 55%);
-  --success-light: hsl(152 30% 18%);
-  --warning:       hsl(30 90% 60%);
-  --warning-light: hsl(30 35% 18%);
-  --danger:        hsl(0 72% 60%);
-  --danger-light:  hsl(0 40% 18%);
-  --info:          hsl(217 91% 70%);
-  --info-light:    hsl(217 40% 18%);
-
-  --xp-gold:       hsl(38 92% 60%);
-  --xp-gold-light: hsl(38 35% 18%);
-  --streak-orange: hsl(20 91% 60%);
-  --streak-light:  hsl(20 35% 18%);
-
-  --beginner:           hsl(152 55% 55%);
-  --beginner-light:     hsl(152 30% 18%);
-  --intermediate:       hsl(30 90% 60%);
-  --intermediate-light: hsl(30 35% 18%);
-  --advanced:           hsl(0 72% 60%);
-  --advanced-light:     hsl(0 40% 18%);
-
-  --shadow-xs:  0 1px 2px hsl(0 0% 0% / 0.4);
-  --shadow-sm:  0 1px 3px hsl(0 0% 0% / 0.5), 0 1px 2px hsl(0 0% 0% / 0.3);
-  --shadow-md:  0 4px 6px hsl(0 0% 0% / 0.5), 0 2px 4px hsl(0 0% 0% / 0.3);
-  --shadow-lg:  0 10px 25px hsl(0 0% 0% / 0.6), 0 4px 6px hsl(0 0% 0% / 0.3);
-  --shadow-xl:  0 20px 40px hsl(0 0% 0% / 0.7);
-  --shadow-2xl: 0 25px 60px hsl(0 0% 0% / 0.8);
-
-  --glass-bg:     hsl(222 21% 11% / 0.72);
-  --glass-border: hsl(220 14% 25% / 0.6);
-
-  --mesh-1: hsl(258 100% 65% / 0.25);
-  --mesh-2: hsl(196 100% 60% / 0.20);
-  --mesh-3: hsl(330 100% 70% / 0.18);
-  --mesh-4: hsl(258 100% 70% / 0.20);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-  }
+  color-scheme: dark;
 }
 
 /* ── Base reset + typography ─────────────────────────────────────────────── */
@@ -292,6 +347,110 @@ button { font-family: inherit; }
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
+}
+
+/* glass-pane — frosted chrome surface for sidebar, topbar, command palette.
+ * Sits ABOVE atmospheric layers (mesh, grain) but BELOW content modals.
+ * Hairline-top gives the surface a sense of catching ambient light from
+ * above, the way a real frosted material would. */
+.glass-pane {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 var(--hairline-top);
+}
+
+/* canvas-mesh — full-viewport gradient mesh, fixed behind everything.
+ * Tinted by --path-tint when a page sets a course-specific color.
+ * 40s drift loop keeps it almost-still; respects reduced motion. */
+.canvas-mesh {
+  position: fixed;
+  inset: -10vh -10vw;            /* over-extends so blur doesn't show seams */
+  z-index: -2;
+  pointer-events: none;
+  filter: blur(100px) saturate(140%);
+  opacity: 0.55;
+  background:
+    radial-gradient(50% 50% at 18% 22%,
+      color-mix(in oklch, var(--path-tint), transparent 60%) 0%, transparent 60%),
+    radial-gradient(45% 45% at 82% 14%,
+      var(--mesh-2) 0%, transparent 60%),
+    radial-gradient(55% 55% at 70% 80%,
+      var(--mesh-3) 0%, transparent 60%),
+    radial-gradient(40% 40% at 15% 92%,
+      var(--mesh-4) 0%, transparent 60%);
+  animation: mesh-drift 40s ease-in-out infinite;
+}
+
+/* canvas-grain — animated film grain overlay. SVG turbulence baked into
+ * a data URL. Blends additively so it texturizes without darkening or
+ * tinting. 8s animation cycle moves it slightly, breaking the static look. */
+.canvas-grain {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 240px 240px;
+  background-repeat: repeat;
+  animation: grain-drift 8s steps(8) infinite;
+}
+@keyframes grain-drift {
+  0%   { background-position: 0 0; }
+  25%  { background-position: -10px 6px; }
+  50%  { background-position: 8px -4px; }
+  75%  { background-position: -6px -8px; }
+  100% { background-position: 0 0; }
+}
+
+/* glow-ring — primary hover state for cards on dark canvas. No transform
+ * (no translate/scale — those feel desktop-app-y); the affordance is the
+ * accent-tinted glow + the hairline outline becoming visible. */
+.glow-ring {
+  position: relative;
+  transition: outline-color 0.18s ease, box-shadow 0.22s ease;
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+}
+.glow-ring:hover {
+  outline-color: var(--accent);
+  box-shadow: 0 0 60px var(--accent-glow);
+}
+
+/* mono-overline — small-caps mono section labels (DESIGN.md typography).
+ * Use above hero copy, above section heads, as form-field group labels. */
+.mono-overline {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  display: inline-block;
+}
+
+/* hairline-t / hairline-b — semantic 1px top/bottom borders matching the
+ * ambient-light direction of dark surfaces. Use these instead of writing
+ * `border-top: 1px solid hsl(...)` inline. */
+.hairline-t { border-top: 1px solid var(--hairline-top); }
+.hairline-b { border-bottom: 1px solid var(--hairline-bottom); }
+
+/* stage — the constrained content container that all surfaces compose
+ * inside of. Side gutters scale with viewport but never crush content. */
+.stage {
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: clamp(24px, 5vw, 56px);
+}
+
+/* Respect reduced motion across all atmospheric layers. */
+@media (prefers-reduced-motion: reduce) {
+  .canvas-mesh,
+  .canvas-grain { animation: none !important; }
 }
 
 .card {

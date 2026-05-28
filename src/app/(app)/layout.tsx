@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAllPaths } from "@/lib/content";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import { CanvasBackdrop } from "@/components/layout/CanvasBackdrop";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -41,7 +42,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   } : null);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-app)" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-app)", position: "relative" }}>
+      {/* Always-on atmospheric layer (mesh + grain). Mounted once here so
+          every authenticated page inherits the canvas. Pure CSS, no JS work
+          per route. */}
+      <CanvasBackdrop />
+
       <AppSidebar user={sidebarUser} />
       <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         {children}

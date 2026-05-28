@@ -16,20 +16,26 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 const STORAGE_KEY = "ailearn-theme";
 
 function resolveSystem(): ResolvedTheme {
-  if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  // We are a drenched-dark-by-default product. When the user has selected
+  // "system" we still default to dark — the design IS the dark experience.
+  // Only honor `prefers-color-scheme: light` if the user has actively asked
+  // for system AND their OS says light.
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
 function getInitial(): Theme {
-  if (typeof window === "undefined") return "system";
+  // First-time visitors get dark, not system. This matches the redesigned
+  // brand: dark is the front door, not an opt-in mode.
+  if (typeof window === "undefined") return "dark";
   const saved = window.localStorage.getItem(STORAGE_KEY) as Theme | null;
   if (saved === "light" || saved === "dark" || saved === "system") return saved;
-  return "system";
+  return "dark";
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
+  const [theme, setThemeState] = useState<Theme>("dark");
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("dark");
 
   useEffect(() => {
     const initial = getInitial();
@@ -71,7 +77,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
   if (!ctx) {
-    return { theme: "system", resolvedTheme: "light", setTheme: () => {}, toggle: () => {} };
+    // Fallback for components rendered outside the provider — return dark
+    // to match the SSR/no-JS-yet rendering of :root.
+    return { theme: "dark", resolvedTheme: "dark", setTheme: () => {}, toggle: () => {} };
   }
   return ctx;
 }

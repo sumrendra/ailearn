@@ -35,6 +35,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${instrumentSerif.variable}`} suppressHydrationWarning>
+      <head>
+        {/* No-flash theme script. Runs before any paint, reads the saved
+            preference from localStorage, and applies the right data-theme
+            attribute. Without this, light-mode users see a dark→light flash
+            because :root defaults to dark and ThemeProvider only runs after
+            React hydrates. The script is small enough to inline; it must
+            run synchronously, before <body> renders. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('ailearn-theme');var r='dark';if(t==='light'||t==='dark'){r=t;}else if(t==='system'){r=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}document.documentElement.setAttribute('data-theme',r);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`,
+          }}
+        />
+      </head>
       <body>
         <AuthProvider>
           <ThemeProvider>{children}</ThemeProvider>
