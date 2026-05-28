@@ -7,7 +7,7 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import {
   Sparkles, Copy, Check, X, BookOpen, Trophy,
-  Clock, Zap, ChevronLeft, ChevronRight, Lightbulb,
+  Clock, Zap, ChevronLeft, ChevronRight, Lightbulb, CheckCircle2,
 } from "lucide-react";
 import { TutorChat } from "@/components/ai/TutorChat";
 import { SqlPlayground } from "@/components/playground/SqlPlayground";
@@ -331,36 +331,22 @@ const MD_COMPONENTS = {
   blockquote: ({ children }: { children?: React.ReactNode }) => (
     <blockquote
       style={{
-        position: "relative",
+        display: "flex",
+        gap: 14,
         margin: "28px 0",
-        padding: "20px 20px 16px 20px",
-        background: "rgba(108,71,255,0.05)",
-        borderLeft: "4px solid var(--accent)",
+        padding: "18px 20px",
+        background: "color-mix(in srgb, var(--accent) 5%, transparent)",
+        borderLeft: "3px solid var(--accent)",
         borderRadius: `0 var(--radius-md) var(--radius-md) 0`,
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          top: -11,
-          left: 14,
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          color: "var(--accent)",
-          textTransform: "uppercase",
-          background: "var(--bg-card)",
-          padding: "2px 9px",
-          borderRadius: "var(--radius-full)",
-          border: "1px solid rgba(108,71,255,0.2)",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 5,
-        }}
-      >
-        <Lightbulb size={10} strokeWidth={2.4} /> Note
-      </div>
-      <div style={{ marginTop: 6 }}>{children}</div>
+      <Lightbulb
+        size={20}
+        strokeWidth={2}
+        color="var(--accent)"
+        style={{ flexShrink: 0, marginTop: 4 }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
     </blockquote>
   ),
 
@@ -384,7 +370,7 @@ const MD_COMPONENTS = {
         color: "var(--accent-text)",
         textTransform: "uppercase",
         letterSpacing: "0.07em",
-        borderBottom: "1px solid rgba(108,71,255,0.2)",
+        borderBottom: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
       }}
     >
       {children}
@@ -410,8 +396,7 @@ const MD_COMPONENTS = {
       style={{
         margin: "44px 0",
         height: 1,
-        background: "linear-gradient(90deg, var(--accent), transparent)",
-        opacity: 0.2,
+        background: "var(--border-subtle)",
       }}
     />
   ),
@@ -424,7 +409,7 @@ const MD_COMPONENTS = {
       style={{
         color: "var(--accent)",
         textDecoration: "underline",
-        textDecorationColor: "rgba(108,71,255,0.3)",
+        textDecorationColor: "color-mix(in srgb, var(--accent) 30%, transparent)",
         textUnderlineOffset: 3,
       }}
     >
@@ -611,7 +596,7 @@ export function LessonViewer({
                   display: "inline-flex", alignItems: "center", gap: 5,
                   fontSize: 12.5, fontWeight: 600, color: "var(--xp-gold)",
                   background: "var(--xp-gold-light)",
-                  border: "1px solid rgba(245,158,11,0.25)",
+                  border: "1px solid color-mix(in srgb, var(--xp-gold) 25%, transparent)",
                   padding: "4px 11px", borderRadius: 999,
                 }}>
                   <Zap size={12} /> +{xpReward} XP
@@ -678,13 +663,17 @@ export function LessonViewer({
           textAlign: "center",
           boxShadow: `0 8px 32px ${pathColor}10`,
         }}>
-          <div style={{ fontSize: 40, marginBottom: 12, lineHeight: 1 }}>{isCompleted ? "✅" : "🎉"}</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, lineHeight: 1 }}>
+            {isCompleted
+              ? <CheckCircle2 size={38} strokeWidth={2} color="var(--success)" />
+              : <Trophy size={38} strokeWidth={2} color="var(--success)" />}
+          </div>
           <h3 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", marginBottom: 8, letterSpacing: "-0.02em" }}>
             {isCompleted ? "You've completed this lesson" : "Finished reading?"}
           </h3>
           <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.65, maxWidth: 380, margin: "0 auto 20px" }}>
             {isCompleted
-              ? "Reinforce what you learned — practice with flashcards or test yourself with a quick quiz."
+              ? "Keep it warm. Flashcards or a quiz will lock it in."
               : "Mark this lesson complete to lock in your progress, then reinforce it with flashcards or a quiz."}
           </p>
 
@@ -697,11 +686,11 @@ export function LessonViewer({
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 padding: "12px 26px",
-                background: pathColor, color: "#fff",
+                background: "var(--accent)", color: "#fff",
                 border: "none", borderRadius: "var(--radius-md)",
                 fontSize: 14, fontWeight: 700,
                 cursor: marking ? "wait" : "pointer",
-                boxShadow: `0 6px 20px ${pathColor}55`,
+                boxShadow: "0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent)",
                 marginBottom: 22,
                 opacity: marking ? 0.85 : 1,
                 transition: "all 0.18s",
@@ -710,20 +699,6 @@ export function LessonViewer({
               <Check size={16} strokeWidth={3} />
               {marking ? "Saving…" : `Mark complete${xpReward ? ` · +${xpReward} XP` : ""}`}
             </button>
-          )}
-          {isCompleted && (
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              padding: "10px 22px",
-              background: "color-mix(in srgb, var(--success) 12%, transparent)",
-              color: "var(--success)",
-              border: "1px solid color-mix(in srgb, var(--success) 28%, transparent)",
-              borderRadius: 999,
-              fontSize: 13, fontWeight: 700,
-              marginBottom: 22,
-            }}>
-              <Check size={14} strokeWidth={3} /> Marked complete
-            </div>
           )}
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: prevLesson || nextLesson ? 24 : 0 }}>
             <Link href={`/flashcards?lesson=${lessonSlug}`} style={{ textDecoration: "none" }}>
@@ -833,7 +808,7 @@ export function LessonViewer({
               onClick={() => scrollTo(id)}
               style={{
                 display: "block", width: "100%", textAlign: "left",
-                background: activeId === id ? "rgba(108,71,255,0.06)" : "transparent",
+                background: activeId === id ? "color-mix(in srgb, var(--accent) 6%, transparent)" : "transparent",
                 border: "none",
                 borderLeft: activeId === id ? "2px solid var(--accent)" : "2px solid transparent",
                 cursor: "pointer",
