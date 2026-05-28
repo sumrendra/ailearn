@@ -1,13 +1,16 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, BookOpen, ListOrdered,
   CheckCircle2, Clock, X, ArrowLeft, Check, Loader2,
 } from "lucide-react";
 import { LessonViewer } from "@/components/learn/LessonViewer";
+import { ShortcutsHelp } from "@/components/learn/ShortcutsHelp";
+import { useLessonShortcuts } from "@/hooks/useLessonShortcuts";
 import dynamic from "next/dynamic";
 
 // Lazy-load the new clean diagrams (replace the old emoji-based ones)
@@ -73,12 +76,19 @@ export function LessonPageClient({
   lesson, path, pathColors, lessons, currentIdx, prevLesson, nextLesson,
   initialCompleted = false, completedSlugs = [], isAuthed = false,
 }: Props) {
+  const router = useRouter();
   const [panelOpen, setPanelOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [completed, setCompleted] = useState(initialCompleted);
   const [completedSet, setCompletedSet] = useState<Set<string>>(() => new Set(completedSlugs));
   const [marking, setMarking] = useState(false);
   const [justCompleted, setJustCompleted] = useState<{ xp: number } | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  // Refs for focus management: when the slide-over closes we restore focus to
+  // the button that opened it (a11y best practice — keyboard users shouldn't
+  // get stranded). `panelRef` lets us focus the first lesson link on open.
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const diagram = LESSON_DIAGRAMS[lesson.slug] ?? null;
 
   useEffect(() => { setMounted(true); }, []);
@@ -131,6 +141,37 @@ export function LessonPageClient({
     const t = setTimeout(() => setJustCompleted(null), 4200);
     return () => clearTimeout(t);
   }, [justCompleted]);
+
+  // Focus management for the slide-over lesson list.
+  //   open  → focus the first lesson link in the panel
+  //   close → return focus to the toggle button (only if it had been opened,
+  //           so we don't snatch focus on the initial render).
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (panelOpen) {
+      wasOpenRef.current = true;
+      // Defer until after framer-motion animates the panel in.
+      const t = setTimeout(() => {
+        const firstLink = panelRef.current?.querySelector<HTMLAnchorElement>("a");
+        firstLink?.focus();
+      }, 80);
+      return () => clearTimeout(t);
+    } else if (wasOpenRef.current) {
+      toggleButtonRef.current?.focus();
+    }
+  }, [panelOpen]);
+
+  // Wire the keyboard shortcuts to local handlers. Handlers are `undefined`
+  // when the action isn't valid for the current state (e.g. no next lesson),
+  // which the hook treats as "ignore this key".
+  useLessonShortcuts({
+    onPrev: prevLesson ? () => router.push(`/lessons/${prevLesson.slug}`) : undefined,
+    onNext: nextLesson ? () => router.push(`/lessons/${nextLesson.slug}`) : undefined,
+    onMarkComplete: !completed && isAuthed ? markComplete : undefined,
+    onTogglePanel: () => setPanelOpen((v) => !v),
+    onCloseOnEsc: panelOpen ? () => setPanelOpen(false) : undefined,
+    onToggleHelp: () => setHelpOpen((v) => !v),
+  });
 
   const completedCount = completedSet.size;
 
@@ -190,7 +231,15 @@ export function LessonPageClient({
             whileTap={completed ? {} : { scale: 0.97 }}
             onClick={markComplete}
             disabled={completed || marking}
-            title={completed ? "You've completed this lesson" : "Mark this lesson complete"}
+            aria-pressed={completed}
+            aria-label={
+              completed
+                ? "Lesson marked complete"
+                : marking
+                ? "Marking lesson complete"
+                : "Mark this lesson complete"
+            }
+            title={completed ? "You've completed this lesson" : "Mark this lesson complete (M)"}
             style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 14px", borderRadius: 8, flexShrink: 0,
@@ -222,11 +271,32 @@ export function LessonPageClient({
           </motion.button>
         )}
 
+        {/* Polite SR announcement for completion. Visually hidden but spoken
+            by screen readers when `completed` flips true. */}
+        <span
+          aria-live="polite"
+          style={{
+            position: "absolute",
+            width: 1, height: 1,
+            padding: 0, margin: -1,
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+            whiteSpace: "nowrap",
+            border: 0,
+          }}
+        >
+          {completed ? "Lesson marked complete" : ""}
+        </span>
+
         {/* Lessons toggle button */}
         <motion.button
+          ref={toggleButtonRef}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => setPanelOpen(v => !v)}
+          aria-expanded={panelOpen}
+          aria-haspopup="dialog"
+          aria-label={panelOpen ? "Close lesson list" : "Open lesson list"}
           style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "6px 14px", borderRadius: 8, flexShrink: 0,
@@ -294,6 +364,7 @@ export function LessonPageClient({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setPanelOpen(false)}
+                aria-label="Close lesson list"
                 style={{
                   position: "fixed", inset: 0, zIndex: 9990,
                   background: "rgba(0,0,0,0.45)",
@@ -303,6 +374,10 @@ export function LessonPageClient({
 
               {/* Panel */}
               <motion.div
+                ref={panelRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Lesson list"
                 initial={{ x: -320, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -320, opacity: 0 }}
@@ -335,6 +410,7 @@ export function LessonPageClient({
                     </div>
                     <button
                       onClick={() => setPanelOpen(false)}
+                      aria-label="Close lesson list"
                       style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4, borderRadius: 6 }}
                     >
                       <X size={16} />
@@ -466,6 +542,9 @@ export function LessonPageClient({
         </AnimatePresence>,
         document.body
       )}
+
+      {/* Keyboard shortcuts help overlay (own portal). */}
+      <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       {/* ── Main content ──────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
