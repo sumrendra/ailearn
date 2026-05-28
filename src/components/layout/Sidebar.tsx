@@ -5,8 +5,10 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Map, BookOpen, FlipHorizontal,
   Trophy, Mic, Search, StickyNote,
-  Settings, Sparkles, Flame, ChevronRight,
+  Settings, Sparkles, Flame,
 } from "lucide-react";
+
+const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 const navGroups = [
   {
@@ -42,33 +44,36 @@ export function Sidebar() {
     pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
 
   return (
-    <aside style={{
-      width: "var(--sidebar-width)",
-      minHeight: "100vh",
-      background: "var(--bg-sidebar)",
-      borderRight: "1px solid var(--border-subtle)",
-      display: "flex",
-      flexDirection: "column",
-      position: "fixed",
-      top: 0, left: 0, bottom: 0,
-      zIndex: 40,
-    }}>
+    <aside
+      className="glass-pane"
+      style={{
+        width: "var(--sidebar-width)",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        position: "sticky",
+        top: 0,
+        zIndex: 40,
+        border: "none",
+        borderRight: "1px solid var(--border-default)",
+      }}
+    >
       {/* ── Logo ───────────────────────────────────────────────────────── */}
-      <div style={{
-        padding: "18px 20px 16px",
-        borderBottom: "1px solid var(--border-subtle)",
-      }}>
+      <div
+        className="hairline-b"
+        style={{ padding: "18px 20px 16px" }}
+      >
         <Link href="/dashboard" style={{ textDecoration: "none" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
               width: 34, height: 34,
-              background: "linear-gradient(135deg, #6c47ff, #9b6dff)",
+              background: "linear-gradient(135deg, var(--accent), var(--accent-hover))",
               borderRadius: 9,
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 2px 8px rgba(108,71,255,0.35)",
+              boxShadow: "0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent)",
               flexShrink: 0,
             }}>
-              <Sparkles size={16} color="#fff" />
+              <Sparkles size={16} color="var(--text-on-accent)" />
             </div>
             <div>
               <div style={{
@@ -89,23 +94,27 @@ export function Sidebar() {
       {/* ── Daily challenge strip ───────────────────────────────────────── */}
       <div style={{ padding: "10px 12px 0" }}>
         <Link href="/challenge" style={{ textDecoration: "none" }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "9px 12px",
-            background: "linear-gradient(90deg, rgba(234,87,10,0.08), rgba(234,87,10,0.04))",
-            border: "1px solid rgba(234,87,10,0.15)",
-            borderRadius: "var(--radius-md)",
-            cursor: "pointer",
-            transition: "background 0.12s",
-          }}>
+          <div
+            className="hairline-t"
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "9px 12px",
+              background: "color-mix(in srgb, var(--streak-orange) 8%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--streak-orange) 18%, transparent)",
+              borderRadius: "var(--radius-md)",
+              cursor: "pointer",
+              transition: `background 0.18s ${EASE}`,
+            }}
+          >
             <Flame size={14} color="var(--streak-orange)" />
             <span style={{ fontSize: 13, color: "var(--streak-orange)", fontWeight: 500, flex: 1 }}>
               Daily challenge
             </span>
             <span style={{
               fontSize: 10, fontWeight: 600,
-              background: "var(--streak-orange)", color: "#fff",
+              background: "var(--streak-orange)", color: "var(--text-on-accent)",
               padding: "2px 6px", borderRadius: 4,
+              fontFamily: "var(--font-mono)",
             }}>+25 XP</span>
           </div>
         </Link>
@@ -115,13 +124,14 @@ export function Sidebar() {
       <nav style={{ flex: 1, padding: "8px 12px", overflowY: "auto" }}>
         {navGroups.map((group) => (
           <div key={group.label} style={{ marginBottom: 4 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 600,
-              color: "var(--text-tertiary)",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              padding: "10px 8px 4px",
-            }}>
+            <div
+              className="mono-overline"
+              style={{
+                color: "var(--text-tertiary)",
+                padding: "10px 8px 4px",
+                display: "block",
+              }}
+            >
               {group.label}
             </div>
             {group.items.map((item) => {
@@ -129,29 +139,21 @@ export function Sidebar() {
               const active = isActive(item.href);
               return (
                 <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    padding: "7px 10px",
-                    borderRadius: "var(--radius-md)",
-                    marginBottom: 1,
-                    background: active ? "var(--accent-light)" : "transparent",
-                    color: active ? "var(--accent)" : "var(--text-secondary)",
-                    fontWeight: active ? 600 : 400,
-                    fontSize: 13.5,
-                    cursor: "pointer",
-                    transition: "background 0.1s, color 0.1s",
-                  }}
-                    onMouseEnter={(e) => {
-                      if (!active) {
-                        (e.currentTarget as HTMLDivElement).style.background = "var(--bg-tertiary)";
-                        (e.currentTarget as HTMLDivElement).style.color = "var(--text-primary)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) {
-                        (e.currentTarget as HTMLDivElement).style.background = "transparent";
-                        (e.currentTarget as HTMLDivElement).style.color = "var(--text-secondary)";
-                      }
+                  <div
+                    className={active ? undefined : "glow-ring"}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "7px 10px",
+                      borderRadius: "var(--radius-md)",
+                      marginBottom: 1,
+                      background: active ? "var(--accent-soft)" : "transparent",
+                      color: active ? "var(--accent-text)" : "var(--text-secondary)",
+                      outline: active ? "1px solid var(--accent)" : undefined,
+                      outlineOffset: active ? "-1px" : undefined,
+                      fontWeight: active ? 600 : 400,
+                      fontSize: 13.5,
+                      cursor: "pointer",
+                      transition: `background 0.18s ${EASE}, color 0.18s ${EASE}, outline-color 0.18s ${EASE}, box-shadow 0.22s ${EASE}`,
                     }}
                   >
                     <Icon size={16} strokeWidth={active ? 2.2 : 1.8} />
@@ -159,9 +161,10 @@ export function Sidebar() {
                     {item.badge && (
                       <span style={{
                         fontSize: 9, fontWeight: 700,
-                        background: "var(--accent)", color: "#fff",
+                        background: "var(--accent)", color: "var(--text-on-accent)",
                         padding: "2px 5px", borderRadius: 4,
                         letterSpacing: "0.04em",
+                        fontFamily: "var(--font-mono)",
                       }}>
                         {item.badge}
                       </span>
@@ -175,15 +178,24 @@ export function Sidebar() {
       </nav>
 
       {/* ── Bottom: settings ────────────────────────────────────────────── */}
-      <div style={{ padding: "8px 12px 16px", borderTop: "1px solid var(--border-subtle)" }}>
+      <div
+        className="hairline-t"
+        style={{ padding: "8px 12px 16px" }}
+      >
         <Link href="/settings" style={{ textDecoration: "none" }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 10,
-            padding: "7px 10px", borderRadius: "var(--radius-md)",
-            color: pathname === "/settings" ? "var(--accent)" : "var(--text-secondary)",
-            background: pathname === "/settings" ? "var(--accent-light)" : "transparent",
-            fontSize: 13.5, cursor: "pointer",
-          }}>
+          <div
+            className={pathname === "/settings" ? undefined : "glow-ring"}
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "7px 10px", borderRadius: "var(--radius-md)",
+              color: pathname === "/settings" ? "var(--accent-text)" : "var(--text-secondary)",
+              background: pathname === "/settings" ? "var(--accent-soft)" : "transparent",
+              outline: pathname === "/settings" ? "1px solid var(--accent)" : undefined,
+              outlineOffset: pathname === "/settings" ? "-1px" : undefined,
+              fontSize: 13.5, cursor: "pointer",
+              transition: `background 0.18s ${EASE}, color 0.18s ${EASE}, outline-color 0.18s ${EASE}, box-shadow 0.22s ${EASE}`,
+            }}
+          >
             <Settings size={16} strokeWidth={1.8} />
             <span style={{ flex: 1 }}>Settings</span>
           </div>

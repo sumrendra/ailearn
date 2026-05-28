@@ -10,7 +10,6 @@ import {
   CreditCard,
   Trophy,
   MessageSquare,
-  User,
   Settings,
   LogOut,
   LogIn,
@@ -44,6 +43,7 @@ interface IconRailProps {
 const RAIL_COLLAPSED = 64;
 const RAIL_EXPANDED = 236;
 const STORAGE_KEY = "ailearn-rail-open";
+const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",  icon: <LayoutDashboard size={20} />, label: "Dashboard" },
@@ -77,64 +77,55 @@ export function IconRail({ user }: IconRailProps) {
     });
   }
 
-  // Close on outside click (only when expanded)
-  useEffect(() => {
-    if (!open) return;
-    function handler(e: MouseEvent) {
-      if (railRef.current && !railRef.current.contains(e.target as Node)) {
-        // Don't auto-close — let user control it
-      }
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
   if (!mounted) {
     return <div style={{ width: RAIL_COLLAPSED, flexShrink: 0 }} />;
   }
 
   return (
     <>
-      {/* Animated rail */}
+      {/* Animated rail — frosted glass over the canvas mesh */}
       <motion.aside
         ref={railRef}
+        className="glass-pane"
         initial={false}
         animate={{ width: open ? RAIL_EXPANDED : RAIL_COLLAPSED }}
         transition={{ type: "spring", stiffness: 320, damping: 36, mass: 0.8 }}
         style={{
-          position: "fixed",
-          left: 0, top: 0, bottom: 0,
+          position: "sticky",
+          top: 0,
+          height: "100vh",
           zIndex: 50,
-          background: "var(--bg-surface)",
-          borderRight: "1px solid var(--border-subtle)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          boxShadow: open ? "4px 0 32px rgba(0,0,0,0.08)" : "none",
+          border: "none",
+          borderRight: "1px solid var(--border-default)",
         }}
       >
         {/* ── Logo + toggle ── */}
-        <div style={{
-          height: 60, flexShrink: 0,
-          display: "flex", alignItems: "center",
-          padding: "0 12px",
-          borderBottom: "1px solid var(--border-subtle)",
-          gap: 10,
-        }}>
+        <div
+          className="hairline-b"
+          style={{
+            height: 60, flexShrink: 0,
+            display: "flex", alignItems: "center",
+            padding: "0 12px",
+            gap: 10,
+          }}
+        >
           {/* Logo icon */}
           <motion.div
             whileHover={{ rotate: [0, -8, 8, 0] }}
             transition={{ duration: 0.4 }}
             style={{
               width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-              background: "linear-gradient(135deg, #6c47ff, #a78bff)",
+              background: "linear-gradient(135deg, var(--accent), var(--accent-hover))",
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 16px rgba(108,71,255,0.3)",
+              boxShadow: "0 4px 16px color-mix(in srgb, var(--accent) 30%, transparent)",
               cursor: "pointer",
             }}
             onClick={toggle}
           >
-            <Brain size={20} color="#fff" />
+            <Brain size={20} color="var(--text-on-accent)" />
           </motion.div>
 
           {/* Brand name */}
@@ -189,41 +180,25 @@ export function IconRail({ user }: IconRailProps) {
             const active = pathname.startsWith(item.href);
             return (
               <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
-                <motion.div
-                  onHoverStart={() => setHovered(item.href)}
-                  onHoverEnd={() => setHovered(null)}
-                  whileTap={{ scale: 0.96 }}
+                <div
+                  className={active ? undefined : "glow-ring"}
+                  onMouseEnter={() => setHovered(item.href)}
+                  onMouseLeave={() => setHovered(null)}
                   style={{
                     position: "relative",
                     display: "flex", alignItems: "center", gap: 12,
                     padding: "10px 12px",
                     borderRadius: 10,
-                    background: active
-                      ? "var(--accent-light)"
-                      : hovered === item.href
-                        ? "var(--bg-sunken)"
-                        : "transparent",
-                    color: active ? "var(--accent)" : "var(--text-secondary)",
-                    transition: "background 0.12s, color 0.12s",
+                    background: active ? "var(--accent-soft)" : "transparent",
+                    color: active ? "var(--accent-text)" : "var(--text-secondary)",
+                    outline: active ? "1px solid var(--accent)" : undefined,
+                    outlineOffset: active ? "-1px" : undefined,
+                    transition: `background 0.18s ${EASE}, color 0.18s ${EASE}, outline-color 0.18s ${EASE}, box-shadow 0.22s ${EASE}`,
                     overflow: "hidden",
                     cursor: "pointer",
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {/* Active indicator pill */}
-                  {active && (
-                    <motion.div
-                      layoutId="active-pill"
-                      style={{
-                        position: "absolute", left: 0, top: "50%",
-                        transform: "translateY(-50%)",
-                        width: 3, height: 22, borderRadius: "0 3px 3px 0",
-                        background: "var(--accent)",
-                      }}
-                      transition={{ type: "spring", stiffness: 400, damping: 35 }}
-                    />
-                  )}
-
                   <div style={{ flexShrink: 0, display: "flex" }}>
                     {item.icon}
                   </div>
@@ -249,32 +224,23 @@ export function IconRail({ user }: IconRailProps) {
                       initial={{ opacity: 0, x: -6, scale: 0.9 }}
                       animate={{ opacity: 1, x: 0, scale: 1 }}
                       exit={{ opacity: 0 }}
+                      className="glass-pane"
                       style={{
                         position: "fixed",
                         left: RAIL_COLLAPSED + 10,
-                        background: "#1a1a2e",
-                        color: "#fff",
+                        color: "var(--text-primary)",
                         padding: "6px 10px",
                         borderRadius: 7,
                         fontSize: 13, fontWeight: 600,
                         whiteSpace: "nowrap",
                         pointerEvents: "none",
-                        boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
                         zIndex: 100,
                       }}
                     >
                       {item.label}
-                      {/* Arrow */}
-                      <div style={{
-                        position: "absolute", left: -5, top: "50%", transform: "translateY(-50%)",
-                        width: 0, height: 0,
-                        borderTop: "5px solid transparent",
-                        borderBottom: "5px solid transparent",
-                        borderRight: "5px solid #1a1a2e",
-                      }} />
                     </motion.div>
                   )}
-                </motion.div>
+                </div>
               </Link>
             );
           })}
@@ -288,24 +254,25 @@ export function IconRail({ user }: IconRailProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
               transition={{ duration: 0.2 }}
+              className="hairline-t"
               style={{
                 margin: "0 8px 8px",
                 padding: "10px 12px",
-                background: "linear-gradient(135deg, rgba(108,71,255,0.08), rgba(167,139,255,0.05))",
+                background: "color-mix(in srgb, var(--accent) 8%, transparent)",
                 borderRadius: 10,
-                border: "1px solid rgba(108,71,255,0.12)",
+                border: "1px solid color-mix(in srgb, var(--accent) 12%, transparent)",
               }}
             >
-              <div style={{ display: "flex", gap: 12 }}>
+              <div style={{ display: "flex", gap: 12, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <Zap size={13} color="#eab308" />
+                  <Zap size={13} color="var(--warning)" />
                   <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>
                     {(user.xp ?? 0).toLocaleString()} XP
                   </span>
                 </div>
                 {(user.currentStreak ?? 0) > 0 && (
                   <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <Flame size={13} color="#ef4444" />
+                    <Flame size={13} color="var(--danger)" />
                     <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>
                       {user.currentStreak}d
                     </span>
@@ -313,11 +280,21 @@ export function IconRail({ user }: IconRailProps) {
                 )}
               </div>
               <div style={{ marginTop: 6 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--text-tertiary)", marginBottom: 4 }}>
-                  <span>Lv.{user.level ?? 1}</span>
-                  <span>Lv.{(user.level ?? 1) + 1}</span>
+                <div
+                  className="mono-overline"
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 9.5,
+                    color: "var(--text-tertiary)",
+                    marginBottom: 4,
+                    letterSpacing: "0.14em",
+                  }}
+                >
+                  <span>Lv {user.level ?? 1}</span>
+                  <span>Lv {(user.level ?? 1) + 1}</span>
                 </div>
-                <div style={{ height: 4, background: "rgba(0,0,0,0.1)", borderRadius: 99, overflow: "hidden" }}>
+                <div style={{ height: 4, background: "var(--bg-sunken)", borderRadius: 99, overflow: "hidden" }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${((user.xp ?? 0) % 500) / 5}%` }}
@@ -331,32 +308,34 @@ export function IconRail({ user }: IconRailProps) {
         </AnimatePresence>
 
         {/* ── Bottom user section ── */}
-        <div style={{
-          padding: "8px 8px 12px",
-          borderTop: "1px solid var(--border-subtle)",
-          display: "flex", flexDirection: "column", gap: 2,
-        }}>
+        <div
+          className="hairline-t"
+          style={{
+            padding: "8px 8px 12px",
+            display: "flex", flexDirection: "column", gap: 2,
+          }}
+        >
           {user ? (
             <>
               {/* Profile row */}
               <Link href="/settings" style={{ textDecoration: "none" }}>
-                <motion.div
-                  whileTap={{ scale: 0.96 }}
-                  onHoverStart={() => setHovered("settings")}
-                  onHoverEnd={() => setHovered(null)}
+                <div
+                  className="glow-ring"
+                  onMouseEnter={() => setHovered("settings")}
+                  onMouseLeave={() => setHovered(null)}
                   style={{
                     display: "flex", alignItems: "center", gap: 10,
                     padding: "8px 10px", borderRadius: 10,
-                    background: hovered === "settings" ? "var(--bg-sunken)" : "transparent",
-                    transition: "background 0.12s",
+                    background: hovered === "settings" ? "var(--bg-overlay)" : "transparent",
+                    transition: `background 0.18s ${EASE}, box-shadow 0.22s ${EASE}, outline-color 0.18s ${EASE}`,
                     cursor: "pointer",
                   }}
                 >
                   <div style={{
                     width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                    background: "linear-gradient(135deg, #6c47ff, #a78bff)",
+                    background: "linear-gradient(135deg, var(--accent), var(--accent-hover))",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 13, fontWeight: 700, color: "#fff",
+                    fontSize: 13, fontWeight: 700, color: "var(--text-on-accent)",
                   }}>
                     {(user.name ?? user.email ?? "?")[0].toUpperCase()}
                   </div>
@@ -379,24 +358,26 @@ export function IconRail({ user }: IconRailProps) {
                     )}
                   </AnimatePresence>
                   {open && <Settings size={14} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />}
-                </motion.div>
+                </div>
               </Link>
 
               {/* Sign out */}
               <form action="/api/auth/signout" method="POST">
-                <motion.button
+                <button
                   type="submit"
-                  whileTap={{ scale: 0.96 }}
-                  onHoverStart={() => setHovered("signout")}
-                  onHoverEnd={() => setHovered(null)}
+                  className="glow-ring"
+                  onMouseEnter={() => setHovered("signout")}
+                  onMouseLeave={() => setHovered(null)}
                   style={{
                     width: "100%",
                     display: "flex", alignItems: "center", gap: 12,
                     padding: "8px 12px", borderRadius: 10,
-                    background: hovered === "signout" ? "rgba(220,38,38,0.06)" : "transparent",
+                    background: hovered === "signout"
+                      ? "color-mix(in srgb, var(--danger) 8%, transparent)"
+                      : "transparent",
                     border: "none", cursor: "pointer",
                     color: hovered === "signout" ? "var(--danger)" : "var(--text-tertiary)",
-                    transition: "background 0.12s, color 0.12s",
+                    transition: `background 0.18s ${EASE}, color 0.18s ${EASE}, box-shadow 0.22s ${EASE}, outline-color 0.18s ${EASE}`,
                     textAlign: "left",
                   }}
                 >
@@ -414,25 +395,26 @@ export function IconRail({ user }: IconRailProps) {
                       </motion.span>
                     )}
                   </AnimatePresence>
-                </motion.button>
+                </button>
               </form>
             </>
           ) : (
             /* Guest — sign in button */
             <Link href="/login" style={{ textDecoration: "none" }}>
-              <motion.div
-                whileTap={{ scale: 0.96 }}
-                onHoverStart={() => setHovered("login")}
-                onHoverEnd={() => setHovered(null)}
+              <div
+                className="glow-ring"
+                onMouseEnter={() => setHovered("login")}
+                onMouseLeave={() => setHovered(null)}
                 style={{
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "10px 12px", borderRadius: 10,
                   background: hovered === "login"
-                    ? "var(--accent-light)"
-                    : "rgba(108,71,255,0.06)",
-                  border: "1px solid rgba(108,71,255,0.15)",
-                  cursor: "pointer", transition: "background 0.12s",
-                  color: "var(--accent)",
+                    ? "var(--accent-soft)"
+                    : "color-mix(in srgb, var(--accent) 6%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--accent) 15%, transparent)",
+                  cursor: "pointer",
+                  transition: `background 0.18s ${EASE}, box-shadow 0.22s ${EASE}, outline-color 0.18s ${EASE}`,
+                  color: "var(--accent-text)",
                 }}
               >
                 <LogIn size={18} style={{ flexShrink: 0 }} />
@@ -449,20 +431,11 @@ export function IconRail({ user }: IconRailProps) {
                     </motion.span>
                   )}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             </Link>
           )}
         </div>
       </motion.aside>
-
-      {/* Spacer so content doesn't hide behind rail */}
-      <motion.div
-        aria-hidden
-        initial={false}
-        animate={{ width: open ? RAIL_EXPANDED : RAIL_COLLAPSED }}
-        transition={{ type: "spring", stiffness: 320, damping: 36, mass: 0.8 }}
-        style={{ flexShrink: 0 }}
-      />
     </>
   );
 }

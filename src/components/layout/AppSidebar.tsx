@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BookOpen, FileText, MessageCircle, Trophy, Search,
-  Sparkles, ChevronsLeft, Settings, LogOut, LogIn, ListTree, Mic,
+  Sparkles, ChevronsLeft, Settings, LogIn, ListTree, Mic,
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -31,11 +31,13 @@ const NAV_ITEMS = [
 ];
 
 const STORAGE_KEY = "ailearn-sidebar-collapsed";
+const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /**
- * App-level sidebar — premium glass surface, smooth collapse, theme toggle.
- * Replaces the original IconRail. Tries to feel like Linear / Notion: deliberate,
- * tight, subtly animated.
+ * App-level sidebar — frosted glass surface floating above the canvas mesh.
+ * Uses `.glass-pane` so atmospheric mesh drifts visibly behind it; nav items
+ * use `.glow-ring` on hover and an accent outline on active (no path-color
+ * backgrounds; path identity stays ambient).
  */
 export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
@@ -63,6 +65,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
   return (
     <aside
+      className="glass-pane"
       style={{
         width,
         flexShrink: 0,
@@ -71,9 +74,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
         top: 0,
         display: "flex",
         flexDirection: "column",
-        background: "var(--bg-sidebar)",
-        borderRight: "1px solid var(--border-subtle)",
-        transition: "width 0.24s cubic-bezier(0.16, 1, 0.3, 1)",
+        // Override .glass-pane's full border with a right-only hairline so the
+        // pane reads as an edge of frosted material on the canvas.
+        border: "none",
+        borderRight: "1px solid var(--border-default)",
+        transition: `width 0.24s ${EASE}`,
         zIndex: 10,
       }}
     >
@@ -85,7 +90,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
           alignItems: "center",
           justifyContent: collapsed ? "center" : "space-between",
           gap: 10,
-          transition: "padding 0.24s ease",
+          transition: `padding 0.24s ${EASE}`,
         }}
       >
         <Link
@@ -104,15 +109,15 @@ export function AppSidebar({ user }: AppSidebarProps) {
               width: 32,
               height: 32,
               borderRadius: 9,
-              background: "linear-gradient(135deg, hsl(258 87% 68%), hsl(258 87% 55%))",
+              background: "linear-gradient(135deg, var(--accent-hover), var(--accent))",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
-              boxShadow: "0 4px 12px hsl(258 87% 64% / 0.35)",
+              boxShadow: `0 4px 12px color-mix(in srgb, var(--accent) 35%, transparent)`,
             }}
           >
-            <Sparkles size={16} color="#fff" strokeWidth={2.5} />
+            <Sparkles size={16} color="var(--text-on-accent)" strokeWidth={2.5} />
           </div>
           {!collapsed && (
             <span
@@ -144,10 +149,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              transition: "background 0.15s ease, color 0.15s ease",
+              transition: `background 0.18s ${EASE}, color 0.18s ${EASE}`,
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-subtle)";
+              (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-overlay)";
               (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)";
             }}
             onMouseLeave={(e) => {
@@ -166,26 +171,27 @@ export function AppSidebar({ user }: AppSidebarProps) {
           onClick={openPalette}
           aria-label="Search courses (⌘K)"
           title="Search courses (⌘K)"
+          className="hairline-t"
           style={{
             width: "100%",
             display: "flex",
             alignItems: "center",
             justifyContent: collapsed ? "center" : "space-between",
             padding: collapsed ? "8px 0" : "9px 11px",
-            background: "var(--bg-subtle)",
+            background: "var(--bg-sunken)",
             border: "1px solid var(--border-subtle)",
             borderRadius: 9,
             color: "var(--text-tertiary)",
             fontSize: 13,
             cursor: "pointer",
-            transition: "background 0.15s ease, border-color 0.15s ease",
+            transition: `background 0.18s ${EASE}, border-color 0.18s ${EASE}`,
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-tertiary)";
+            (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-overlay)";
             (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-default)";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-subtle)";
+            (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-sunken)";
             (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-subtle)";
           }}
         >
@@ -197,7 +203,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
             <kbd
               style={{
                 fontSize: 11,
-                color: "var(--text-quaternary)",
+                color: "var(--text-tertiary)",
                 background: "var(--bg-surface)",
                 border: "1px solid var(--border-subtle)",
                 padding: "1px 5px",
@@ -229,6 +235,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
               key={href}
               href={href}
               title={collapsed ? label : undefined}
+              className={active ? undefined : "glow-ring"}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -236,36 +243,17 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 padding: collapsed ? "9px 0" : "9px 12px",
                 justifyContent: collapsed ? "center" : "flex-start",
                 borderRadius: 8,
-                color: active ? "var(--accent)" : "var(--text-secondary)",
-                background: active ? "var(--accent-light)" : "transparent",
+                color: active ? "var(--accent-text)" : "var(--text-secondary)",
+                background: active ? "var(--accent-soft)" : "transparent",
+                outline: active ? "1px solid var(--accent)" : undefined,
+                outlineOffset: active ? "-1px" : undefined,
                 fontSize: 13.5,
                 fontWeight: active ? 600 : 500,
                 textDecoration: "none",
-                transition: "background 0.15s ease, color 0.15s ease",
+                transition: `background 0.18s ${EASE}, color 0.18s ${EASE}, outline-color 0.18s ${EASE}, box-shadow 0.22s ${EASE}`,
                 position: "relative",
               }}
-              onMouseEnter={(e) => {
-                if (!active) (e.currentTarget as HTMLAnchorElement).style.background = "var(--bg-subtle)";
-              }}
-              onMouseLeave={(e) => {
-                if (!active) (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-              }}
             >
-              {/* Active indicator strip */}
-              {active && !collapsed && (
-                <span
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: 3,
-                    height: 18,
-                    background: "var(--accent)",
-                    borderRadius: "0 3px 3px 0",
-                  }}
-                />
-              )}
               <Icon size={16} strokeWidth={active ? 2.5 : 2} style={{ flexShrink: 0 }} />
               {!collapsed && <span style={{ whiteSpace: "nowrap" }}>{label}</span>}
             </Link>
@@ -274,12 +262,16 @@ export function AppSidebar({ user }: AppSidebarProps) {
       </nav>
 
       {/* User card / sign-in */}
-      <div style={{ padding: collapsed ? "10px" : "12px", borderTop: "1px solid var(--border-subtle)" }}>
+      <div
+        className="hairline-t"
+        style={{ padding: collapsed ? "10px" : "12px" }}
+      >
         {user ? (
           <UserCard user={user} collapsed={collapsed} />
         ) : (
           <Link
             href="/login"
+            className="glow-ring"
             style={{
               display: "flex",
               alignItems: "center",
@@ -292,11 +284,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
               fontSize: 13,
               fontWeight: 600,
               textDecoration: "none",
-              boxShadow: "0 4px 12px hsl(258 87% 64% / 0.25)",
-              transition: "transform 0.15s ease",
+              boxShadow: `0 4px 12px color-mix(in srgb, var(--accent) 25%, transparent)`,
+              transition: `background 0.18s ${EASE}, box-shadow 0.22s ${EASE}`,
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)"; }}
           >
             <LogIn size={14} strokeWidth={2.5} />
             {!collapsed && <span>Sign in</span>}
@@ -306,8 +296,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
       {/* Bottom row — theme toggle + expand */}
       <div
+        className="hairline-t"
         style={{
-          padding: collapsed ? "0 10px 12px" : "0 12px 12px",
+          padding: collapsed ? "10px" : "10px 12px 12px",
           display: "flex",
           alignItems: "center",
           justifyContent: collapsed ? "center" : "space-between",
@@ -324,12 +315,13 @@ export function AppSidebar({ user }: AppSidebarProps) {
               height: 32,
               borderRadius: 8,
               border: "1px solid var(--border-subtle)",
-              background: "var(--bg-subtle)",
+              background: "var(--bg-sunken)",
               color: "var(--text-tertiary)",
               cursor: "pointer",
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
+              transition: `background 0.18s ${EASE}, color 0.18s ${EASE}`,
             }}
           >
             <ChevronsLeft size={14} style={{ transform: "rotate(180deg)" }} />
@@ -345,19 +337,19 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 height: 32,
                 borderRadius: 8,
                 border: "1px solid var(--border-subtle)",
-                background: "var(--bg-subtle)",
+                background: "var(--bg-sunken)",
                 color: "var(--text-tertiary)",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                transition: "background 0.15s ease, color 0.15s ease",
+                transition: `background 0.18s ${EASE}, color 0.18s ${EASE}`,
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = "var(--bg-tertiary)";
+                (e.currentTarget as HTMLAnchorElement).style.background = "var(--bg-overlay)";
                 (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)";
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background = "var(--bg-subtle)";
+                (e.currentTarget as HTMLAnchorElement).style.background = "var(--bg-sunken)";
                 (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-tertiary)";
               }}
             >
@@ -395,15 +387,15 @@ function UserCard({
           width: collapsed ? 36 : 34,
           height: collapsed ? 36 : 34,
           borderRadius: 999,
-          background: "linear-gradient(135deg, hsl(258 87% 75%), hsl(258 87% 55%))",
-          color: "#fff",
+          background: "linear-gradient(135deg, var(--accent-hover), var(--accent))",
+          color: "var(--text-on-accent)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontSize: 13,
           fontWeight: 700,
           flexShrink: 0,
-          boxShadow: "0 2px 8px hsl(258 87% 64% / 0.4)",
+          boxShadow: `0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent)`,
         }}
       >
         {user.image ? (
@@ -435,11 +427,20 @@ function UserCard({
               color: "var(--text-tertiary)",
               display: "flex",
               gap: 8,
+              alignItems: "baseline",
+              fontFamily: "var(--font-mono)",
+              fontVariantNumeric: "tabular-nums",
             }}
           >
-            <span>Lv {user.level ?? 1}</span>
-            <span>·</span>
-            <span>{(user.xp ?? 0).toLocaleString()} XP</span>
+            <span className="mono-overline" style={{ fontSize: 9.5, color: "var(--text-tertiary)" }}>
+              Lv
+            </span>
+            <span>{user.level ?? 1}</span>
+            <span style={{ color: "var(--text-muted)" }}>·</span>
+            <span>{(user.xp ?? 0).toLocaleString()}</span>
+            <span className="mono-overline" style={{ fontSize: 9.5, color: "var(--text-tertiary)" }}>
+              XP
+            </span>
           </div>
         </div>
       )}
