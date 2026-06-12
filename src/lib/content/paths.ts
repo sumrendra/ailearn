@@ -27,6 +27,12 @@ import {
   FA_L1, FA_L2, FA_L3, FA_L4, FA_L5,
   FA_L6, FA_L7, FA_L8, FA_L9, FA_L10,
 } from "./french-advanced-content";
+// GMAT Prep — split across 3 files (overview/quant/verbal) so 3 content
+// agents could author them in parallel. Re-exported here as one logical
+// curriculum.
+import { GMAT_L1, GMAT_L2, GMAT_L3, GMAT_L4 } from "./gmat-overview-content";
+import { GMAT_L5, GMAT_L6, GMAT_L7 } from "./gmat-quant-content";
+import { GMAT_L8, GMAT_L9, GMAT_L10 } from "./gmat-verbal-content";
 
 export const PATHS: LearningPath[] = [
   // ── LLM Foundations ───────────────────────────────────────────────────────
@@ -297,6 +303,34 @@ export const PATHS: LearningPath[] = [
       { slug: "french-advanced-tef-reading",       title: "TEF/TCF reading — strategies and traps",            description: "The scan-then-read strategy, three question types (direct, inference, vocab in context), the almost-right answer trap, connector recognition, time management.",                                              content: FA_L8,  order: 8,  estimatedMins: 20, xpReward: 75,  tags: ["French", "TEF Reading", "Exam Strategy"] },
       { slug: "french-advanced-tef-listening",     title: "TEF/TCF listening — accents and fast speech",       description: "Québécois vocabulary (char, magasiner, fin de semaine), fast-speech reductions (chuis, y'a, kestu), number recognition under speed, the scan-and-listen technique.",                                       content: FA_L9,  order: 9,  estimatedMins: 22, xpReward: 80,  tags: ["French", "Listening", "Québécois"] },
       { slug: "french-advanced-tef-production",    title: "TEF writing + speaking — the production sections",  description: "Section A (continue a text, 200 words) + Section B (opinion essay) writing strategy. Expression orale across 3 sections. Score targets for Express Entry NCLC 7. Exam-day tips.",                              content: FA_L10, order: 10, estimatedMins: 22, xpReward: 90,  tags: ["French", "TEF Writing", "TEF Speaking"] },
+    ],
+  },
+  // ── GMAT Prep ────────────────────────────────────────────────────────────
+  // GMAT Focus Edition (2024+ format): three sections (Quant / Verbal / Data
+  // Insights), 205-805 scoring, 45min each, computer-adaptive. The 10-lesson
+  // curriculum walks an MBA applicant from "what even is this test" through
+  // section-by-section strategy to a test-day plan with a wrong-answer journal.
+  {
+    slug: "gmat-prep",
+    title: "GMAT Prep (Focus Edition)",
+    description: "A working strategy for the GMAT Focus Edition. Pattern-recognition mindset, the quant/verbal/DI playbooks, real GMAT-difficulty practice problems, and a test-day routine — for adults studying after work.",
+    icon: "book-open-check",
+    color: "#475569",
+    difficulty: "INTERMEDIATE",
+    estimatedHours: 16,
+    tags: ["GMAT", "MBA", "Quant", "Verbal", "Data Insights", "Test Prep"],
+    order: 14,
+    lessons: [
+      { slug: "gmat-101",              title: "What the GMAT actually is (and isn't)",                   description: "GMAT Focus Edition structure, 205-805 scoring, what business schools look for, and the single most important mindset shift: the GMAT is a pattern-recognition test with a stopwatch.",                          content: GMAT_L1,  order: 1,  estimatedMins: 20, xpReward: 70,  tags: ["GMAT", "Overview", "Scoring", "Study Plan"] },
+      { slug: "gmat-quant-mindset",    title: "The Quant Mindset — patterns over computation",           description: "The shift that unlocks 80%+ of quant: spot the structure, don't grind the arithmetic. Plug-in-numbers, back-solve, elimination, and the 5 traps the test writers love most.",                                  content: GMAT_L2,  order: 2,  estimatedMins: 24, xpReward: 80,  tags: ["GMAT", "Quant", "Strategy", "Pattern Recognition"] },
+      { slug: "gmat-verbal-mindset",   title: "The Verbal Mindset — read like a logician",               description: "Stop reading for content, start reading for argument structure. Conclusion vs premise, hedge words, inference vs assumption, and the paragraph-mapping technique that owns RC.",                              content: GMAT_L3,  order: 3,  estimatedMins: 24, xpReward: 80,  tags: ["GMAT", "Verbal", "Strategy", "Reading"] },
+      { slug: "gmat-data-insights",    title: "Data Insights — the new section nobody knows how to study", description: "The Focus Edition's distinguishing section. Multi-Source Reasoning, Table Analysis, Graphics Interpretation, Two-Part Analysis, and the eternal Data Sufficiency. The DS 12-style decision tree.",        content: GMAT_L4,  order: 4,  estimatedMins: 26, xpReward: 85,  tags: ["GMAT", "Data Insights", "Data Sufficiency", "Strategy"] },
+      { slug: "gmat-quant-arithmetic", title: "Arithmetic & Number Properties — patterns in plain sight", description: "The #1 quant topic. Parity, divisibility rules, primes, GCD/LCM, fractions, percents (with the asymmetry trap), ratios. Most arithmetic questions are number-properties questions in disguise.",         content: GMAT_L5,  order: 5,  estimatedMins: 28, xpReward: 90,  tags: ["GMAT", "Quant", "Arithmetic", "Number Properties"] },
+      { slug: "gmat-quant-algebra",    title: "Algebra & Word Problems — translating English to math",   description: "Linear/quadratic equations, inequalities (with the sign-flip trap), absolute value (two cases), exponents/roots, functions, and the word-problem archetypes: work rate, distance/rate/time, mixture, age.",  content: GMAT_L6,  order: 6,  estimatedMins: 28, xpReward: 90,  tags: ["GMAT", "Quant", "Algebra", "Word Problems"] },
+      { slug: "gmat-quant-geometry",   title: "Geometry, Counting & Statistics — the 'everything else'", description: "The 6 figures tested obsessively (30-60-90, 45-45-90, Pythagorean triples), counting (perm vs comb, complementary), and stats (mean/median/mode + the weighted average archetype).",                       content: GMAT_L7,  order: 7,  estimatedMins: 26, xpReward: 90,  tags: ["GMAT", "Quant", "Geometry", "Probability", "Statistics"] },
+      { slug: "gmat-verbal-cr",        title: "Critical Reasoning — find the assumption, weaken the argument", description: "The 8 CR archetypes, the negate test for assumption questions (single most powerful technique in verbal), and the classic logical fallacies the GMAT tests on Flaw questions.",                      content: GMAT_L8,  order: 8,  estimatedMins: 28, xpReward: 95,  tags: ["GMAT", "Verbal", "Critical Reasoning", "Logic"] },
+      { slug: "gmat-verbal-rc",        title: "Reading Comprehension — speed without skimping",          description: "The 4 RC question types, paragraph-level argument mapping in 30s/paragraph, the 'transition word' map, and the 4 wrong-answer patterns RC hides behind (extreme, out-of-scope, half-right, opposite).",       content: GMAT_L9,  order: 9,  estimatedMins: 26, xpReward: 90,  tags: ["GMAT", "Verbal", "Reading Comprehension", "Pacing"] },
+      { slug: "gmat-test-day",         title: "Test day strategy & the wrong-answer journal",            description: "Night-before routine, morning-of routine, per-section pacing (2:10/2:00/1:50), flag-and-edit in Focus Edition, and the single highest-ROI study practice: the wrong-answer journal.",                            content: GMAT_L10, order: 10, estimatedMins: 22, xpReward: 100, tags: ["GMAT", "Test Day", "Wrong-Answer Journal", "Pacing"] },
     ],
   },
 ];

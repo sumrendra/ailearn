@@ -80,3 +80,22 @@ export async function isFrenchTtsAvailable(): Promise<boolean> {
   if (typeof window === "undefined" || !window.speechSynthesis) return false;
   return (await pickFrenchVoice()) !== null;
 }
+
+/**
+ * Creates a configured French utterance without speaking it.
+ * Lets callers attach their own onend/onerror handlers before speaking.
+ * Returns null if TTS is unavailable.
+ */
+export async function createFrenchUtterance(
+  text: string,
+  rate = 0.9,
+): Promise<SpeechSynthesisUtterance | null> {
+  if (typeof window === "undefined" || !window.speechSynthesis) return null;
+  const voice = await pickFrenchVoice();
+  const utterance = new SpeechSynthesisUtterance(text);
+  if (voice) utterance.voice = voice;
+  utterance.lang = "fr-FR";
+  utterance.rate = rate;
+  utterance.pitch = 1.0;
+  return utterance;
+}

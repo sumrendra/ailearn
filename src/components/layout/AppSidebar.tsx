@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BookOpen, FileText, MessageCircle, Trophy, Search,
-  Sparkles, ChevronsLeft, Settings, LogIn, ListTree, Mic,
+  Sparkles, ChevronsLeft, Settings, LogIn, ListTree, Mic, GraduationCap,
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -28,6 +28,7 @@ const NAV_ITEMS = [
   { href: "/quiz",      Icon: Trophy,          label: "Quizzes",    shortcut: "G Q" },
   { href: "/tutor",     Icon: MessageCircle,   label: "Tutor",      shortcut: "G T" },
   { href: "/interview", Icon: Mic,             label: "Interview",  shortcut: "G I" },
+  { href: "/tcf",       Icon: GraduationCap,  label: "TCF Canada", shortcut: "G X" },
 ];
 
 const STORAGE_KEY = "ailearn-sidebar-collapsed";

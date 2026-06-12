@@ -10,7 +10,7 @@
  */
 import {
   Brain, Database, Cpu, Table2, Server, Cloud, Code2, Box, Languages, FileSpreadsheet, Coffee,
-  Leaf, Share2, Network, Blocks, Shield, GraduationCap,
+  Leaf, Share2, Network, Blocks, Shield, GraduationCap, BookOpenCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -149,6 +149,18 @@ const META: Record<string, PathMeta> = {
     ring: "rgba(157,23,77,0.22)",
     gradient: "linear-gradient(135deg, #500724 0%, #9d174d 55%, #db2777 100%)",
     glow: "rgba(157,23,77,0.30)",
+    tier: "specialization",
+  },
+  "gmat-prep": {
+    // Deep slate — analytical, serious, "premium prep book" feel. Doesn't
+    // collide with any of the existing 13 paths and reads well against the
+    // drenched-dark canvas + violet primary actions.
+    Icon: BookOpenCheck,
+    color: "#475569",
+    tint: "rgba(71,85,105,0.10)",
+    ring: "rgba(71,85,105,0.28)",
+    gradient: "linear-gradient(135deg, #1e293b 0%, #334155 55%, #64748b 100%)",
+    glow: "rgba(71,85,105,0.32)",
     tier: "specialization",
   },
 };
