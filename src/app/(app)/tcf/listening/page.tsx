@@ -2,10 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Play, Square, RotateCcw, ChevronRight, ChevronLeft, Check, X, Volume2 } from "lucide-react";
+import { Play, Square, RotateCcw, ChevronRight, ChevronLeft, Check, X, Volume2, Loader2 } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
-import { TCF_LISTENING, estimateCLBFromListening } from "@/lib/content/tcf-listening";
-import { createFrenchUtterance } from "@/lib/french-tts";
+import {
+  LISTENING_PAPERS,
+  estimateCLBFromListening,
+  PAPER_COUNT,
+  type TCFListeningQuestion,
+} from "@/lib/content/tcf-papers";
 
 const LEVEL_COLOR: Record<string, string> = {
   A1: "#22c55e", A2: "#84cc16",
@@ -25,39 +29,45 @@ function bandOf(id: number) {
   return 2;
 }
 
-type Phase = "intro" | "quiz" | "complete";
+type Phase = "select" | "intro" | "quiz" | "complete";
 
 export default function TCFListeningPage() {
-  const [phase, setPhase] = useState<Phase>("intro");
+  const [paper, setPaper] = useState(1);
+  const [phase, setPhase] = useState<Phase>("select");
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<(number | null)[]>(Array(39).fill(null));
 
   // Audio state
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [playCount, setPlayCount] = useState(0);
-  const [rate, setRate] = useState<0.65 | 0.9>(0.9);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [slow, setSlow] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCache = useRef<Map<string, string>>(new Map());
 
   // Timer
   const [secondsLeft, setSecondsLeft] = useState(35 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const q = TCF_LISTENING[idx];
+  const questions: TCFListeningQuestion[] = LISTENING_PAPERS[paper] ?? LISTENING_PAPERS[1];
+  const q = questions[idx];
   const userAnswer = answers[idx];
   const answered = userAnswer !== null;
 
-  // Clean up TTS on unmount / question change
+  // Cleanup audio on unmount
   useEffect(() => {
     return () => {
-      window.speechSynthesis?.cancel();
+      audioRef.current?.pause();
     };
   }, []);
 
+  // Stop audio on question change
   useEffect(() => {
-    window.speechSynthesis?.cancel();
-    setIsSpeaking(false);
+    audioRef.current?.pause();
+    setIsPlaying(false);
     setPlayCount(0);
+    setIsLoading(false);
   }, [idx]);
 
   // Timer
@@ -82,22 +92,44 @@ export default function TCFListeningPage() {
   }, [timerRunning]);
 
   const handlePlay = useCallback(async () => {
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
+    if (isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
       return;
     }
-    const utterance = await createFrenchUtterance(q.audioScript, rate);
-    if (!utterance) return;
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    utteranceRef.current = utterance;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-    setIsSpeaking(true);
+
+    const cacheKey = `p${paper}-q${idx}`;
+    let blobUrl = audioCache.current.get(cacheKey);
+
+    if (!blobUrl) {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/tcf/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: q.audioScript, level: q.level }),
+        });
+        if (!res.ok) throw new Error("TTS failed");
+        const blob = await res.blob();
+        blobUrl = URL.createObjectURL(blob);
+        audioCache.current.set(cacheKey, blobUrl);
+      } catch {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(false);
+    }
+
+    const audio = new Audio(blobUrl);
+    audio.playbackRate = slow ? 0.72 : 1.0;
+    audio.onended = () => setIsPlaying(false);
+    audio.onpause = () => setIsPlaying(false);
+    audioRef.current = audio;
+    audio.play();
+    setIsPlaying(true);
     setPlayCount((c) => c + 1);
     if (!timerRunning && phase === "quiz") setTimerRunning(true);
-  }, [isSpeaking, q, rate, timerRunning, phase]);
+  }, [isPlaying, paper, idx, q, slow, timerRunning, phase]);
 
   function selectAnswer(optIdx: number) {
     if (answered) return;
@@ -107,7 +139,7 @@ export default function TCFListeningPage() {
   }
 
   function goNext() {
-    window.speechSynthesis.cancel();
+    audioRef.current?.pause();
     if (idx < 38) {
       setIdx(idx + 1);
     } else {
@@ -118,45 +150,158 @@ export default function TCFListeningPage() {
 
   function goPrev() {
     if (idx > 0) {
-      window.speechSynthesis.cancel();
+      audioRef.current?.pause();
       setIdx(idx - 1);
     }
   }
 
-  function restart() {
-    window.speechSynthesis.cancel();
+  function startPaper(p: number) {
+    setPaper(p);
     setIdx(0);
     setAnswers(Array(39).fill(null));
-    setPhase("intro");
     setSecondsLeft(35 * 60);
     setTimerRunning(false);
     setPlayCount(0);
-    setIsSpeaking(false);
+    setIsPlaying(false);
+    setIsLoading(false);
+    audioCache.current.clear();
+    setPhase("intro");
+  }
+
+  function restart() {
+    audioRef.current?.pause();
+    audioCache.current.clear();
+    setIdx(0);
+    setAnswers(Array(39).fill(null));
+    setPhase("select");
+    setSecondsLeft(35 * 60);
+    setTimerRunning(false);
+    setPlayCount(0);
+    setIsPlaying(false);
+    setIsLoading(false);
   }
 
   const totalAnswered = answers.filter((a) => a !== null).length;
-  const totalCorrect = answers.filter((a, i) => a === TCF_LISTENING[i].correctIndex).length;
+  const totalCorrect = answers.filter((a, i) => a === questions[i].correctIndex).length;
 
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
   const ss = String(secondsLeft % 60).padStart(2, "0");
   const timerColor = secondsLeft < 300 ? "#ef4444" : secondsLeft < 600 ? "#f59e0b" : "var(--text-tertiary)";
 
+  // ── Paper Select ───────────────────────────────────────────────
+  if (phase === "select") {
+    return (
+      <>
+        <Topbar title="TCF Listening" subtitle="Sélectionnez un examen" />
+        <div style={{ maxWidth: 600, margin: "0 auto", padding: "48px 24px" }}>
+          <div className="glass-pane" style={{ borderRadius: 20, padding: "36px 36px 32px" }}>
+            <span className="mono-overline" style={{ color: "#5b6af0" }}>TCF Canada · Listening</span>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 400, color: "var(--text-primary)", margin: "10px 0 6px", letterSpacing: "-0.01em" }}>
+              Choisissez votre examen blanc
+            </h1>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 28, lineHeight: 1.6 }}>
+              5 examens blancs complets, chacun avec 39 questions de niveau A1 à C2. L&apos;audio est généré par IA (voix naturelle française).
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+              {Array.from({ length: PAPER_COUNT }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => startPaper(p)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "14px 18px",
+                    background: "var(--bg-overlay)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "all 0.18s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "#5b6af010";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "#5b6af060";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-overlay)";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-subtle)";
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 9,
+                        background: "#5b6af015",
+                        border: "1px solid #5b6af030",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontFamily: "var(--font-mono)",
+                        fontWeight: 700,
+                        fontSize: 14,
+                        color: "#5b6af0",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {p}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+                        Examen blanc {p}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 1 }}>
+                        39 questions · 35 min · A1–C2
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} color="var(--text-tertiary)" />
+                </button>
+              ))}
+            </div>
+
+            <Link
+              href="/tcf"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "10px",
+                background: "transparent",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: 8,
+                fontSize: 13,
+                color: "var(--text-secondary)",
+                textDecoration: "none",
+              }}
+            >
+              Retour au hub TCF
+            </Link>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   // ── Intro ──────────────────────────────────────────────────────
   if (phase === "intro") {
     return (
       <>
-        <Topbar title="TCF Listening" subtitle="Compréhension orale — 39 questions" />
+        <Topbar title="TCF Listening" subtitle={`Examen ${paper} · Compréhension orale`} />
         <div style={{ maxWidth: 600, margin: "0 auto", padding: "60px 24px" }}>
           <div className="glass-pane" style={{ borderRadius: 20, padding: "40px 40px 36px" }}>
-            <span className="mono-overline" style={{ color: "#5b6af0" }}>TCF Canada · Listening</span>
+            <span className="mono-overline" style={{ color: "#5b6af0" }}>TCF Canada · Examen {paper}</span>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text-primary)", margin: "10px 0 6px", letterSpacing: "-0.01em" }}>
               Compréhension orale
             </h1>
             <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 28 }}>
-              39 multiple-choice questions across three difficulty bands. Click <strong style={{ color: "var(--text-primary)" }}>Listen</strong> to hear the audio, then select your answer. In the real exam audio plays once — here you can replay in practice mode.
+              39 questions à choix multiples dans trois bandes de difficulté. Cliquez sur <strong style={{ color: "var(--text-primary)" }}>Écouter</strong> pour entendre l&apos;audio (voix naturelle), puis sélectionnez votre réponse.
             </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 32 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
               {Object.entries(BAND_LABEL).map(([band, label]) => (
                 <div
                   key={band}
@@ -187,27 +332,45 @@ export default function TCFListeningPage() {
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 28, padding: "10px 14px", background: "var(--bg-overlay)", borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
               <Volume2 size={14} color="var(--text-tertiary)" />
               <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                Rate control: choose <strong>Normal (0.9×)</strong> or <strong>Slow (0.65×)</strong> before each play. Real TCF audio is native speed — challenge yourself!
+                Audio IA naturel (Gemini TTS). Basculez entre vitesse <strong>normale</strong> et <strong>lente (72 %)</strong> pour vous entraîner.
               </span>
             </div>
 
-            <button
-              onClick={() => setPhase("quiz")}
-              style={{
-                width: "100%",
-                padding: "14px",
-                background: "#5b6af0",
-                color: "white",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: "pointer",
-                letterSpacing: "0.01em",
-              }}
-            >
-              Start Practice
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setPhase("select")}
+                style={{
+                  flex: 1,
+                  padding: "13px",
+                  background: "var(--bg-overlay)",
+                  color: "var(--text-secondary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                Changer
+              </button>
+              <button
+                onClick={() => setPhase("quiz")}
+                style={{
+                  flex: 2,
+                  padding: "14px",
+                  background: "#5b6af0",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 10,
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                Commencer l&apos;examen {paper}
+              </button>
+            </div>
           </div>
         </div>
       </>
@@ -220,17 +383,17 @@ export default function TCFListeningPage() {
     const pct = Math.round((totalCorrect / 39) * 100);
 
     const byBand = [0, 1, 2].map((b) => {
-      const qs = TCF_LISTENING.filter((q) => bandOf(q.id) === b);
+      const qs = questions.filter((q) => bandOf(q.id) === b);
       const correct = qs.filter((q) => answers[q.id - 1] === q.correctIndex).length;
       return { label: BAND_LABEL[b], correct, total: qs.length };
     });
 
     return (
       <>
-        <Topbar title="TCF Listening" subtitle="Results" />
+        <Topbar title="TCF Listening" subtitle={`Examen ${paper} · Résultats`} />
         <div style={{ maxWidth: 620, margin: "0 auto", padding: "48px 24px 80px" }}>
           <div className="glass-pane" style={{ borderRadius: 20, padding: "40px 40px 36px" }}>
-            <span className="mono-overline" style={{ color: "#5b6af0" }}>Session complete</span>
+            <span className="mono-overline" style={{ color: "#5b6af0" }}>Examen {paper} terminé</span>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 400, color: "var(--text-primary)", margin: "10px 0 24px", letterSpacing: "-0.01em" }}>
               {totalCorrect} / 39 correct
             </h1>
@@ -260,7 +423,7 @@ export default function TCFListeningPage() {
               }}
             >
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 4 }}>
-                Estimated CLB level
+                Niveau CLB estimé
               </div>
               <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
                 {clbResult.clb}
@@ -269,7 +432,7 @@ export default function TCFListeningPage() {
                 {clbResult.cefr} · {clbResult.description}
               </div>
               <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 6 }}>
-                Estimate only — based on practice performance, not official TCF scoring.
+                Estimation seulement — basée sur les performances en pratique, non sur la notation officielle TCF.
               </div>
             </div>
 
@@ -316,7 +479,7 @@ export default function TCFListeningPage() {
                   gap: 6,
                 }}
               >
-                <RotateCcw size={14} /> Restart
+                <RotateCcw size={14} /> Autre examen
               </button>
               <Link
                 href="/tcf"
@@ -336,7 +499,7 @@ export default function TCFListeningPage() {
                   justifyContent: "center",
                 }}
               >
-                Back to TCF Hub
+                Hub TCF
               </Link>
             </div>
           </div>
@@ -352,8 +515,8 @@ export default function TCFListeningPage() {
   return (
     <>
       <Topbar
-        title="TCF Listening"
-        subtitle={`Q ${idx + 1} of 39 · ${BAND_LABEL[band]}`}
+        title={`TCF Listening · Examen ${paper}`}
+        subtitle={`Q ${idx + 1} de 39 · ${BAND_LABEL[band]}`}
         actions={
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {/* Timer */}
@@ -372,7 +535,7 @@ export default function TCFListeningPage() {
                 color: timerColor,
                 cursor: "pointer",
               }}
-              title={timerRunning ? "Pause timer" : "Start timer"}
+              title={timerRunning ? "Pause" : "Démarrer"}
             >
               {mm}:{ss}
             </button>
@@ -434,21 +597,25 @@ export default function TCFListeningPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <button
                 onClick={handlePlay}
+                disabled={isLoading}
                 style={{
                   width: 44,
                   height: 44,
                   borderRadius: "50%",
-                  background: isSpeaking ? "#ef444422" : "#5b6af022",
-                  border: `1.5px solid ${isSpeaking ? "#ef4444" : "#5b6af0"}`,
+                  background: isPlaying ? "#ef444422" : isLoading ? "var(--bg-overlay)" : "#5b6af022",
+                  border: `1.5px solid ${isPlaying ? "#ef4444" : isLoading ? "var(--border-subtle)" : "#5b6af0"}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  cursor: "pointer",
+                  cursor: isLoading ? "not-allowed" : "pointer",
                   flexShrink: 0,
+                  opacity: isLoading ? 0.7 : 1,
                 }}
-                title={isSpeaking ? "Stop" : "Play audio"}
+                title={isPlaying ? "Stop" : isLoading ? "Chargement…" : "Écouter"}
               >
-                {isSpeaking ? (
+                {isLoading ? (
+                  <Loader2 size={16} color="var(--text-tertiary)" style={{ animation: "spin 1s linear infinite" }} />
+                ) : isPlaying ? (
                   <Square size={16} color="#ef4444" />
                 ) : (
                   <Play size={16} color="#5b6af0" style={{ marginLeft: 2 }} />
@@ -457,35 +624,41 @@ export default function TCFListeningPage() {
 
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>
-                  {isSpeaking ? "Playing…" : playCount === 0 ? "Press to listen" : `Played ${playCount}×`}
+                  {isLoading ? "Génération audio…" : isPlaying ? "Lecture en cours…" : playCount === 0 ? "Appuyez pour écouter" : `Écouté ${playCount}×`}
                 </div>
                 <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>
-                  {playCount === 0 ? "Audio plays automatically on first listen" : playCount === 1 ? "In the real exam, audio plays once only" : "Practice mode — unlimited replays"}
+                  {isLoading
+                    ? "Voix naturelle IA — premère lecture en cache"
+                    : playCount === 0
+                    ? "L'audio se charge à la première écoute"
+                    : playCount === 1
+                    ? "À l'examen réel, l'audio passe une seule fois"
+                    : "Mode pratique — réécoutes illimitées"}
                 </div>
               </div>
 
               {/* Rate toggle */}
               <div style={{ display: "flex", gap: 4 }}>
-                {([0.9, 0.65] as const).map((r) => (
+                {[false, true].map((s) => (
                   <button
-                    key={r}
-                    onClick={() => { if (!isSpeaking) setRate(r); }}
-                    disabled={isSpeaking}
+                    key={String(s)}
+                    onClick={() => { if (!isPlaying && !isLoading) setSlow(s); }}
+                    disabled={isPlaying || isLoading}
                     style={{
                       padding: "4px 9px",
                       borderRadius: 5,
                       fontSize: 11,
                       fontFamily: "var(--font-mono)",
                       fontWeight: 600,
-                      cursor: isSpeaking ? "not-allowed" : "pointer",
-                      background: rate === r ? "#5b6af0" : "var(--bg-overlay)",
-                      color: rate === r ? "white" : "var(--text-tertiary)",
-                      border: rate === r ? "1px solid #5b6af0" : "1px solid var(--border-subtle)",
-                      opacity: isSpeaking && rate !== r ? 0.5 : 1,
+                      cursor: (isPlaying || isLoading) ? "not-allowed" : "pointer",
+                      background: slow === s ? "#5b6af0" : "var(--bg-overlay)",
+                      color: slow === s ? "white" : "var(--text-tertiary)",
+                      border: slow === s ? "1px solid #5b6af0" : "1px solid var(--border-subtle)",
+                      opacity: (isPlaying || isLoading) && slow !== s ? 0.5 : 1,
                     }}
-                    title={r === 0.9 ? "Normal speed" : "Slow speed"}
+                    title={s ? "Vitesse lente (72%)" : "Vitesse normale"}
                   >
-                    {r === 0.9 ? "Normal" : "Slow"}
+                    {s ? "Lent" : "Normal"}
                   </button>
                 ))}
               </div>
@@ -590,7 +763,7 @@ export default function TCFListeningPage() {
               </p>
               <details style={{ marginTop: 10 }}>
                 <summary style={{ fontSize: 11, color: "var(--text-tertiary)", cursor: "pointer", userSelect: "none" }}>
-                  Show audio transcript
+                  Voir la transcription audio
                 </summary>
                 <p style={{ marginTop: 8, fontSize: 12, color: "var(--text-secondary)", fontStyle: "italic", lineHeight: 1.6 }}>
                   {q.audioScript}
@@ -619,7 +792,7 @@ export default function TCFListeningPage() {
               opacity: idx === 0 ? 0.4 : 1,
             }}
           >
-            <ChevronLeft size={14} /> Previous
+            <ChevronLeft size={14} /> Précédent
           </button>
 
           <button
@@ -640,10 +813,14 @@ export default function TCFListeningPage() {
               opacity: answered ? 1 : 0.5,
             }}
           >
-            {idx === 38 ? "Finish" : "Next"} <ChevronRight size={14} />
+            {idx === 38 ? "Terminer" : "Suivant"} <ChevronRight size={14} />
           </button>
         </div>
       </div>
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </>
   );
 }
