@@ -30,10 +30,10 @@ const PAPERS: Record<number, SpeakingTask[]> = {
       tips: ["Utilisez des formules de politesse", "Posez des questions claires", "Réagissez naturellement aux imprévus"],
     },
     {
-      type: 3, label: "Monologue d'opinion", prepSeconds: 0, recordSeconds: 270,
-      context: "Vous devez donner et défendre votre opinion sur un sujet général sans préparation.",
+      type: 3, label: "Monologue d'opinion", prepSeconds: 180, recordSeconds: 270,
+      context: "Vous disposez de 3 minutes de préparation, puis 4,5 minutes pour exposer et défendre votre point de vue sur un sujet général.",
       prompt: "Pensez-vous que les grandes villes sont un meilleur endroit pour s'installer en tant que nouvel immigrant qu'une ville de taille moyenne ? Développez votre point de vue avec des arguments et des exemples.",
-      tips: ["Annoncez votre position clairement", "Donnez 2-3 arguments structurés", "Illustrez avec des exemples concrets", "Concluez en reformulant votre opinion"],
+      tips: ["Utilisez les 3 min de préparation pour noter vos idées clés", "Annoncez votre position clairement dès le début", "Donnez 2-3 arguments structurés avec exemples", "Concluez en reformulant votre opinion"],
     },
   ],
   2: [
@@ -50,10 +50,10 @@ const PAPERS: Record<number, SpeakingTask[]> = {
       tips: ["Structurez votre présentation", "Mettez en valeur vos points forts", "Adaptez le registre au contexte professionnel"],
     },
     {
-      type: 3, label: "Monologue d'opinion", prepSeconds: 0, recordSeconds: 270,
-      context: "Sujet de société — donnez votre avis argumenté.",
+      type: 3, label: "Monologue d'opinion", prepSeconds: 180, recordSeconds: 270,
+      context: "3 min de préparation, puis 4,5 min d'exposé — sujet de société, donnez votre avis argumenté.",
       prompt: "Selon vous, quel est l'impact des réseaux sociaux sur l'apprentissage des langues ? Sont-ils plutôt un outil utile ou une distraction ? Justifiez votre réponse avec des exemples.",
-      tips: ["Présentez les deux côtés avant de conclure", "Utilisez des expressions d'opinion : À mon avis, Je pense que…", "Gardez un fil directeur clair"],
+      tips: ["Utilisez les 3 min de préparation pour noter vos idées clés", "Présentez les deux côtés avant de conclure", "Utilisez des expressions d'opinion : À mon avis, Je pense que…", "Gardez un fil directeur clair"],
     },
   ],
   3: [
@@ -70,10 +70,10 @@ const PAPERS: Record<number, SpeakingTask[]> = {
       tips: ["Expliquez clairement votre situation", "Soyez poli mais assertif", "Proposez des alternatives si nécessaire"],
     },
     {
-      type: 3, label: "Monologue d'opinion", prepSeconds: 0, recordSeconds: 270,
-      context: "Question sur l'éducation et la société.",
+      type: 3, label: "Monologue d'opinion", prepSeconds: 180, recordSeconds: 270,
+      context: "3 min de préparation, puis 4,5 min d'exposé — question sur l'éducation et la société.",
       prompt: "Êtes-vous pour ou contre l'enseignement bilingue obligatoire dans les écoles primaires canadiennes ? Défendez votre position en vous appuyant sur des arguments concrets.",
-      tips: ["Définissez clairement votre position dès le début", "Anticipez et réfutez les contre-arguments", "Terminez par une conclusion forte"],
+      tips: ["Utilisez les 3 min de préparation pour noter vos idées clés", "Définissez clairement votre position dès le début", "Anticipez et réfutez les contre-arguments", "Terminez par une conclusion forte"],
     },
   ],
   4: [
@@ -90,10 +90,10 @@ const PAPERS: Record<number, SpeakingTask[]> = {
       tips: ["Soyez factuel et précis", "Exprimez l'urgence sans être agressif", "Proposez une solution ou demandez un délai précis"],
     },
     {
-      type: 3, label: "Monologue d'opinion", prepSeconds: 0, recordSeconds: 270,
-      context: "Sujet culturel et social.",
+      type: 3, label: "Monologue d'opinion", prepSeconds: 180, recordSeconds: 270,
+      context: "3 min de préparation, puis 4,5 min d'exposé — sujet culturel et social.",
       prompt: "Dans quelle mesure pensez-vous que les immigrants devraient adopter la culture du pays d'accueil tout en préservant leur propre culture ? Y a-t-il un équilibre possible ? Donnez votre avis argumenté.",
-      tips: ["Nuancez votre position", "Utilisez des exemples tirés de votre expérience", "Abordez la question sous différents angles"],
+      tips: ["Utilisez les 3 min de préparation pour noter vos idées clés", "Nuancez votre position", "Utilisez des exemples tirés de votre expérience", "Abordez la question sous différents angles"],
     },
   ],
   5: [
@@ -110,10 +110,10 @@ const PAPERS: Record<number, SpeakingTask[]> = {
       tips: ["Montrez votre implication parentale", "Posez des questions ouvertes", "Cherchez des solutions collaboratives"],
     },
     {
-      type: 3, label: "Monologue d'opinion", prepSeconds: 0, recordSeconds: 270,
-      context: "Sujet environnemental et citoyen.",
+      type: 3, label: "Monologue d'opinion", prepSeconds: 180, recordSeconds: 270,
+      context: "3 min de préparation, puis 4,5 min d'exposé — sujet environnemental et citoyen.",
       prompt: "Pensez-vous que chaque individu peut faire une différence significative face aux changements climatiques, ou s'agit-il uniquement d'une responsabilité gouvernementale et industrielle ? Défendez votre position.",
-      tips: ["Donnez des exemples concrets d'actions individuelles", "Montrez que vous êtes conscient des enjeux globaux", "Concluez avec une position claire et nuancée"],
+      tips: ["Utilisez les 3 min de préparation pour noter vos idées clés", "Donnez des exemples concrets d'actions individuelles", "Montrez que vous êtes conscient des enjeux globaux", "Concluez avec une position claire et nuancée"],
     },
   ],
 };
@@ -454,6 +454,18 @@ export default function TCFSpeakingPage() {
               <div style={{ height: "100%", width: `${pct}%`, background: pct >= 60 ? "#ef4444" : "#f59e0b", borderRadius: 4, transition: "width 0.8s ease" }} />
             </div>
             <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 20 }}>{pct}% · {totalScore}/{maxScore} pts</div>
+
+            {/* IRCC context */}
+            <div style={{ padding: "12px 16px", background: totalScore >= 30 ? "#22c55e0a" : "#f59e0b0a", border: `1px solid ${totalScore >= 30 ? "#22c55e22" : "#f59e0b22"}`, borderRadius: 10, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: totalScore >= 30 ? "#22c55e" : "#f59e0b", marginBottom: 4 }}>
+                Seuil IRCC — Expression orale
+              </div>
+              <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Pour la Résidence permanente (Entrée express), NCLC 7 correspond à environ <strong>10–12 / 20</strong> par tâche orale.{" "}
+                {totalScore >= 30 ? "Votre score global est dans la fourchette NCLC 7+." : "Visez ≥ 10/20 par tâche pour atteindre le seuil NCLC 7."}
+              </p>
+            </div>
+
             <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
               Développez chaque tâche pour voir la transcription de votre réponse, les scores détaillés et les conseils personnalisés.
             </p>

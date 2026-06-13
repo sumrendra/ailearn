@@ -71,6 +71,16 @@ export default function TCFListeningPage() {
     setIsLoading(false);
   }, [idx]);
 
+  // Auto-play audio in exam mode when question loads (real TCF plays audio automatically)
+  useEffect(() => {
+    if (phase !== "quiz" || !examMode) return;
+    const timer = setTimeout(() => {
+      handlePlay();
+    }, 400); // allow idx-change effect to settle first
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, phase, examMode]);
+
   // Auto-start timer when quiz begins (real TCF clock starts immediately)
   useEffect(() => {
     if (phase === "quiz") setTimerRunning(true);
@@ -345,7 +355,7 @@ export default function TCFListeningPage() {
               <div style={{ display: "flex", gap: 8 }}>
                 {[
                   { value: false, label: "Mode pratique", desc: "Réécoutes illimitées · aide à l'apprentissage", icon: <BookOpen size={15} color={!examMode ? "#5b6af0" : "var(--text-tertiary)"} /> },
-                  { value: true, label: "Mode examen", desc: "Audio joué 1 fois uniquement · conditions réelles TCF", icon: <Lock size={15} color={examMode ? "#ef4444" : "var(--text-tertiary)"} /> },
+                  { value: true, label: "Mode examen", desc: "Audio lance automatiquement · 1 seule écoute · retour impossible", icon: <Lock size={15} color={examMode ? "#ef4444" : "var(--text-tertiary)"} /> },
                 ].map((opt) => (
                   <button
                     key={String(opt.value)}
@@ -818,7 +828,8 @@ export default function TCFListeningPage() {
         <div style={{ display: "flex", gap: 10, marginTop: 16, justifyContent: "space-between" }}>
           <button
             onClick={goPrev}
-            disabled={idx === 0}
+            disabled={idx === 0 || examMode}
+            title={examMode ? "Retour désactivé en mode examen" : undefined}
             style={{
               display: "flex",
               alignItems: "center",
@@ -828,9 +839,9 @@ export default function TCFListeningPage() {
               border: "1px solid var(--border-subtle)",
               borderRadius: 10,
               fontSize: 13,
-              color: idx === 0 ? "var(--text-tertiary)" : "var(--text-primary)",
-              cursor: idx === 0 ? "not-allowed" : "pointer",
-              opacity: idx === 0 ? 0.4 : 1,
+              color: (idx === 0 || examMode) ? "var(--text-tertiary)" : "var(--text-primary)",
+              cursor: (idx === 0 || examMode) ? "not-allowed" : "pointer",
+              opacity: (idx === 0 || examMode) ? 0.4 : 1,
             }}
           >
             <ChevronLeft size={14} /> Précédent
