@@ -158,6 +158,29 @@ export default function TCFWritingPage() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [timerRunning]);
 
+  // Auto-submit when timer expires (real TCF closes the exam when time is up)
+  const responsesRef = useRef(responses);
+  responsesRef.current = responses;
+  useEffect(() => {
+    if (secondsLeft !== 0 || phase !== "writing") return;
+    const allTasks = PAPERS[paper];
+    const currentResponses = responsesRef.current;
+    setPhase("evaluating");
+    Promise.all(
+      allTasks.map((t, i) =>
+        fetch("/api/tcf/writing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taskNumber: t.type, taskPrompt: t.prompt,
+            response: currentResponses[i], minWords: t.minWords, maxWords: t.maxWords,
+          }),
+        }).then((r) => r.json())
+      )
+    ).then((evals) => { setResults(evals); setPhase("complete"); })
+     .catch(() => { setEvalError("Temps écoulé. Impossible d'évaluer. Veuillez réessayer."); setPhase("writing"); });
+  }, [secondsLeft, phase, paper]);
+
   function startPaper(p: number) {
     setPaper(p);
     setTaskIdx(0);

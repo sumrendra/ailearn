@@ -86,7 +86,7 @@ export default function TCFListeningPage() {
     if (phase === "quiz") setTimerRunning(true);
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Timer
+  // Timer — auto-finishes exam when it expires (real TCF behaviour)
   useEffect(() => {
     if (timerRunning) {
       timerRef.current = setInterval(() => {
@@ -94,6 +94,7 @@ export default function TCFListeningPage() {
           if (s <= 1) {
             clearInterval(timerRef.current!);
             setTimerRunning(false);
+            setPhase("complete");
             return 0;
           }
           return s - 1;

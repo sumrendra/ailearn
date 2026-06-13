@@ -46,6 +46,7 @@ export default function TCFReadingPage() {
   const userAnswer = answers[idx];
   const answered = userAnswer !== null;
 
+  // Timer — auto-finishes exam when it expires (real TCF behaviour)
   useEffect(() => {
     if (timerRunning) {
       timerRef.current = setInterval(() => {
@@ -53,6 +54,7 @@ export default function TCFReadingPage() {
           if (s <= 1) {
             clearInterval(timerRef.current!);
             setTimerRunning(false);
+            setPhase("complete");
             return 0;
           }
           return s - 1;
