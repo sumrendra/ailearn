@@ -147,6 +147,7 @@ export default function TCFSpeakingPage() {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const mimeTypeRef = useRef<string>("audio/webm");
   const chunksRef = useRef<Blob[]>([]);
   const prepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -194,6 +195,18 @@ export default function TCFSpeakingPage() {
     }, 1000);
   }
 
+  function blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        resolve(dataUrl.split(",")[1] ?? "");
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
   const finishRecording = useCallback((currentTaskIdx: number, currentAudioBlobs: (Blob | null)[]) => {
     clearInterval(recTimerRef.current!);
     const mr = mediaRecorderRef.current;
@@ -201,7 +214,7 @@ export default function TCFSpeakingPage() {
     mr.stop();
     streamRef.current?.getTracks().forEach((t) => t.stop());
     mr.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+      const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current });
       const updated = [...currentAudioBlobs];
       updated[currentTaskIdx] = blob;
       setAudioBlobs(updated);
@@ -227,10 +240,17 @@ export default function TCFSpeakingPage() {
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       streamRef.current = stream;
       chunksRef.current = [];
-      const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      // Prefer webm/opus (Chrome/Firefox), fall back to mp4 (Safari), then bare webm
+      const supported = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+      const mimeType = supported.find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
+      mimeTypeRef.current = mimeType || "audio/webm";
+      const mr = new MediaRecorder(stream, {
+        ...(mimeType ? { mimeType } : {}),
+        audioBitsPerSecond: 32000, // ~240KB/min → stays well under 4.5MB Vercel limit
+      });
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.start(100);
       mediaRecorderRef.current = mr;
@@ -269,11 +289,7 @@ export default function TCFSpeakingPage() {
             strengths: [], improvements: ["Enregistrez une réponse vocale complète"],
           } as EvalResult;
         }
-        const arrayBuffer = await blob.arrayBuffer();
-        const bytes = new Uint8Array(arrayBuffer);
-        let binary = "";
-        for (let j = 0; j < bytes.byteLength; j++) binary += String.fromCharCode(bytes[j]);
-        const base64 = btoa(binary);
+        const base64 = await blobToBase64(blob);
 
         const res = await fetch("/api/tcf/speaking", {
           method: "POST",
@@ -282,7 +298,7 @@ export default function TCFSpeakingPage() {
             taskNumber: t.type,
             taskPrompt: t.prompt,
             audioBase64: base64,
-            mimeType: "audio/webm",
+            mimeType: mimeTypeRef.current,
           }),
         });
         return res.json();

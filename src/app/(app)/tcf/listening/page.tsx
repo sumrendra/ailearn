@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Play, Square, RotateCcw, ChevronRight, ChevronLeft, Check, X, Volume2, Loader2 } from "lucide-react";
+import { Play, Square, RotateCcw, ChevronRight, ChevronLeft, Check, X, Volume2, Loader2, Lock, BookOpen } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import {
   LISTENING_PAPERS,
@@ -18,9 +18,9 @@ const LEVEL_COLOR: Record<string, string> = {
 };
 
 const BAND_LABEL: Record<number, string> = {
-  0: "A1–A2 · Basic (Q 1–10)",
-  1: "B1–B2 · Intermediate (Q 11–25)",
-  2: "C1–C2 · Advanced (Q 26–39)",
+  0: "Section 1 · A1–A2 · Documents courts (Q 1–10)",
+  1: "Section 2 · B1–B2 · Documents informatifs (Q 11–25)",
+  2: "Section 3 · C1–C2 · Documents longs (Q 26–39)",
 };
 
 function bandOf(id: number) {
@@ -34,6 +34,7 @@ type Phase = "select" | "intro" | "quiz" | "complete";
 export default function TCFListeningPage() {
   const [paper, setPaper] = useState(1);
   const [phase, setPhase] = useState<Phase>("select");
+  const [examMode, setExamMode] = useState(false);
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<(number | null)[]>(Array(39).fill(null));
 
@@ -70,6 +71,11 @@ export default function TCFListeningPage() {
     setIsLoading(false);
   }, [idx]);
 
+  // Auto-start timer when quiz begins (real TCF clock starts immediately)
+  useEffect(() => {
+    if (phase === "quiz") setTimerRunning(true);
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Timer
   useEffect(() => {
     if (timerRunning) {
@@ -92,6 +98,8 @@ export default function TCFListeningPage() {
   }, [timerRunning]);
 
   const handlePlay = useCallback(async () => {
+    // In exam mode, audio plays exactly once (real TCF rule)
+    if (examMode && playCount >= 1) return;
     if (isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
@@ -128,8 +136,7 @@ export default function TCFListeningPage() {
     audio.play();
     setIsPlaying(true);
     setPlayCount((c) => c + 1);
-    if (!timerRunning && phase === "quiz") setTimerRunning(true);
-  }, [isPlaying, paper, idx, q, slow, timerRunning, phase]);
+  }, [examMode, isPlaying, paper, idx, q, slow, playCount]);
 
   function selectAnswer(optIdx: number) {
     if (answered) return;
@@ -174,6 +181,7 @@ export default function TCFListeningPage() {
     setIdx(0);
     setAnswers(Array(39).fill(null));
     setPhase("select");
+    setExamMode(false);
     setSecondsLeft(35 * 60);
     setTimerRunning(false);
     setPlayCount(0);
@@ -329,10 +337,42 @@ export default function TCFListeningPage() {
               ))}
             </div>
 
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 28, padding: "10px 14px", background: "var(--bg-overlay)", borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
+            {/* Mode selection */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 10, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                Mode d&apos;entraînement
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[
+                  { value: false, label: "Mode pratique", desc: "Réécoutes illimitées · aide à l'apprentissage", icon: <BookOpen size={15} color={!examMode ? "#5b6af0" : "var(--text-tertiary)"} /> },
+                  { value: true, label: "Mode examen", desc: "Audio joué 1 fois uniquement · conditions réelles TCF", icon: <Lock size={15} color={examMode ? "#ef4444" : "var(--text-tertiary)"} /> },
+                ].map((opt) => (
+                  <button
+                    key={String(opt.value)}
+                    onClick={() => setExamMode(opt.value)}
+                    style={{
+                      flex: 1, padding: "12px 14px", textAlign: "left",
+                      background: examMode === opt.value ? (opt.value ? "#ef444410" : "#5b6af010") : "var(--bg-overlay)",
+                      border: `1.5px solid ${examMode === opt.value ? (opt.value ? "#ef4444" : "#5b6af0") : "var(--border-subtle)"}`,
+                      borderRadius: 10, cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      {opt.icon}
+                      <span style={{ fontSize: 13, fontWeight: 600, color: examMode === opt.value ? (opt.value ? "#ef4444" : "#5b6af0") : "var(--text-primary)" }}>
+                        {opt.label}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-tertiary)", lineHeight: 1.4 }}>{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 20, padding: "10px 14px", background: "var(--bg-overlay)", borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
               <Volume2 size={14} color="var(--text-tertiary)" />
               <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                Audio IA naturel (Gemini TTS). Basculez entre vitesse <strong>normale</strong> et <strong>lente (72 %)</strong> pour vous entraîner.
+                Audio IA naturel (Gemini TTS). Le chronomètre démarre dès le début de l&apos;examen.
               </span>
             </div>
 
@@ -340,15 +380,9 @@ export default function TCFListeningPage() {
               <button
                 onClick={() => setPhase("select")}
                 style={{
-                  flex: 1,
-                  padding: "13px",
-                  background: "var(--bg-overlay)",
-                  color: "var(--text-secondary)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  cursor: "pointer",
+                  flex: 1, padding: "13px", background: "var(--bg-overlay)",
+                  color: "var(--text-secondary)", border: "1px solid var(--border-subtle)",
+                  borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: "pointer",
                 }}
               >
                 Changer
@@ -356,19 +390,13 @@ export default function TCFListeningPage() {
               <button
                 onClick={() => setPhase("quiz")}
                 style={{
-                  flex: 2,
-                  padding: "14px",
-                  background: "#5b6af0",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 10,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  letterSpacing: "0.01em",
+                  flex: 2, padding: "14px",
+                  background: examMode ? "#ef4444" : "#5b6af0",
+                  color: "white", border: "none", borderRadius: 10,
+                  fontSize: 15, fontWeight: 600, cursor: "pointer", letterSpacing: "0.01em",
                 }}
               >
-                Commencer l&apos;examen {paper}
+                {examMode ? "🔒 Commencer (mode examen)" : "Commencer l'examen " + paper}
               </button>
             </div>
           </div>
@@ -438,6 +466,12 @@ export default function TCFListeningPage() {
               </div>
               <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 6 }}>
                 Estimation seulement — basée sur les performances en pratique, non sur la notation officielle TCF (IRT).
+              </div>
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--border-subtle)", fontSize: 12, color: "var(--text-secondary)" }}>
+                <strong style={{ color: clbResult.score699 >= 458 ? "#22c55e" : "#f59e0b" }}>
+                  {clbResult.score699 >= 458 ? "✓ Seuil IRCC atteint" : "✗ Seuil IRCC non atteint"}
+                </strong>
+                {" "}— Entrée express exige NCLC 7 (≥ 458/699 en écoute). Votre estimation : {clbResult.score699}/699.
               </div>
             </div>
 
@@ -516,6 +550,9 @@ export default function TCFListeningPage() {
   // ── Quiz ───────────────────────────────────────────────────────
   const levelColor = LEVEL_COLOR[q.level] ?? "var(--accent)";
   const band = bandOf(q.id);
+  const examLocked = examMode && playCount >= 1;
+  const btnDisabled = isLoading || examLocked;
+  const btnColor = examLocked ? "#6b7280" : isPlaying ? "#ef4444" : "#5b6af0";
 
   return (
     <>
@@ -544,6 +581,11 @@ export default function TCFListeningPage() {
             >
               {mm}:{ss}
             </button>
+            {examMode && (
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", background: "#ef444415", color: "#ef4444", padding: "2px 7px", borderRadius: 4 }}>
+                Examen
+              </span>
+            )}
             <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
               {totalAnswered}/39
             </span>
@@ -592,34 +634,31 @@ export default function TCFListeningPage() {
           {/* Audio player */}
           <div
             style={{
-              background: "var(--bg-overlay)",
               borderRadius: 12,
               padding: "16px 20px",
               marginBottom: 24,
-              border: "1px solid var(--border-subtle)",
+              background: "var(--bg-overlay)",
+              border: `1px solid ${examLocked ? "#ef444433" : "var(--border-subtle)"}`,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <button
                 onClick={handlePlay}
-                disabled={isLoading}
+                disabled={btnDisabled}
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: "50%",
-                  background: isPlaying ? "#ef444422" : isLoading ? "var(--bg-overlay)" : "#5b6af022",
-                  border: `1.5px solid ${isPlaying ? "#ef4444" : isLoading ? "var(--border-subtle)" : "#5b6af0"}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: isLoading ? "not-allowed" : "pointer",
-                  flexShrink: 0,
-                  opacity: isLoading ? 0.7 : 1,
+                  width: 44, height: 44, borderRadius: "50%",
+                  background: examLocked ? "#6b728015" : isPlaying ? "#ef444422" : isLoading ? "var(--bg-overlay)" : "#5b6af022",
+                  border: `1.5px solid ${btnColor}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: btnDisabled ? "not-allowed" : "pointer",
+                  flexShrink: 0, opacity: btnDisabled && !examLocked ? 0.7 : 1,
                 }}
-                title={isPlaying ? "Stop" : isLoading ? "Chargement…" : "Écouter"}
+                title={examLocked ? "Audio déjà joué — mode examen" : isPlaying ? "Stop" : isLoading ? "Chargement…" : "Écouter"}
               >
                 {isLoading ? (
                   <Loader2 size={16} color="var(--text-tertiary)" style={{ animation: "spin 1s linear infinite" }} />
+                ) : examLocked ? (
+                  <Lock size={16} color="#6b7280" />
                 ) : isPlaying ? (
                   <Square size={16} color="#ef4444" />
                 ) : (
@@ -629,44 +668,41 @@ export default function TCFListeningPage() {
 
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>
-                  {isLoading ? "Génération audio…" : isPlaying ? "Lecture en cours…" : playCount === 0 ? "Appuyez pour écouter" : `Écouté ${playCount}×`}
+                  {isLoading ? "Génération audio…" : examLocked ? "Audio joué — 1 écoute (mode examen)" : isPlaying ? "Lecture en cours…" : playCount === 0 ? "Appuyez pour écouter" : `Écouté ${playCount}×`}
                 </div>
-                <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>
-                  {isLoading
-                    ? "Voix naturelle IA — premère lecture en cache"
-                    : playCount === 0
-                    ? "L'audio se charge à la première écoute"
-                    : playCount === 1
-                    ? "À l'examen réel, l'audio passe une seule fois"
+                <div style={{ fontSize: 11, color: examLocked ? "#ef4444" : "var(--text-tertiary)", marginTop: 2 }}>
+                  {isLoading ? "Voix naturelle IA — première lecture en cache"
+                    : examLocked ? "TCF réel : l'audio passe une seule fois par question"
+                    : playCount === 0 ? "L'audio se charge à la première écoute"
+                    : examMode ? "1 seule écoute autorisée en mode examen"
                     : "Mode pratique — réécoutes illimitées"}
                 </div>
               </div>
 
-              {/* Rate toggle */}
-              <div style={{ display: "flex", gap: 4 }}>
-                {[false, true].map((s) => (
-                  <button
-                    key={String(s)}
-                    onClick={() => { if (!isPlaying && !isLoading) setSlow(s); }}
-                    disabled={isPlaying || isLoading}
-                    style={{
-                      padding: "4px 9px",
-                      borderRadius: 5,
-                      fontSize: 11,
-                      fontFamily: "var(--font-mono)",
-                      fontWeight: 600,
-                      cursor: (isPlaying || isLoading) ? "not-allowed" : "pointer",
-                      background: slow === s ? "#5b6af0" : "var(--bg-overlay)",
-                      color: slow === s ? "white" : "var(--text-tertiary)",
-                      border: slow === s ? "1px solid #5b6af0" : "1px solid var(--border-subtle)",
-                      opacity: (isPlaying || isLoading) && slow !== s ? 0.5 : 1,
-                    }}
-                    title={s ? "Vitesse lente (72%)" : "Vitesse normale"}
-                  >
-                    {s ? "Lent" : "Normal"}
-                  </button>
-                ))}
-              </div>
+              {/* Rate toggle — hidden in exam mode after play */}
+              {!examLocked && (
+                <div style={{ display: "flex", gap: 4 }}>
+                  {[false, true].map((s) => (
+                    <button
+                      key={String(s)}
+                      onClick={() => { if (!isPlaying && !isLoading) setSlow(s); }}
+                      disabled={isPlaying || isLoading}
+                      style={{
+                        padding: "4px 9px", borderRadius: 5, fontSize: 11,
+                        fontFamily: "var(--font-mono)", fontWeight: 600,
+                        cursor: (isPlaying || isLoading) ? "not-allowed" : "pointer",
+                        background: slow === s ? "#5b6af0" : "var(--bg-overlay)",
+                        color: slow === s ? "white" : "var(--text-tertiary)",
+                        border: slow === s ? "1px solid #5b6af0" : "1px solid var(--border-subtle)",
+                        opacity: (isPlaying || isLoading) && slow !== s ? 0.5 : 1,
+                      }}
+                      title={s ? "Vitesse lente (72%)" : "Vitesse normale"}
+                    >
+                      {s ? "Lent" : "Normal"}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

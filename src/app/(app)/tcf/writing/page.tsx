@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ChevronRight, RotateCcw, PenLine, Loader2, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronRight, ChevronLeft, RotateCcw, PenLine, Loader2, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 
 interface WritingTask {
@@ -165,7 +165,7 @@ export default function TCFWritingPage() {
     setResults([null, null, null]);
     setEvalError(null);
     setSecondsLeft(60 * 60);
-    setTimerRunning(false);
+    setTimerRunning(true); // Clock starts immediately like the real TCF
     setPhase("writing");
   }
 
@@ -180,7 +180,6 @@ export default function TCFWritingPage() {
   }
 
   function handleChange(val: string) {
-    if (!timerRunning) setTimerRunning(true);
     const updated = [...responses];
     updated[taskIdx] = val;
     setResponses(updated);
@@ -338,9 +337,21 @@ export default function TCFWritingPage() {
             <div style={{ height: 8, background: "var(--bg-overlay)", borderRadius: 4, overflow: "hidden", marginBottom: 6 }}>
               <div style={{ height: "100%", width: `${pct}%`, background: pct >= 60 ? "#f59e0b" : pct >= 40 ? "#ef4444" : "#ef4444", borderRadius: 4, transition: "width 0.8s ease" }} />
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 24 }}>{pct}% · {totalScore}/{maxScore} pts</div>
+            <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 20 }}>{pct}%</div>
+
+            {/* IRCC context */}
+            <div style={{ padding: "12px 16px", background: totalScore >= 36 ? "#22c55e0a" : "#f59e0b0a", border: `1px solid ${totalScore >= 36 ? "#22c55e22" : "#f59e0b22"}`, borderRadius: 10, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: totalScore >= 36 ? "#22c55e" : "#f59e0b", marginBottom: 4 }}>
+                Seuil IRCC — Expression écrite
+              </div>
+              <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                Le TCF Canada Expression écrite est noté sur 20 par tâche. Pour la RP (Entrée express), NCLC 7 correspond à un score d&apos;environ <strong>12–14 / 20</strong> par tâche.{" "}
+                {totalScore >= 36 ? "Votre score global est dans la fourchette NCLC 7+." : "Visez ≥ 12/20 par tâche pour atteindre le seuil NCLC 7."}
+              </p>
+            </div>
+
             <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-              Développez chaque tâche ci-dessous pour voir les scores détaillés, la transcription de vos points forts et les axes d&apos;amélioration.
+              Développez chaque tâche ci-dessous pour voir les scores détaillés, vos points forts et les axes d&apos;amélioration.
             </p>
           </div>
 
@@ -573,26 +584,42 @@ export default function TCFWritingPage() {
           )}
         </div>
 
-        <button
-          onClick={isMinMet ? submitAndNext : undefined}
-          disabled={!isMinMet}
-          style={{
-            width: "100%", padding: "14px",
-            background: isMinMet ? accent : "var(--bg-overlay)",
-            border: `1px solid ${isMinMet ? accent : "var(--border-subtle)"}`,
-            borderRadius: 12, fontSize: 15, fontWeight: 600,
-            color: isMinMet ? "white" : "var(--text-tertiary)",
-            cursor: isMinMet ? "pointer" : "not-allowed",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            transition: "all 0.2s ease",
-          }}
-        >
-          {taskIdx < 2 ? (
-            <><PenLine size={16} /> Passer à la tâche {taskIdx + 2} <ChevronRight size={16} /></>
-          ) : (
-            <><CheckCircle size={16} /> Soumettre et obtenir l&apos;évaluation</>
+        <div style={{ display: "flex", gap: 10 }}>
+          {taskIdx > 0 && (
+            <button
+              onClick={() => setTaskIdx(taskIdx - 1)}
+              style={{
+                padding: "14px 20px",
+                background: "var(--bg-overlay)", color: "var(--text-primary)",
+                border: "1px solid var(--border-default)", borderRadius: 12,
+                fontSize: 14, fontWeight: 500, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <ChevronLeft size={16} /> Tâche {taskIdx}
+            </button>
           )}
-        </button>
+          <button
+            onClick={isMinMet ? submitAndNext : undefined}
+            disabled={!isMinMet}
+            style={{
+              flex: 1, padding: "14px",
+              background: isMinMet ? accent : "var(--bg-overlay)",
+              border: `1px solid ${isMinMet ? accent : "var(--border-subtle)"}`,
+              borderRadius: 12, fontSize: 15, fontWeight: 600,
+              color: isMinMet ? "white" : "var(--text-tertiary)",
+              cursor: isMinMet ? "pointer" : "not-allowed",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              transition: "all 0.2s ease",
+            }}
+          >
+            {taskIdx < 2 ? (
+              <><PenLine size={16} /> Passer à la tâche {taskIdx + 2} <ChevronRight size={16} /></>
+            ) : (
+              <><CheckCircle size={16} /> Soumettre et obtenir l&apos;évaluation</>
+            )}
+          </button>
+        </div>
       </div>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

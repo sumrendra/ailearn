@@ -66,9 +66,13 @@ export default function TCFReadingPage() {
     };
   }, [timerRunning]);
 
+  // Auto-start timer when quiz begins
+  useEffect(() => {
+    if (phase === "quiz") setTimerRunning(true);
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function selectAnswer(optIdx: number) {
     if (answered) return;
-    if (!timerRunning && phase === "quiz") setTimerRunning(true);
     const updated = [...answers];
     updated[idx] = optIdx;
     setAnswers(updated);
@@ -350,6 +354,12 @@ export default function TCFReadingPage() {
               </div>
               <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 6 }}>
                 Estimation seulement — basée sur les performances en pratique, non sur la notation officielle TCF (IRT).
+              </div>
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--border-subtle)", fontSize: 12, color: "var(--text-secondary)" }}>
+                <strong style={{ color: clbResult.score699 >= 453 ? "#22c55e" : "#f59e0b" }}>
+                  {clbResult.score699 >= 453 ? "✓ Seuil IRCC atteint" : "✗ Seuil IRCC non atteint"}
+                </strong>
+                {" "}— Entrée express exige NCLC 7 (≥ 453/699 en lecture). Votre estimation : {clbResult.score699}/699.
               </div>
             </div>
 
