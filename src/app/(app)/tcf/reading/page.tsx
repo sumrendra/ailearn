@@ -317,7 +317,7 @@ export default function TCFReadingPage() {
                 style={{
                   height: "100%",
                   width: `${pct}%`,
-                  background: pct >= 67 ? "#10b981" : pct >= 41 ? "#f59e0b" : "#ef4444",
+                  background: pct >= 65 ? "#10b981" : pct >= 41 ? "#f59e0b" : "#ef4444",
                   borderRadius: 4,
                   transition: "width 0.8s ease",
                 }}
@@ -335,16 +335,21 @@ export default function TCFReadingPage() {
               }}
             >
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 4 }}>
-                Estimated CLB level
+                Niveau NCLC estimé
               </div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
-                {clbResult.clb}
+              <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
+                  {clbResult.clb}
+                </div>
+                <div style={{ fontSize: 14, fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
+                  ~{clbResult.score699} / 699
+                </div>
               </div>
               <div style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 2 }}>
                 {clbResult.cefr} · {clbResult.description}
               </div>
               <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 6 }}>
-                Estimate only — based on practice performance, not official TCF scoring.
+                Estimation seulement — basée sur les performances en pratique, non sur la notation officielle TCF (IRT).
               </div>
             </div>
 
@@ -590,7 +595,7 @@ export default function TCFReadingPage() {
               opacity: idx === 0 ? 0.4 : 1,
             }}
           >
-            <ChevronLeft size={14} /> Previous
+            <ChevronLeft size={14} /> Précédent
           </button>
 
           <button
@@ -608,7 +613,7 @@ export default function TCFReadingPage() {
               opacity: answered ? 1 : 0.5,
             }}
           >
-            {idx === 38 ? "Finish" : "Next"} <ChevronRight size={14} />
+            {idx === 38 ? "Terminer" : "Suivant"} <ChevronRight size={14} />
           </button>
         </div>
       </div>

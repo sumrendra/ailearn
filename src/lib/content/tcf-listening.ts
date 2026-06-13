@@ -596,21 +596,26 @@ export function estimateCLBFromListening(correct: number): {
   clb: string;
   cefr: string;
   description: string;
+  score699: number;
 } {
   const pct = correct / 39;
-  if (pct >= 0.92)
-    return { clb: "CLB 12", cefr: "C2", description: "Near-native proficiency" };
-  if (pct >= 0.79)
-    return { clb: "CLB 10–11", cefr: "C1", description: "Advanced proficiency" };
-  if (pct >= 0.67)
-    return { clb: "CLB 8–9", cefr: "B2", description: "Upper-intermediate" };
-  if (pct >= 0.54)
-    return { clb: "CLB 7", cefr: "B1+", description: "Intermediate — PR threshold" };
-  if (pct >= 0.41)
-    return { clb: "CLB 6", cefr: "B1", description: "Lower-intermediate" };
-  if (pct >= 0.28)
-    return { clb: "CLB 5", cefr: "A2+", description: "Elementary" };
-  if (pct >= 0.15)
-    return { clb: "CLB 4", cefr: "A2", description: "Basic" };
-  return { clb: "Below CLB 4", cefr: "A1", description: "Beginner" };
+  // Linear approximation of 0-699 TCF scale (actual uses IRT)
+  const score699 = Math.round(pct * 699);
+  // Thresholds derived from official IRCC NCLC→TCF equivalency table
+  // NCLC 7 = 458/699 (listening) = 65.5% → minimum for most PR streams
+  if (pct >= 0.906)
+    return { clb: "NCLC 11–12", cefr: "C2", description: "Near-native proficiency", score699 };
+  if (pct >= 0.787)
+    return { clb: "NCLC 9–10", cefr: "C1", description: "Advanced proficiency", score699 };
+  if (pct >= 0.720)
+    return { clb: "NCLC 8", cefr: "B2+", description: "Upper-intermediate", score699 };
+  if (pct >= 0.655)
+    return { clb: "NCLC 7", cefr: "B2", description: "Intermediate — PR threshold", score699 };
+  if (pct >= 0.516)
+    return { clb: "NCLC 6", cefr: "B1+", description: "Lower-intermediate", score699 };
+  if (pct >= 0.259)
+    return { clb: "NCLC 5", cefr: "A2+", description: "Elementary", score699 };
+  if (pct >= 0.143)
+    return { clb: "NCLC 4", cefr: "A2", description: "Basic", score699 };
+  return { clb: "Below NCLC 4", cefr: "A1", description: "Beginner", score699 };
 }
