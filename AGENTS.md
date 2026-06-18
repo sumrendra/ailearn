@@ -1,3 +1,5 @@
+For application architecture, routes, content system, APIs, and known gaps, read [`CODEBASE.md`](./CODEBASE.md) before making structural changes.
+
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 

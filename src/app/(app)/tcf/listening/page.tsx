@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Play, Square, RotateCcw, ChevronRight, ChevronLeft, Check, X, Volume2, Loader2, Lock, BookOpen } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
@@ -43,6 +43,7 @@ export default function TCFListeningPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playCount, setPlayCount] = useState(0);
   const [slow, setSlow] = useState(false);
+  const [ttsError, setTtsError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioCache = useRef<Map<string, string>>(new Map());
 
@@ -54,7 +55,9 @@ export default function TCFListeningPage() {
   const questions: TCFListeningQuestion[] = LISTENING_PAPERS[paper] ?? LISTENING_PAPERS[1];
   const q = questions[idx];
   const userAnswer = answers[idx];
-  const answered = userAnswer !== null;
+  const hasSelection = userAnswer !== null;
+  /** Real TCF exam: no correct/incorrect feedback until the section ends. */
+  const showFeedback = !examMode && hasSelection;
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -63,28 +66,69 @@ export default function TCFListeningPage() {
     };
   }, []);
 
-  // Stop audio on question change
-  useEffect(() => {
+  async function handlePlay() {
+    if (examMode && playCount >= 1) return;
+    if (isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    const cacheKey = `p${paper}-q${idx}`;
+    let blobUrl = audioCache.current.get(cacheKey);
+
+    if (!blobUrl) {
+      setIsLoading(true);
+      setTtsError(null);
+      try {
+        const res = await fetch("/api/tcf/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: q.audioScript, level: q.level }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({})) as { error?: string };
+          throw new Error(err.error ?? "TTS failed");
+        }
+        const blob = await res.blob();
+        blobUrl = URL.createObjectURL(blob);
+        audioCache.current.set(cacheKey, blobUrl);
+      } catch (err) {
+        setIsLoading(false);
+        setTtsError(err instanceof Error ? err.message : "Impossible de générer l'audio.");
+        return;
+      }
+      setIsLoading(false);
+    }
+
+    const audio = new Audio(blobUrl);
+    audio.playbackRate = slow ? 0.72 : 1.0;
+    audio.onended = () => setIsPlaying(false);
+    audio.onpause = () => setIsPlaying(false);
+    audioRef.current = audio;
+    audio.play();
+    setIsPlaying(true);
+    setPlayCount((c) => c + 1);
+  }
+
+  function scheduleExamAutoPlay() {
+    if (!examMode) return;
+    setTimeout(() => void handlePlay(), 400);
+  }
+
+  function resetAudioUi() {
     audioRef.current?.pause();
     setIsPlaying(false);
     setPlayCount(0);
     setIsLoading(false);
-  }, [idx]);
+    setTtsError(null);
+  }
 
-  // Auto-play audio in exam mode when question loads (real TCF plays audio automatically)
-  useEffect(() => {
-    if (phase !== "quiz" || !examMode) return;
-    const timer = setTimeout(() => {
-      handlePlay();
-    }, 400); // allow idx-change effect to settle first
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, phase, examMode]);
-
-  // Auto-start timer when quiz begins (real TCF clock starts immediately)
-  useEffect(() => {
-    if (phase === "quiz") setTimerRunning(true);
-  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  function goToIdx(newIdx: number) {
+    resetAudioUi();
+    setIdx(newIdx);
+    scheduleExamAutoPlay();
+  }
 
   // Timer — auto-finishes exam when it expires (real TCF behaviour)
   useEffect(() => {
@@ -108,49 +152,8 @@ export default function TCFListeningPage() {
     };
   }, [timerRunning]);
 
-  const handlePlay = useCallback(async () => {
-    // In exam mode, audio plays exactly once (real TCF rule)
-    if (examMode && playCount >= 1) return;
-    if (isPlaying) {
-      audioRef.current?.pause();
-      setIsPlaying(false);
-      return;
-    }
-
-    const cacheKey = `p${paper}-q${idx}`;
-    let blobUrl = audioCache.current.get(cacheKey);
-
-    if (!blobUrl) {
-      setIsLoading(true);
-      try {
-        const res = await fetch("/api/tcf/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: q.audioScript, level: q.level }),
-        });
-        if (!res.ok) throw new Error("TTS failed");
-        const blob = await res.blob();
-        blobUrl = URL.createObjectURL(blob);
-        audioCache.current.set(cacheKey, blobUrl);
-      } catch {
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(false);
-    }
-
-    const audio = new Audio(blobUrl);
-    audio.playbackRate = slow ? 0.72 : 1.0;
-    audio.onended = () => setIsPlaying(false);
-    audio.onpause = () => setIsPlaying(false);
-    audioRef.current = audio;
-    audio.play();
-    setIsPlaying(true);
-    setPlayCount((c) => c + 1);
-  }, [examMode, isPlaying, paper, idx, q, slow, playCount]);
-
   function selectAnswer(optIdx: number) {
-    if (answered) return;
+    if (!examMode && hasSelection) return;
     const updated = [...answers];
     updated[idx] = optIdx;
     setAnswers(updated);
@@ -159,7 +162,7 @@ export default function TCFListeningPage() {
   function goNext() {
     audioRef.current?.pause();
     if (idx < 38) {
-      setIdx(idx + 1);
+      goToIdx(idx + 1);
     } else {
       setPhase("complete");
       setTimerRunning(false);
@@ -168,8 +171,7 @@ export default function TCFListeningPage() {
 
   function goPrev() {
     if (idx > 0) {
-      audioRef.current?.pause();
-      setIdx(idx - 1);
+      goToIdx(idx - 1);
     }
   }
 
@@ -182,6 +184,7 @@ export default function TCFListeningPage() {
     setPlayCount(0);
     setIsPlaying(false);
     setIsLoading(false);
+    setTtsError(null);
     audioCache.current.clear();
     setPhase("intro");
   }
@@ -198,6 +201,7 @@ export default function TCFListeningPage() {
     setPlayCount(0);
     setIsPlaying(false);
     setIsLoading(false);
+    setTtsError(null);
   }
 
   const totalAnswered = answers.filter((a) => a !== null).length;
@@ -399,7 +403,11 @@ export default function TCFListeningPage() {
                 Changer
               </button>
               <button
-                onClick={() => setPhase("quiz")}
+                onClick={() => {
+                  setTimerRunning(true);
+                  setPhase("quiz");
+                  if (examMode) scheduleExamAutoPlay();
+                }}
                 style={{
                   flex: 2, padding: "14px",
                   background: examMode ? "#ef4444" : "#5b6af0",
@@ -508,6 +516,53 @@ export default function TCFListeningPage() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Per-question review — essential in exam mode where inline feedback is hidden */}
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 12 }}>
+                Revue des réponses
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 360, overflowY: "auto" }}>
+                {questions.map((question, i) => {
+                  const chosen = answers[i];
+                  const ok = chosen === question.correctIndex;
+                  return (
+                    <details
+                      key={question.id}
+                      style={{
+                        padding: "10px 14px",
+                        background: "var(--bg-overlay)",
+                        borderRadius: 8,
+                        border: `1px solid ${ok ? "#22c55e33" : chosen !== null ? "#ef444433" : "var(--border-subtle)"}`,
+                      }}
+                    >
+                      <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--text-primary)", listStyle: "none" }}>
+                        <span style={{ fontFamily: "var(--font-mono)", marginRight: 8, color: ok ? "#22c55e" : chosen !== null ? "#ef4444" : "var(--text-tertiary)" }}>
+                          {ok ? "✓" : chosen !== null ? "✗" : "—"}
+                        </span>
+                        Q{i + 1} · {question.level} · {question.topic}
+                      </summary>
+                      <p style={{ margin: "10px 0 6px", fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                        {question.question}
+                      </p>
+                      {chosen !== null && (
+                        <p style={{ margin: "0 0 6px", fontSize: 12, color: ok ? "#22c55e" : "#ef4444" }}>
+                          Votre réponse : {question.options[chosen]}
+                        </p>
+                      )}
+                      {!ok && (
+                        <p style={{ margin: "0 0 6px", fontSize: 12, color: "#22c55e" }}>
+                          Bonne réponse : {question.options[question.correctIndex]}
+                        </p>
+                      )}
+                      <p style={{ margin: 0, fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.55 }}>
+                        {question.explanation}
+                      </p>
+                    </details>
+                  );
+                })}
+              </div>
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
@@ -681,8 +736,10 @@ export default function TCFListeningPage() {
                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>
                   {isLoading ? "Génération audio…" : examLocked ? "Audio joué — 1 écoute (mode examen)" : isPlaying ? "Lecture en cours…" : playCount === 0 ? "Appuyez pour écouter" : `Écouté ${playCount}×`}
                 </div>
-                <div style={{ fontSize: 11, color: examLocked ? "#ef4444" : "var(--text-tertiary)", marginTop: 2 }}>
-                  {isLoading ? "Voix naturelle IA — première lecture en cache"
+                <div style={{ fontSize: 11, color: examLocked ? "#ef4444" : ttsError ? "#ef4444" : "var(--text-tertiary)", marginTop: 2 }}>
+                  {ttsError
+                    ? ttsError
+                    : isLoading ? "Voix naturelle IA — première lecture en cache"
                     : examLocked ? "TCF réel : l'audio passe une seule fois par question"
                     : playCount === 0 ? "L'audio se charge à la première écoute"
                     : examMode ? "1 seule écoute autorisée en mode examen"
@@ -739,19 +796,20 @@ export default function TCFListeningPage() {
               let border = "var(--border-subtle)";
               let color = "var(--text-primary)";
 
-              if (answered) {
+              if (showFeedback) {
                 if (isCorrect) { bg = "#22c55e18"; border = "#22c55e"; color = "#22c55e"; }
                 else if (isSelected && !isCorrect) { bg = "#ef444418"; border = "#ef4444"; color = "#ef4444"; }
                 else { color = "var(--text-tertiary)"; }
               } else if (isSelected) {
-                bg = "#5b6af022"; border = "#5b6af0";
+                bg = examMode ? "#5b6af018" : "#5b6af022";
+                border = "#5b6af0";
               }
 
               return (
                 <button
                   key={oi}
                   onClick={() => selectAnswer(oi)}
-                  disabled={answered}
+                  disabled={!examMode && hasSelection}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -760,7 +818,7 @@ export default function TCFListeningPage() {
                     background: bg,
                     border: `1.5px solid ${border}`,
                     borderRadius: 10,
-                    cursor: answered ? "default" : "pointer",
+                    cursor: !examMode && hasSelection ? "default" : "pointer",
                     textAlign: "left",
                     transition: "all 0.15s ease",
                   }}
@@ -779,12 +837,12 @@ export default function TCFListeningPage() {
                       fontFamily: "var(--font-mono)",
                       color,
                       flexShrink: 0,
-                      background: answered && isCorrect ? "#22c55e" : answered && isSelected && !isCorrect ? "#ef4444" : "transparent",
+                      background: showFeedback && isCorrect ? "#22c55e" : showFeedback && isSelected && !isCorrect ? "#ef4444" : "transparent",
                     }}
                   >
-                    {answered && isCorrect ? (
+                    {showFeedback && isCorrect ? (
                       <Check size={12} color="white" />
-                    ) : answered && isSelected && !isCorrect ? (
+                    ) : showFeedback && isSelected && !isCorrect ? (
                       <X size={12} color="white" />
                     ) : (
                       String.fromCharCode(65 + oi)
@@ -797,7 +855,7 @@ export default function TCFListeningPage() {
           </div>
 
           {/* Explanation */}
-          {answered && (
+          {showFeedback && (
             <div
               style={{
                 marginTop: 20,
@@ -849,21 +907,21 @@ export default function TCFListeningPage() {
           </button>
 
           <button
-            onClick={answered ? goNext : undefined}
-            disabled={!answered}
+            onClick={examMode || hasSelection ? goNext : undefined}
+            disabled={!examMode && !hasSelection}
             style={{
               display: "flex",
               alignItems: "center",
               gap: 6,
               padding: "10px 20px",
-              background: answered ? "#5b6af0" : "var(--bg-overlay)",
-              border: `1px solid ${answered ? "#5b6af0" : "var(--border-subtle)"}`,
+              background: examMode || hasSelection ? "#5b6af0" : "var(--bg-overlay)",
+              border: `1px solid ${examMode || hasSelection ? "#5b6af0" : "var(--border-subtle)"}`,
               borderRadius: 10,
               fontSize: 13,
-              fontWeight: answered ? 600 : 400,
-              color: answered ? "white" : "var(--text-tertiary)",
-              cursor: answered ? "pointer" : "not-allowed",
-              opacity: answered ? 1 : 0.5,
+              fontWeight: examMode || hasSelection ? 600 : 400,
+              color: examMode || hasSelection ? "white" : "var(--text-tertiary)",
+              cursor: examMode || hasSelection ? "pointer" : "not-allowed",
+              opacity: examMode || hasSelection ? 1 : 0.5,
             }}
           >
             {idx === 38 ? "Terminer" : "Suivant"} <ChevronRight size={14} />

@@ -110,6 +110,49 @@ function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+function emptyEvalResult(minWords: number, maxWords: number): EvalResult {
+  return {
+    score: 0,
+    taskCompletion: 0,
+    coherence: 0,
+    vocabulary: 0,
+    grammar: 0,
+    feedback: "Aucune réponse soumise pour cette tâche.",
+    strengths: [],
+    improvements: [`Rédigez entre ${minWords} et ${maxWords} mots selon la consigne.`],
+    wordCount: 0,
+  };
+}
+
+async function evaluateWritingTask(
+  task: WritingTask,
+  response: string,
+): Promise<EvalResult> {
+  if (!response.trim()) {
+    return emptyEvalResult(task.minWords, task.maxWords);
+  }
+  const res = await fetch("/api/tcf/writing", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      taskNumber: task.type,
+      taskPrompt: task.prompt,
+      response,
+      minWords: task.minWords,
+      maxWords: task.maxWords,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error ?? "Evaluation failed");
+  }
+  const data = await res.json() as EvalResult & { error?: string };
+  if (typeof data.score !== "number") {
+    throw new Error(data.error ?? "Invalid evaluation response");
+  }
+  return data;
+}
+
 interface EvalResult {
   score: number;
   taskCompletion: number;
@@ -136,6 +179,8 @@ export default function TCFWritingPage() {
   const [timerRunning, setTimerRunning] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const responsesRef = useRef(responses);
+  const paperRef = useRef(paper);
   const [openResult, setOpenResult] = useState<number | null>(null);
 
   const tasks = PAPERS[paper];
@@ -145,10 +190,35 @@ export default function TCFWritingPage() {
   const isOverMax = currentWords > task.maxWords;
 
   useEffect(() => {
+    responsesRef.current = responses;
+  }, [responses]);
+
+  useEffect(() => {
+    paperRef.current = paper;
+  }, [paper]);
+
+  function submitAllForEvaluation(currentResponses: string[]) {
+    const allTasks = PAPERS[paperRef.current];
+    setPhase("evaluating");
+    Promise.all(
+      allTasks.map((t, i) => evaluateWritingTask(t, currentResponses[i])),
+    ).then((evals) => { setResults(evals); setPhase("complete"); })
+     .catch((err) => {
+       setEvalError(err instanceof Error ? err.message : "Temps écoulé. Impossible d'évaluer. Veuillez réessayer.");
+       setPhase("writing");
+     });
+  }
+
+  useEffect(() => {
     if (timerRunning) {
       timerRef.current = setInterval(() => {
         setSecondsLeft((s) => {
-          if (s <= 1) { clearInterval(timerRef.current!); setTimerRunning(false); return 0; }
+          if (s <= 1) {
+            clearInterval(timerRef.current!);
+            setTimerRunning(false);
+            queueMicrotask(() => submitAllForEvaluation(responsesRef.current));
+            return 0;
+          }
           return s - 1;
         });
       }, 1000);
@@ -157,29 +227,6 @@ export default function TCFWritingPage() {
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [timerRunning]);
-
-  // Auto-submit when timer expires (real TCF closes the exam when time is up)
-  const responsesRef = useRef(responses);
-  responsesRef.current = responses;
-  useEffect(() => {
-    if (secondsLeft !== 0 || phase !== "writing") return;
-    const allTasks = PAPERS[paper];
-    const currentResponses = responsesRef.current;
-    setPhase("evaluating");
-    Promise.all(
-      allTasks.map((t, i) =>
-        fetch("/api/tcf/writing", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            taskNumber: t.type, taskPrompt: t.prompt,
-            response: currentResponses[i], minWords: t.minWords, maxWords: t.maxWords,
-          }),
-        }).then((r) => r.json())
-      )
-    ).then((evals) => { setResults(evals); setPhase("complete"); })
-     .catch(() => { setEvalError("Temps écoulé. Impossible d'évaluer. Veuillez réessayer."); setPhase("writing"); });
-  }, [secondsLeft, phase, paper]);
 
   function startPaper(p: number) {
     setPaper(p);
@@ -220,24 +267,12 @@ export default function TCFWritingPage() {
     try {
       const allTasks = PAPERS[paper];
       const evals = await Promise.all(
-        allTasks.map((t, i) =>
-          fetch("/api/tcf/writing", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              taskNumber: t.type,
-              taskPrompt: t.prompt,
-              response: responses[i],
-              minWords: t.minWords,
-              maxWords: t.maxWords,
-            }),
-          }).then((r) => r.json())
-        )
+        allTasks.map((t, i) => evaluateWritingTask(t, responses[i])),
       );
       setResults(evals);
       setPhase("complete");
-    } catch {
-      setEvalError("Impossible d'obtenir l'évaluation. Veuillez réessayer.");
+    } catch (err) {
+      setEvalError(err instanceof Error ? err.message : "Impossible d'obtenir l'évaluation. Veuillez réessayer.");
       setPhase("writing");
       setTaskIdx(2);
     }
@@ -336,7 +371,7 @@ export default function TCFWritingPage() {
 
   // ── Complete ───────────────────────────────────────────────────
   if (phase === "complete") {
-    const validResults = results.filter(Boolean) as EvalResult[];
+    const validResults = results.filter((r): r is EvalResult => r != null && typeof r.score === "number");
     const totalScore = validResults.reduce((s, r) => s + r.score, 0);
     const maxScore = validResults.length * 20;
     const pct = Math.round((totalScore / maxScore) * 100);

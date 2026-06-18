@@ -143,11 +143,13 @@ export default function TCFSpeakingPage() {
   const [results, setResults] = useState<(EvalResult | null)[]>([null, null, null]);
   const [openResult, setOpenResult] = useState<number | null>(null);
   const [evalError, setEvalError] = useState<string | null>(null);
-  const [audioBlobs, setAudioBlobs] = useState<(Blob | null)[]>([null, null, null]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mimeTypeRef = useRef<string>("audio/webm");
+  /** Refs avoid stale closures when the recording timer fires or tasks chain. */
+  const audioBlobsRef = useRef<(Blob | null)[]>([null, null, null]);
+  const mimeTypesRef = useRef<(string | null)[]>([null, null, null]);
   const chunksRef = useRef<Blob[]>([]);
   const prepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -169,7 +171,8 @@ export default function TCFSpeakingPage() {
     setPaper(p);
     setTaskIdx(0);
     setResults([null, null, null]);
-    setAudioBlobs([null, null, null]);
+    audioBlobsRef.current = [null, null, null];
+    mimeTypesRef.current = [null, null, null];
     setEvalError(null);
     const t = PAPERS[p][0];
     if (t.prepSeconds > 0) {
@@ -207,17 +210,65 @@ export default function TCFSpeakingPage() {
     });
   }
 
-  const finishRecording = useCallback((currentTaskIdx: number, currentAudioBlobs: (Blob | null)[]) => {
+  const evaluateAll = useCallback(async (blobs: (Blob | null)[], mimes: (string | null)[]) => {
+    setPhase("evaluating");
+    try {
+      const evalTasks = tasks.map(async (t, i) => {
+        const blob = blobs[i];
+        if (!blob || blob.size < 1000) {
+          return {
+            score: 0, fluency: 0, vocabulary: 0, grammar: 0, pronunciation: 0,
+            transcript: "", feedback: "Aucun audio enregistré pour cette tâche.",
+            strengths: [], improvements: ["Enregistrez une réponse vocale complète"],
+          } as EvalResult;
+        }
+        const base64 = await blobToBase64(blob);
+
+        const res = await fetch("/api/tcf/speaking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taskNumber: t.type,
+            taskPrompt: t.prompt,
+            audioBase64: base64,
+            mimeType: mimes[i] ?? blob.type ?? "audio/webm",
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({})) as { error?: string };
+          throw new Error(err.error ?? "Evaluation failed");
+        }
+        const data = await res.json() as EvalResult & { error?: string };
+        if (typeof data.score !== "number") {
+          throw new Error(data.error ?? "Invalid evaluation response");
+        }
+        return data;
+      });
+
+      const evals = await Promise.all(evalTasks);
+      setResults(evals);
+      setPhase("complete");
+    } catch (err) {
+      setEvalError(err instanceof Error ? err.message : "Impossible d'obtenir l'évaluation. Veuillez réessayer.");
+      setPhase("select");
+    }
+  }, [tasks]);
+
+  const finishRecording = useCallback((currentTaskIdx: number) => {
     clearInterval(recTimerRef.current!);
     const mr = mediaRecorderRef.current;
     if (!mr || mr.state === "inactive") return;
     mr.stop();
     streamRef.current?.getTracks().forEach((t) => t.stop());
     mr.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current });
-      const updated = [...currentAudioBlobs];
+      const mime = mimeTypeRef.current;
+      const blob = new Blob(chunksRef.current, { type: mime });
+      const updated = [...audioBlobsRef.current];
       updated[currentTaskIdx] = blob;
-      setAudioBlobs(updated);
+      const updatedMimes = [...mimeTypesRef.current];
+      updatedMimes[currentTaskIdx] = mime;
+      audioBlobsRef.current = updated;
+      mimeTypesRef.current = updatedMimes;
 
       if (currentTaskIdx < 2) {
         const nextTaskIdx = currentTaskIdx + 1;
@@ -232,11 +283,10 @@ export default function TCFSpeakingPage() {
           setPrepLeft(0);
         }
       } else {
-        evaluateAll(updated);
+        evaluateAll(updated, updatedMimes);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks]);
+  }, [tasks, evaluateAll]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -260,57 +310,20 @@ export default function TCFSpeakingPage() {
       let s = t.recordSeconds;
       setRecLeft(s);
       const capturedIdx = taskIdx;
-      const capturedBlobs = audioBlobs;
       recTimerRef.current = setInterval(() => {
         s--;
         setRecLeft(s);
         if (s <= 0) {
-          finishRecording(capturedIdx, capturedBlobs);
+          finishRecording(capturedIdx);
         }
       }, 1000);
     } catch {
       setEvalError("Impossible d'accéder au microphone. Vérifiez les permissions.");
     }
-  }, [tasks, taskIdx, audioBlobs, finishRecording]);
+  }, [tasks, taskIdx, finishRecording]);
 
   function stopEarly() {
-    finishRecording(taskIdx, audioBlobs);
-  }
-
-  async function evaluateAll(blobs: (Blob | null)[]) {
-    setPhase("evaluating");
-    try {
-      const evalTasks = tasks.map(async (t, i) => {
-        const blob = blobs[i];
-        if (!blob || blob.size < 1000) {
-          return {
-            score: 0, fluency: 0, vocabulary: 0, grammar: 0, pronunciation: 0,
-            transcript: "", feedback: "Aucun audio enregistré pour cette tâche.",
-            strengths: [], improvements: ["Enregistrez une réponse vocale complète"],
-          } as EvalResult;
-        }
-        const base64 = await blobToBase64(blob);
-
-        const res = await fetch("/api/tcf/speaking", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            taskNumber: t.type,
-            taskPrompt: t.prompt,
-            audioBase64: base64,
-            mimeType: mimeTypeRef.current,
-          }),
-        });
-        return res.json();
-      });
-
-      const evals = await Promise.all(evalTasks);
-      setResults(evals);
-      setPhase("complete");
-    } catch {
-      setEvalError("Impossible d'obtenir l'évaluation. Veuillez réessayer.");
-      setPhase("select");
-    }
+    finishRecording(taskIdx);
   }
 
   function restart() {
@@ -321,7 +334,8 @@ export default function TCFSpeakingPage() {
     setPhase("select");
     setTaskIdx(0);
     setResults([null, null, null]);
-    setAudioBlobs([null, null, null]);
+    audioBlobsRef.current = [null, null, null];
+    mimeTypesRef.current = [null, null, null];
     setEvalError(null);
   }
 
@@ -429,7 +443,7 @@ export default function TCFSpeakingPage() {
 
   // ── Complete ───────────────────────────────────────────────────
   if (phase === "complete") {
-    const validResults = results.filter(Boolean) as EvalResult[];
+    const validResults = results.filter((r): r is EvalResult => r != null && typeof r.score === "number");
     const totalScore = validResults.reduce((s, r) => s + r.score, 0);
     const maxScore = validResults.length * 20;
     const pct = Math.round((totalScore / maxScore) * 100);
@@ -586,7 +600,6 @@ export default function TCFSpeakingPage() {
   }
 
   // ── Prep / Recording ───────────────────────────────────────────
-  const totalTaskTime = task.prepSeconds + task.recordSeconds;
   const isPrepping = phase === "prep" && task.prepSeconds > 0 && prepLeft > 0;
   const isReadyToRecord = phase === "prep" && (task.prepSeconds === 0 || prepLeft === 0);
   const isRecording = phase === "recording";
