@@ -22,15 +22,16 @@ cd ailearn
 cp .env.local.example .env.local
 # Edit .env.local — add your ANTHROPIC_API_KEY at minimum
 
-# 3. Start everything
-docker compose up
+# 3. Start everything (migrations run automatically on container start)
+docker compose up -d --build
 
-# 4. In a new terminal, run migrations + seed
-docker compose exec app npx prisma migrate dev --name init
-docker compose exec app npx prisma db seed
+# 4. Open http://localhost:3080
 
-# 5. Open http://localhost:3000
+# Optional: pre-generate TCF listening audio (one-time, needs GEMINI_API_KEY)
+docker compose exec app npm run seed:tcf-audio -- --paper=1
 ```
+
+**Production (Portainer on labz-server):** see [DEPLOYMENT.md](./DEPLOYMENT.md) — pull & redeploy applies migrations; run `seed:tcf-audio` once via container console.
 
 ## Local development (no Docker)
 

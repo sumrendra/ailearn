@@ -143,6 +143,8 @@ export default function TCFSpeakingPage() {
   const [results, setResults] = useState<(EvalResult | null)[]>([null, null, null]);
   const [openResult, setOpenResult] = useState<number | null>(null);
   const [evalError, setEvalError] = useState<string | null>(null);
+  const [micError, setMicError] = useState<string | null>(null);
+  const [isRequestingMic, setIsRequestingMic] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -153,6 +155,7 @@ export default function TCFSpeakingPage() {
   const chunksRef = useRef<Blob[]>([]);
   const prepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startRecordingRef = useRef<(() => Promise<void>) | null>(null);
 
   const tasks = PAPERS[paper];
   const task = tasks[taskIdx];
@@ -174,6 +177,8 @@ export default function TCFSpeakingPage() {
     audioBlobsRef.current = [null, null, null];
     mimeTypesRef.current = [null, null, null];
     setEvalError(null);
+    setMicError(null);
+    setIsRequestingMic(false);
     const t = PAPERS[p][0];
     if (t.prepSeconds > 0) {
       setPrepLeft(t.prepSeconds);
@@ -185,7 +190,7 @@ export default function TCFSpeakingPage() {
     }
   }
 
-  function startPrepTimer(seconds: number) {
+  const startPrepTimer = useCallback((seconds: number) => {
     clearInterval(prepTimerRef.current!);
     let s = seconds;
     prepTimerRef.current = setInterval(() => {
@@ -193,10 +198,10 @@ export default function TCFSpeakingPage() {
       setPrepLeft(s);
       if (s <= 0) {
         clearInterval(prepTimerRef.current!);
-        startRecording();
+        void startRecordingRef.current?.();
       }
     }, 1000);
-  }
+  }, []);
 
   function blobToBase64(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -286,22 +291,43 @@ export default function TCFSpeakingPage() {
         evaluateAll(updated, updatedMimes);
       }
     };
-  }, [tasks, evaluateAll]);
+  }, [tasks, evaluateAll, startPrepTimer]);
 
   const startRecording = useCallback(async () => {
+    if (isRequestingMic || phase === "recording") return;
+
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setMicError("L'accès au microphone nécessite HTTPS ou localhost, et un navigateur récent.");
+      return;
+    }
+
+    setMicError(null);
+    setIsRequestingMic(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
       streamRef.current = stream;
       chunksRef.current = [];
-      // Prefer webm/opus (Chrome/Firefox), fall back to mp4 (Safari), then bare webm
+
       const supported = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
       const mimeType = supported.find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
       mimeTypeRef.current = mimeType || "audio/webm";
-      const mr = new MediaRecorder(stream, {
-        ...(mimeType ? { mimeType } : {}),
-        audioBitsPerSecond: 32000, // ~240KB/min → stays well under 4.5MB Vercel limit
-      });
-      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+
+      let mr: MediaRecorder;
+      try {
+        mr = new MediaRecorder(stream, {
+          ...(mimeType ? { mimeType } : {}),
+          audioBitsPerSecond: 32000,
+        });
+      } catch {
+        // Safari / some browsers reject explicit bitrate — retry without it.
+        mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      }
+
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
       mr.start(100);
       mediaRecorderRef.current = mr;
       setPhase("recording");
@@ -317,10 +343,21 @@ export default function TCFSpeakingPage() {
           finishRecording(capturedIdx);
         }
       }, 1000);
-    } catch {
-      setEvalError("Impossible d'accéder au microphone. Vérifiez les permissions.");
+    } catch (err) {
+      const denied = err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError");
+      setMicError(
+        denied
+          ? "Accès au microphone refusé. Autorisez le micro dans les paramètres du navigateur, puis réessayez."
+          : "Impossible d'accéder au microphone. Vérifiez les permissions et réessayez.",
+      );
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    } finally {
+      setIsRequestingMic(false);
     }
-  }, [tasks, taskIdx, finishRecording]);
+  }, [tasks, taskIdx, finishRecording, isRequestingMic, phase]);
+
+  startRecordingRef.current = startRecording;
 
   function stopEarly() {
     finishRecording(taskIdx);
@@ -337,6 +374,8 @@ export default function TCFSpeakingPage() {
     audioBlobsRef.current = [null, null, null];
     mimeTypesRef.current = [null, null, null];
     setEvalError(null);
+    setMicError(null);
+    setIsRequestingMic(false);
   }
 
   const formatTime = (s: number) =>
@@ -685,23 +724,61 @@ export default function TCFSpeakingPage() {
           {/* Ready to record (no prep or prep done) */}
           {isReadyToRecord && (
             <div style={{ textAlign: "center", padding: "12px 0" }}>
-              <div style={{ width: 80, height: 80, borderRadius: "50%", background: `${accent}15`, border: `2px solid ${accent}44`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                <Mic size={32} color={accent} />
-              </div>
-              <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 20, lineHeight: 1.6 }}>
-                {task.prepSeconds > 0
-                  ? "Le temps de préparation est écoulé. Cliquez pour démarrer l'enregistrement."
-                  : "Aucun temps de préparation pour cette tâche. Cliquez pour démarrer directement."}
-              </p>
+              {micError && (
+                <div style={{
+                  padding: "10px 14px", background: "#ef444412", border: "1px solid #ef444433",
+                  borderRadius: 8, marginBottom: 16, fontSize: 13, color: "#ef4444", textAlign: "left",
+                }}>
+                  {micError}
+                </div>
+              )}
               <button
-                onClick={startRecording}
+                type="button"
+                onClick={() => void startRecording()}
+                disabled={isRequestingMic}
                 style={{
-                  padding: "14px 32px", background: accent, color: "white",
-                  border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: "pointer",
-                  display: "flex", alignItems: "center", gap: 8, margin: "0 auto",
+                  width: "100%", background: "transparent", border: "none", padding: 0,
+                  cursor: isRequestingMic ? "wait" : "pointer", textAlign: "center",
                 }}
               >
-                <Mic size={18} /> Démarrer l&apos;enregistrement
+                <div style={{
+                  width: 80, height: 80, borderRadius: "50%",
+                  background: `${accent}15`, border: `2px solid ${accent}44`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 16px",
+                  opacity: isRequestingMic ? 0.6 : 1,
+                }}>
+                  {isRequestingMic ? (
+                    <Loader2 size={32} color={accent} style={{ animation: "spin 1.2s linear infinite" }} />
+                  ) : (
+                    <Mic size={32} color={accent} />
+                  )}
+                </div>
+              </button>
+              <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 20, lineHeight: 1.6 }}>
+                {isRequestingMic
+                  ? "Demande d'accès au microphone…"
+                  : task.prepSeconds > 0
+                    ? "Le temps de préparation est écoulé. Cliquez pour démarrer l'enregistrement."
+                    : "Aucun temps de préparation pour cette tâche. Cliquez pour démarrer directement."}
+              </p>
+              <button
+                type="button"
+                onClick={() => void startRecording()}
+                disabled={isRequestingMic}
+                style={{
+                  padding: "14px 32px", background: accent, color: "white",
+                  border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600,
+                  cursor: isRequestingMic ? "wait" : "pointer",
+                  display: "flex", alignItems: "center", gap: 8, margin: "0 auto",
+                  opacity: isRequestingMic ? 0.7 : 1,
+                }}
+              >
+                {isRequestingMic ? (
+                  <><Loader2 size={18} style={{ animation: "spin 1.2s linear infinite" }} /> Accès au micro…</>
+                ) : (
+                  <><Mic size={18} /> Démarrer l&apos;enregistrement</>
+                )}
               </button>
               <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-tertiary)" }}>
                 Durée maximale : {formatTime(task.recordSeconds)}

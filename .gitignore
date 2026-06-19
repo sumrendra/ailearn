@@ -14,7 +14,10 @@
 /coverage
 
 # next.js
-/.next/
+/.next
+
+# Generated TCF listening WAV files (persisted via Docker volume in production)
+public/tcf-audio/**/*.wav/
 /out/
 
 # production
