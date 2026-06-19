@@ -41,22 +41,13 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Include Prisma schema, config, and seed for database operations
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
-# TCF audio scripts (auto-import + background seed)
-COPY --from=builder --chown=nextjs:nodejs /app/src/lib/content ./src/lib/content
-COPY --from=builder --chown=nextjs:nodejs /app/src/lib/tcf-tts-server.ts ./src/lib/tcf-tts-server.ts
-COPY --chown=nextjs:nodejs scripts/tcf-audio-background.sh ./scripts/tcf-audio-background.sh
-
-RUN mkdir -p public/tcf-audio && chown nextjs:nodejs public/tcf-audio
-
 # Copy pre-installed and pre-generated dependencies (including compiled Prisma Client) from builder stage
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh /app/scripts/tcf-audio-background.sh
 
 # Make locally-installed CLIs (prisma, tsx) available on PATH
 ENV PATH="/app/node_modules/.bin:$PATH"
@@ -68,6 +59,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "server.js"]
 

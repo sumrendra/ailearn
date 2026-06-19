@@ -200,23 +200,3 @@ enum Difficulty {
   INTERMEDIATE
   ADVANCED
 }
-
-// ─── TCF listening audio (pre-generated, static content) ───────────────────
-//
-// One row per (paper, question). Populated once via `npm run seed:tcf-audio`.
-// Exam UI reads from here — no live Gemini TTS during tests.
-
-model TcfListeningAudio {
-  id            String   @id @default(cuid())
-  paper         Int
-  questionIndex Int
-  contentHash   String
-  audioData     Bytes
-  mimeType      String   @default("audio/wav")
-  voice         String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@unique([paper, questionIndex])
-  @@index([paper])
-}

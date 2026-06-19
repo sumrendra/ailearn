@@ -13,7 +13,6 @@ services:
       # Connects to your existing pgvector-db instance
       # default host.docker.internal allows connecting to the database exposed on your host's port 5432
       DATABASE_URL: postgresql://${DB_USER:-admin}:${DB_PASSWORD:-epaps0991g}@${DB_HOST:-host.docker.internal}:${DB_PORT:-5432}/${DB_NAME:-ailearn}
-      TCF_AUDIO_DIR: /app/public/tcf-audio
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3080}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-secret-change-in-production}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
@@ -22,9 +21,3 @@ services:
       AUTH_TRUST_HOST: "true"
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    volumes:
-      # Persists generated WAV files across redeploys — background seeder fills this once
-      - tcf-audio-data:/app/public/tcf-audio
-
-volumes:
-  tcf-audio-data:

@@ -366,27 +366,9 @@ Uses `@prisma/adapter-pg` with a `pg` Pool — required for Prisma 7 driver adap
 ### Running migrations
 
 ```bash
-npx prisma migrate dev    # local schema changes
+npx prisma migrate dev    # local
+docker compose exec app npx prisma migrate deploy  # production container
 ```
-
-**Production / Portainer:** migrations run automatically on container start via `docker-entrypoint.sh` (`prisma migrate deploy`). See [DEPLOYMENT.md](./DEPLOYMENT.md).
-
-Manual override (rare):
-
-```bash
-docker compose exec app npx prisma migrate deploy
-```
-
-### TCF listening audio (one-time seed)
-
-Stored in `TcfListeningAudio` table. Not run on deploy — run once:
-
-```bash
-docker compose exec app npm run seed:tcf-audio          # all papers (resumable)
-docker compose exec app npm run seed:tcf-audio -- --paper=1
-```
-
-Served at `GET /api/tcf/listening/audio/[paper]/[question]`.
 
 ### Docker database connection
 

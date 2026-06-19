@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Play, Square, RotateCcw, ChevronRight, ChevronLeft, Check, X, Volume2, Loader2, Lock, BookOpen } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
-import { createFrenchUtterance } from "@/lib/french-tts";
 import {
   LISTENING_PAPERS,
   estimateCLBFromListening,
@@ -30,19 +29,7 @@ function bandOf(id: number) {
   return 2;
 }
 
-type Phase = "select" | "intro" | "preparing" | "quiz" | "complete";
-type AudioSource = "db" | "browser";
-
-const PREFETCH_CONCURRENCY = 8;
-
-async function fetchStoredAudio(paper: number, qIdx: number): Promise<Blob> {
-  const res = await fetch(`/api/tcf/listening/audio/${paper}/${qIdx}`);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as { error?: string; hint?: string };
-    throw new Error(err.hint ? `${err.error} — ${err.hint}` : (err.error ?? "Audio not found"));
-  }
-  return res.blob();
-}
+type Phase = "select" | "intro" | "quiz" | "complete";
 
 export default function TCFListeningPage() {
   const [paper, setPaper] = useState(1);
@@ -57,15 +44,8 @@ export default function TCFListeningPage() {
   const [playCount, setPlayCount] = useState(0);
   const [slow, setSlow] = useState(false);
   const [ttsError, setTtsError] = useState<string | null>(null);
-  const [prefetchDone, setPrefetchDone] = useState(0);
-  const [prefetchError, setPrefetchError] = useState<string | null>(null);
-  const [audioSource, setAudioSource] = useState<AudioSource>("db");
-  const [dbAudioReady, setDbAudioReady] = useState<boolean | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioCache = useRef<Map<string, string>>(new Map());
-  const idxRef = useRef(0);
-  const paperRef = useRef(1);
-  const prefetchAbortRef = useRef(false);
 
   // Timer
   const [secondsLeft, setSecondsLeft] = useState(35 * 60);
@@ -74,8 +54,6 @@ export default function TCFListeningPage() {
 
   const questions: TCFListeningQuestion[] = LISTENING_PAPERS[paper] ?? LISTENING_PAPERS[1];
   const q = questions[idx];
-  idxRef.current = idx;
-  paperRef.current = paper;
   const userAnswer = answers[idx];
   const hasSelection = userAnswer !== null;
   /** Real TCF exam: no correct/incorrect feedback until the section ends. */
@@ -85,171 +63,61 @@ export default function TCFListeningPage() {
   useEffect(() => {
     return () => {
       audioRef.current?.pause();
-      for (const url of audioCache.current.values()) {
-        URL.revokeObjectURL(url);
-      }
     };
   }, []);
 
-  function clearAudioCache() {
-    for (const url of audioCache.current.values()) {
-      URL.revokeObjectURL(url);
-    }
-    audioCache.current.clear();
-  }
-
-  function cacheKeyFor(qIdx: number, p = paperRef.current) {
-    return `p${p}-q${qIdx}`;
-  }
-
-  async function playBrowserTts(text: string, rate: number, qIdx: number): Promise<void> {
-    if (typeof window === "undefined" || !window.speechSynthesis) {
-      throw new Error("Synthèse vocale non disponible dans ce navigateur.");
-    }
-    window.speechSynthesis.cancel();
-    const utterance = await createFrenchUtterance(text, rate);
-    if (!utterance) {
-      throw new Error("Aucune voix française trouvée. Utilisez Chrome ou Safari sur macOS/Windows.");
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      utterance.onend = () => {
-        if (qIdx === idxRef.current) setIsPlaying(false);
-        resolve();
-      };
-      utterance.onerror = () => {
-        if (qIdx === idxRef.current) setIsPlaying(false);
-        reject(new Error("Lecture audio impossible."));
-      };
-      if (qIdx === idxRef.current) setIsPlaying(true);
-      window.speechSynthesis.speak(utterance);
-    });
-  }
-
-  async function ensureAudioCached(qIdx: number, p = paperRef.current): Promise<string> {
-    const cacheKey = cacheKeyFor(qIdx, p);
-    const existing = audioCache.current.get(cacheKey);
-    if (existing) return existing;
-
-    const blob = await fetchStoredAudio(p, qIdx);
-    const blobUrl = URL.createObjectURL(blob);
-    audioCache.current.set(cacheKey, blobUrl);
-    return blobUrl;
-  }
-
-  async function prefetchPaperFromDb(p: number, count = 39): Promise<boolean> {
-    prefetchAbortRef.current = false;
-    setPrefetchError(null);
-    setPrefetchDone(0);
-
-    const indices = Array.from({ length: count }, (_, i) => i);
-    let done = 0;
-    const missing: number[] = [];
-
-    for (let i = 0; i < indices.length; i += PREFETCH_CONCURRENCY) {
-      if (prefetchAbortRef.current) return false;
-
-      const batch = indices.slice(i, i + PREFETCH_CONCURRENCY);
-      await Promise.all(
-        batch.map(async (qIdx) => {
-          const cacheKey = cacheKeyFor(qIdx, p);
-          if (audioCache.current.has(cacheKey)) {
-            done++;
-            setPrefetchDone(done);
-            return;
-          }
-          try {
-            const blob = await fetchStoredAudio(p, qIdx);
-            audioCache.current.set(cacheKey, URL.createObjectURL(blob));
-            done++;
-            setPrefetchDone(done);
-          } catch {
-            missing.push(qIdx);
-          }
-        }),
-      );
-    }
-
-    if (prefetchAbortRef.current) return false;
-
-    if (missing.length > 0) {
-      setPrefetchError(
-        `${missing.length} audio(s) manquant(s) en base pour l'examen ${p}. Exécutez: npm run seed:tcf-audio`,
-      );
-      return false;
-    }
-
-    setAudioSource("db");
-    return true;
-  }
-
-  async function prepareExamAudio(): Promise<boolean> {
-    return prefetchPaperFromDb(paperRef.current);
-  }
-
-  async function handlePlay(questionIdx?: number) {
-    const qIdx = questionIdx ?? idxRef.current;
-    const question = questions[qIdx];
-    const rate = slow ? 0.72 : 0.9;
-
-    if (examMode && playCount >= 1 && qIdx === idxRef.current) return;
+  async function handlePlay() {
+    if (examMode && playCount >= 1) return;
     if (isPlaying) {
       audioRef.current?.pause();
-      window.speechSynthesis?.cancel();
       setIsPlaying(false);
       return;
     }
 
-    setIsLoading(true);
-    setTtsError(null);
-    try {
-      if (audioSource === "browser") {
-        await playBrowserTts(question.audioScript, rate, qIdx);
-        if (qIdx === idxRef.current) setPlayCount((c) => c + 1);
+    const cacheKey = `p${paper}-q${idx}`;
+    let blobUrl = audioCache.current.get(cacheKey);
+
+    if (!blobUrl) {
+      setIsLoading(true);
+      setTtsError(null);
+      try {
+        const res = await fetch("/api/tcf/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: q.audioScript, level: q.level }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({})) as { error?: string };
+          throw new Error(err.error ?? "TTS failed");
+        }
+        const blob = await res.blob();
+        blobUrl = URL.createObjectURL(blob);
+        audioCache.current.set(cacheKey, blobUrl);
+      } catch (err) {
+        setIsLoading(false);
+        setTtsError(err instanceof Error ? err.message : "Impossible de générer l'audio.");
         return;
       }
-
-      const blobUrl = await ensureAudioCached(qIdx);
-      if (qIdx !== idxRef.current) return;
-
-      const audio = new Audio(blobUrl);
-      audio.playbackRate = rate;
-      audio.onended = () => setIsPlaying(false);
-      audio.onpause = () => setIsPlaying(false);
-      audioRef.current = audio;
-      await audio.play();
-      setIsPlaying(true);
-      setPlayCount((c) => c + 1);
-    } catch (err) {
-      if (qIdx !== idxRef.current) return;
-
-      try {
-        setAudioSource("browser");
-        setTtsError(
-          err instanceof Error
-            ? `${err.message} — repli sur la voix du navigateur.`
-            : "Audio base indisponible — repli navigateur.",
-        );
-        await playBrowserTts(question.audioScript, rate, qIdx);
-        setPlayCount((c) => c + 1);
-      } catch (fallbackErr) {
-        setTtsError(
-          fallbackErr instanceof Error ? fallbackErr.message : "Impossible de lire l'audio.",
-        );
-      }
-    } finally {
-      if (qIdx === idxRef.current) setIsLoading(false);
+      setIsLoading(false);
     }
+
+    const audio = new Audio(blobUrl);
+    audio.playbackRate = slow ? 0.72 : 1.0;
+    audio.onended = () => setIsPlaying(false);
+    audio.onpause = () => setIsPlaying(false);
+    audioRef.current = audio;
+    audio.play();
+    setIsPlaying(true);
+    setPlayCount((c) => c + 1);
   }
 
-  function scheduleExamAutoPlay(questionIdx: number) {
+  function scheduleExamAutoPlay() {
     if (!examMode) return;
-    setTimeout(() => void handlePlay(questionIdx), 400);
+    setTimeout(() => void handlePlay(), 400);
   }
 
   function resetAudioUi() {
     audioRef.current?.pause();
-    window.speechSynthesis?.cancel();
     setIsPlaying(false);
     setPlayCount(0);
     setIsLoading(false);
@@ -259,7 +127,7 @@ export default function TCFListeningPage() {
   function goToIdx(newIdx: number) {
     resetAudioUi();
     setIdx(newIdx);
-    scheduleExamAutoPlay(newIdx);
+    scheduleExamAutoPlay();
   }
 
   // Timer — auto-finishes exam when it expires (real TCF behaviour)
@@ -293,7 +161,6 @@ export default function TCFListeningPage() {
 
   function goNext() {
     audioRef.current?.pause();
-    window.speechSynthesis?.cancel();
     if (idx < 38) {
       goToIdx(idx + 1);
     } else {
@@ -309,7 +176,6 @@ export default function TCFListeningPage() {
   }
 
   function startPaper(p: number) {
-    prefetchAbortRef.current = true;
     setPaper(p);
     setIdx(0);
     setAnswers(Array(39).fill(null));
@@ -319,48 +185,13 @@ export default function TCFListeningPage() {
     setIsPlaying(false);
     setIsLoading(false);
     setTtsError(null);
-    setPrefetchDone(0);
-    setPrefetchError(null);
-    setAudioSource("db");
-    setDbAudioReady(null);
-    clearAudioCache();
+    audioCache.current.clear();
     setPhase("intro");
   }
 
-  async function beginExam() {
-    if (examMode) {
-      setPhase("preparing");
-      const ok = await prepareExamAudio();
-      if (!ok) {
-        setPhase("intro");
-        return;
-      }
-    }
-    setTimerRunning(true);
-    setPhase("quiz");
-    if (examMode) scheduleExamAutoPlay(0);
-  }
-
-  // Check DB audio availability when intro loads for selected paper
-  useEffect(() => {
-    if (phase !== "intro") return;
-    let cancelled = false;
-    fetch(`/api/tcf/listening/audio/status?paper=${paper}`)
-      .then((r) => r.json())
-      .then((data: { ready?: boolean; stored?: number }) => {
-        if (!cancelled) setDbAudioReady(Boolean(data.ready));
-      })
-      .catch(() => {
-        if (!cancelled) setDbAudioReady(false);
-      });
-    return () => { cancelled = true; };
-  }, [phase, paper]);
-
   function restart() {
-    prefetchAbortRef.current = true;
     audioRef.current?.pause();
-    window.speechSynthesis?.cancel();
-    clearAudioCache();
+    audioCache.current.clear();
     setIdx(0);
     setAnswers(Array(39).fill(null));
     setPhase("select");
@@ -371,10 +202,6 @@ export default function TCFListeningPage() {
     setIsPlaying(false);
     setIsLoading(false);
     setTtsError(null);
-    setPrefetchDone(0);
-    setPrefetchError(null);
-    setAudioSource("db");
-    setDbAudioReady(null);
   }
 
   const totalAnswered = answers.filter((a) => a !== null).length;
@@ -533,7 +360,7 @@ export default function TCFListeningPage() {
               <div style={{ display: "flex", gap: 8 }}>
                 {[
                   { value: false, label: "Mode pratique", desc: "Réécoutes illimitées · aide à l'apprentissage", icon: <BookOpen size={15} color={!examMode ? "#5b6af0" : "var(--text-tertiary)"} /> },
-                  { value: true, label: "Mode examen", desc: "Audios préchargés depuis la base · 1 écoute · retour impossible", icon: <Lock size={15} color={examMode ? "#ef4444" : "var(--text-tertiary)"} /> },
+                  { value: true, label: "Mode examen", desc: "Audio lance automatiquement · 1 seule écoute · retour impossible", icon: <Lock size={15} color={examMode ? "#ef4444" : "var(--text-tertiary)"} /> },
                 ].map((opt) => (
                   <button
                     key={String(opt.value)}
@@ -557,38 +384,10 @@ export default function TCFListeningPage() {
               </div>
             </div>
 
-            {dbAudioReady === false && (
-              <div style={{
-                padding: "10px 14px", background: "#f59e0b12", border: "1px solid #f59e0b44",
-                borderRadius: 8, marginBottom: 16, fontSize: 13, color: "#b45309",
-              }}>
-                Audios pas encore générés pour cet examen. Exécutez <code style={{ fontFamily: "var(--font-mono)" }}>npm run seed:tcf-audio</code> une fois, puis rechargez.
-              </div>
-            )}
-            {dbAudioReady === true && (
-              <div style={{
-                padding: "10px 14px", background: "#22c55e12", border: "1px solid #22c55e33",
-                borderRadius: 8, marginBottom: 16, fontSize: 13, color: "#16a34a",
-              }}>
-                ✓ 39 audios prêts en base pour l&apos;examen {paper}
-              </div>
-            )}
-
-            {prefetchError && (
-              <div style={{
-                padding: "10px 14px", background: "#ef444412", border: "1px solid #ef444433",
-                borderRadius: 8, marginBottom: 16, fontSize: 13, color: "#ef4444",
-              }}>
-                {prefetchError}
-              </div>
-            )}
-
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 20, padding: "10px 14px", background: "var(--bg-overlay)", borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
               <Volume2 size={14} color="var(--text-tertiary)" />
               <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                {examMode
-                  ? "Mode examen : les 39 audios sont chargés depuis PostgreSQL avant le début. Le chronomètre démarre une fois tout prêt."
-                  : "Mode pratique : audios stockés en base (Gemini TTS), repli voix navigateur si manquant."}
+                Audio IA naturel (Gemini TTS). Le chronomètre démarre dès le début de l&apos;examen.
               </span>
             </div>
 
@@ -604,7 +403,11 @@ export default function TCFListeningPage() {
                 Changer
               </button>
               <button
-                onClick={() => void beginExam()}
+                onClick={() => {
+                  setTimerRunning(true);
+                  setPhase("quiz");
+                  if (examMode) scheduleExamAutoPlay();
+                }}
                 style={{
                   flex: 2, padding: "14px",
                   background: examMode ? "#ef4444" : "#5b6af0",
@@ -617,50 +420,6 @@ export default function TCFListeningPage() {
             </div>
           </div>
         </div>
-      </>
-    );
-  }
-
-  // ── Preparing (exam mode — voice warmup) ───────────────────────
-  if (phase === "preparing") {
-    const pct = Math.round((prefetchDone / 39) * 100);
-    return (
-      <>
-        <Topbar title="TCF Listening" subtitle={`Examen ${paper} · Préparation`} />
-        <div style={{ maxWidth: 520, margin: "0 auto", padding: "80px 24px" }}>
-          <div className="glass-pane" style={{ borderRadius: 20, padding: "40px 36px", textAlign: "center" }}>
-            <Loader2 size={36} color="#5b6af0" style={{ animation: "spin 1s linear infinite", marginBottom: 20 }} />
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 400, color: "var(--text-primary)", margin: "0 0 8px" }}>
-              Chargement des audios
-            </h2>
-            <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 24 }}>
-              Récupération des 39 pistes depuis la base de données. Le chronomètre démarrera une fois tout en cache local.
-            </p>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 28, fontWeight: 700, color: "#5b6af0", marginBottom: 8 }}>
-              {prefetchDone} / 39
-            </div>
-            <div style={{ height: 6, background: "var(--bg-overlay)", borderRadius: 3, overflow: "hidden", marginBottom: 12 }}>
-              <div style={{ height: "100%", width: `${pct}%`, background: "#5b6af0", borderRadius: 3, transition: "width 0.3s ease" }} />
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-              PostgreSQL · lecture instantanée pendant l&apos;examen
-            </div>
-            <button
-              onClick={() => {
-                prefetchAbortRef.current = true;
-                setPhase("intro");
-              }}
-              style={{
-                marginTop: 24, padding: "10px 20px", background: "var(--bg-overlay)",
-                border: "1px solid var(--border-subtle)", borderRadius: 8,
-                fontSize: 13, color: "var(--text-secondary)", cursor: "pointer",
-              }}
-            >
-              Annuler
-            </button>
-          </div>
-        </div>
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </>
     );
   }
@@ -950,7 +709,7 @@ export default function TCFListeningPage() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <button
-                onClick={() => void handlePlay()}
+                onClick={handlePlay}
                 disabled={btnDisabled}
                 style={{
                   width: 44, height: 44, borderRadius: "50%",
@@ -975,22 +734,16 @@ export default function TCFListeningPage() {
 
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>
-                  {isLoading ? "Chargement audio…" : examLocked ? "Audio joué — 1 écoute (mode examen)" : isPlaying ? "Lecture en cours…" : playCount === 0 ? "Appuyez pour écouter" : `Écouté ${playCount}×`}
+                  {isLoading ? "Génération audio…" : examLocked ? "Audio joué — 1 écoute (mode examen)" : isPlaying ? "Lecture en cours…" : playCount === 0 ? "Appuyez pour écouter" : `Écouté ${playCount}×`}
                 </div>
                 <div style={{ fontSize: 11, color: examLocked ? "#ef4444" : ttsError ? "#ef4444" : "var(--text-tertiary)", marginTop: 2 }}>
                   {ttsError
                     ? ttsError
-                    : isLoading
-                      ? "Préparation de la lecture…"
+                    : isLoading ? "Voix naturelle IA — première lecture en cache"
                     : examLocked ? "TCF réel : l'audio passe une seule fois par question"
-                    : playCount === 0
-                      ? audioSource === "db"
-                        ? "Audio stocké — lecture instantanée"
-                        : "Voix navigateur (repli)"
+                    : playCount === 0 ? "L'audio se charge à la première écoute"
                     : examMode ? "1 seule écoute autorisée en mode examen"
-                    : audioSource === "db"
-                      ? "Audio stocké — réécoutes illimitées"
-                      : "Voix navigateur — réécoutes illimitées"}
+                    : "Mode pratique — réécoutes illimitées"}
                 </div>
               </div>
 

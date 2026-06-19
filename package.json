@@ -6,10 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "seed:tcf-audio": "tsx prisma/seed-tcf-audio.ts",
-    "db:import-tcf-audio": "tsx prisma/import-tcf-audio.ts",
-    "db:migrate": "prisma migrate deploy"
+    "lint": "eslint"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.97.1",
@@ -53,7 +50,6 @@
     "@types/pg": "^8.11.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
