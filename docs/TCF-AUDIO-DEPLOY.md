@@ -20,6 +20,6 @@ After deploying code with `AudioAsset` + volume-based API:
    curl -s "https://ailearn.sumrendralabz.biz/api/tcf/listening/audio/status?paper=1"
    ```
 
-Do **not** add `docker-entrypoint.sh` or auto `prisma migrate deploy` on container start.
+**Portainer name conflict:** If deploy fails with `container name "/ailearn-app" is already in use`, stop and remove the old container first (`docker stop ailearn-app && docker rm ailearn-app`), then redeploy the stack.
 
 Apply DB migration once via upload script (includes `AudioAsset` table SQL).

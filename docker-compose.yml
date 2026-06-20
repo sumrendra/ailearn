@@ -21,8 +21,4 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ailearn-audio-data:/data/audio:ro
-
-volumes:
-  ailearn-audio-data:
-    driver: local
+      - /home/sumrendra/ailearn-audio:/data/audio:ro
