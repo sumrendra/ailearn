@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { callGeminiForJson, evalErrorMessage } from "@/lib/gemini-eval";
 
 interface EvalRequest {
   taskNumber: 1 | 2 | 3;
@@ -80,36 +81,8 @@ R√©pondez UNIQUEMENT en JSON valide (pas de markdown, pas de texte avant ou apr√
     },
   };
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify(geminiBody),
-    }
-  );
-
-  if (!res.ok) {
-    const err = await res.text();
-    console.error("Gemini writing eval error:", err);
-    return NextResponse.json({ error: "Evaluation failed" }, { status: 502 });
-  }
-
-  const data = await res.json() as {
-    candidates?: Array<{
-      content?: { parts?: Array<{ text?: string }> };
-    }>;
-  };
-
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) {
-    return NextResponse.json({ error: "No evaluation in response" }, { status: 502 });
-  }
-
   try {
+    const { text } = await callGeminiForJson(apiKey, geminiBody);
     const parsed = JSON.parse(text) as Partial<EvalResult>;
     const result: EvalResult = {
       score: Math.min(20, Math.max(0, Number(parsed.score) || 0)),
@@ -123,7 +96,8 @@ R√©pondez UNIQUEMENT en JSON valide (pas de markdown, pas de texte avant ou apr√
       wordCount,
     };
     return NextResponse.json(result);
-  } catch {
-    return NextResponse.json({ error: "Failed to parse evaluation" }, { status: 502 });
+  } catch (err) {
+    console.error("Gemini writing eval error:", err);
+    return NextResponse.json({ error: evalErrorMessage(err) }, { status: 502 });
   }
 }
