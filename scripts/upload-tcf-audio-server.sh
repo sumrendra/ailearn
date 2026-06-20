@@ -9,6 +9,8 @@ SSH_KEY="${SSH_KEY:-$HOMELABZ/keys/homelabz_ed25519}"
 KNOWN_HOSTS="${KNOWN_HOSTS:-$HOMELABZ/keys/known_hosts}"
 REMOTE="${REMOTE:-sumrendra@192.168.1.4}"
 REMOTE_AUDIO_ROOT="${REMOTE_AUDIO_ROOT:-/home/sumrendra/ailearn-audio}"
+# Default ailearn DB on labz-server (used when ailearn-app is stopped for Portainer redeploy)
+REMOTE_DATABASE_URL="${REMOTE_DATABASE_URL:-postgresql://admin:epaps0991g@127.0.0.1:5432/ailearn}"
 REMOTE_DIR="/tmp/ailearn-tcf-upload-$$"
 LOCAL_AUDIO="${ROOT}/data/tcf-audio"
 
@@ -54,7 +56,11 @@ ssh_cmd "set -e
   cd '$REMOTE_DIR'
   tar -xzf bundle.tgz
   cp scripts/tcf-push-package.json package.json
-  docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' ailearn-app | grep '^DATABASE_URL=' > .env.upload
+  if docker inspect ailearn-app >/dev/null 2>&1; then
+    docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' ailearn-app | grep '^DATABASE_URL=' > .env.upload
+  else
+    echo 'DATABASE_URL=$REMOTE_DATABASE_URL' > .env.upload
+  fi
   docker run --rm \
     --network host \
     --user node \
