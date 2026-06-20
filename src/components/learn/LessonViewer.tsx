@@ -16,6 +16,9 @@ import { EmbeddingExplorer } from "@/components/diagrams/EmbeddingExplorer";
 import { TokenizationVisualizer } from "@/components/diagrams/TokenizationVisualizer";
 import { RAGFlowExplorer } from "@/components/diagrams/RAGFlowExplorer";
 import { AgentLoopInteractive } from "@/components/diagrams/AgentLoopInteractive";
+import { K8sClusterMap } from "@/components/diagrams/K8sClusterMap";
+import { K8sWorkloadStack } from "@/components/diagrams/K8sWorkloadStack";
+import { K8sServiceRouting } from "@/components/diagrams/K8sServiceRouting";
 import { VocabList } from "@/components/french/VocabList";
 import { SentenceBuilder } from "@/components/french/SentenceBuilder";
 import { ConversationScene } from "@/components/french/ConversationScene";
@@ -268,6 +271,9 @@ const MD_COMPONENTS = {
     if (lang === "diagram-tokenization") return <TokenizationVisualizer />;
     if (lang === "diagram-rag") return <RAGFlowExplorer />;
     if (lang === "diagram-agent-loop") return <AgentLoopInteractive />;
+    if (lang === "diagram-k8s-cluster") return <K8sClusterMap />;
+    if (lang === "diagram-k8s-workloads") return <K8sWorkloadStack />;
+    if (lang === "diagram-k8s-routing") return <K8sServiceRouting />;
 
     if (lang === "french-vocab") {
       const items = parseFrenchVocab(extractTextContent(children));

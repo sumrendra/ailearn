@@ -163,6 +163,15 @@ const META: Record<string, PathMeta> = {
     glow: "rgba(71,85,105,0.32)",
     tier: "specialization",
   },
+  "kubernetes-infra": {
+    Icon: Cloud,
+    color: "#326ce5",
+    tint: "rgba(50,108,229,0.08)",
+    ring: "rgba(50,108,229,0.22)",
+    gradient: "linear-gradient(135deg, #1a4fb8 0%, #326ce5 55%, #5b9aff 100%)",
+    glow: "rgba(50,108,229,0.30)",
+    tier: "advanced",
+  },
 };
 
 /** Generic fallback when a path doesn't have a meta entry (e.g. brand new). */
@@ -196,13 +205,6 @@ export const PLANNED_PATHS: PlannedPath[] = [
     title: "System Design",
     description: "Scalability, reliability & distributed systems patterns.",
     Icon: Server,
-    tier: "advanced",
-  },
-  {
-    slug: "kubernetes-infra",
-    title: "Kubernetes & Infra",
-    description: "Containers, orchestration & cloud-native deployment.",
-    Icon: Cloud,
     tier: "advanced",
   },
   {

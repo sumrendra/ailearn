@@ -8,6 +8,7 @@ import { JavaAdvanced } from "./JavaAdvanced";
 import { JavaComplete } from "./JavaComplete";
 import { JavaFrameworks } from "./JavaFrameworks";
 import { KafkaEssentials } from "./KafkaEssentials";
+import { KubernetesInfra } from "./KubernetesInfra";
 import { LLMFoundations } from "./LLMFoundations";
 import { MicroservicesArchitecture } from "./MicroservicesArchitecture";
 import { RagVectorDbs } from "./RagVectorDbs";
@@ -25,6 +26,7 @@ const REGISTRY: Record<string, ComponentType<PathObjectProps>> = {
   "java-complete": JavaComplete,
   "java-frameworks": JavaFrameworks,
   "kafka-essentials": KafkaEssentials,
+  "kubernetes-infra": KubernetesInfra,
   "microservices-architecture": MicroservicesArchitecture,
   "system-design": SystemDesign,
   "java-advanced": JavaAdvanced,
@@ -49,6 +51,7 @@ export {
   JavaComplete,
   JavaFrameworks,
   KafkaEssentials,
+  KubernetesInfra,
   LLMFoundations,
   MicroservicesArchitecture,
   RagVectorDbs,

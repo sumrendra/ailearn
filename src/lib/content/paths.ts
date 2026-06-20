@@ -33,6 +33,7 @@ import {
 import { GMAT_L1, GMAT_L2, GMAT_L3, GMAT_L4 } from "./gmat-overview-content";
 import { GMAT_L5, GMAT_L6, GMAT_L7 } from "./gmat-quant-content";
 import { GMAT_L8, GMAT_L9, GMAT_L10 } from "./gmat-verbal-content";
+import { K8S_L1, K8S_L2, K8S_L3, K8S_L4, K8S_L5, K8S_L6 } from "./kubernetes-content";
 
 export const PATHS: LearningPath[] = [
   // ── LLM Foundations ───────────────────────────────────────────────────────
@@ -331,6 +332,26 @@ export const PATHS: LearningPath[] = [
       { slug: "gmat-verbal-cr",        title: "Critical Reasoning — find the assumption, weaken the argument", description: "The 8 CR archetypes, the negate test for assumption questions (single most powerful technique in verbal), and the classic logical fallacies the GMAT tests on Flaw questions.",                      content: GMAT_L8,  order: 8,  estimatedMins: 28, xpReward: 95,  tags: ["GMAT", "Verbal", "Critical Reasoning", "Logic"] },
       { slug: "gmat-verbal-rc",        title: "Reading Comprehension — speed without skimping",          description: "The 4 RC question types, paragraph-level argument mapping in 30s/paragraph, the 'transition word' map, and the 4 wrong-answer patterns RC hides behind (extreme, out-of-scope, half-right, opposite).",       content: GMAT_L9,  order: 9,  estimatedMins: 26, xpReward: 90,  tags: ["GMAT", "Verbal", "Reading Comprehension", "Pacing"] },
       { slug: "gmat-test-day",         title: "Test day strategy & the wrong-answer journal",            description: "Night-before routine, morning-of routine, per-section pacing (2:10/2:00/1:50), flag-and-edit in Focus Edition, and the single highest-ROI study practice: the wrong-answer journal.",                            content: GMAT_L10, order: 10, estimatedMins: 22, xpReward: 100, tags: ["GMAT", "Test Day", "Wrong-Answer Journal", "Pacing"] },
+    ],
+  },
+  // ── Kubernetes & Infra ────────────────────────────────────────────────────
+  {
+    slug: "kubernetes-infra",
+    title: "Kubernetes & Infra",
+    description: "Ship containers at scale — cluster anatomy, workloads, networking, config, and the production patterns interviewers actually ask about. Visual, concise, no jargon overload.",
+    icon: "cloud",
+    color: "#326ce5",
+    difficulty: "ADVANCED",
+    estimatedHours: 8,
+    tags: ["Kubernetes", "Docker", "DevOps", "Cloud Native", "Containers"],
+    order: 15,
+    lessons: [
+      { slug: "k8s-why-containers",    title: "Containers → Why Kubernetes?",              description: "The problem Docker Compose can't solve at fleet scale, the one-sentence mental model, and when K8s is actually worth the complexity.", content: K8S_L1, order: 1, estimatedMins: 16, xpReward: 70,  tags: ["Kubernetes", "Docker", "Architecture"] },
+      { slug: "k8s-cluster-anatomy",   title: "Cluster anatomy — control plane & nodes",     description: "API server, etcd, scheduler, controllers, kubelet — the five parts that matter, plus the reconciliation loop that wins interviews.", content: K8S_L2, order: 2, estimatedMins: 18, xpReward: 75,  tags: ["Kubernetes", "Control Plane", "kubectl"] },
+      { slug: "k8s-workloads",         title: "Workloads — Pod, Deployment, Service",        description: "The 95% stack, labels & selectors, rolling updates, and liveness vs readiness probes done right.", content: K8S_L3, order: 3, estimatedMins: 20, xpReward: 80,  tags: ["Kubernetes", "Deployment", "Pods", "Probes"] },
+      { slug: "k8s-networking",        title: "Networking — Services, DNS & Ingress",        description: "ClusterIP vs NodePort vs LoadBalancer vs Ingress, in-cluster DNS, and a methodical debug checklist.", content: K8S_L4, order: 4, estimatedMins: 18, xpReward: 80,  tags: ["Kubernetes", "Service", "Ingress", "DNS"] },
+      { slug: "k8s-config-resources",  title: "Config, secrets & resource limits",           description: "ConfigMap vs Secret, requests/limits, OOMKilled debugging, and graceful shutdown.", content: K8S_L5, order: 5, estimatedMins: 18, xpReward: 80,  tags: ["Kubernetes", "ConfigMap", "Secrets", "Resources"] },
+      { slug: "k8s-production",      title: "Production ops & interview rapid-fire",       description: "CI/CD flow, HPA autoscaling, troubleshooting cheat sheet, and the rapid-fire Q&A table for interviews.", content: K8S_L6, order: 6, estimatedMins: 18, xpReward: 85,  tags: ["Kubernetes", "Production", "HPA", "Interview"] },
     ],
   },
 ];
