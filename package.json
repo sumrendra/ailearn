@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "upload:tcf-audio": "tsx scripts/upload-tcf-audio.mts",
+    "upload:tcf-audio:server": "bash scripts/upload-tcf-audio-server.sh",
+    "generate:tcf-audio": "tsx scripts/generate-tcf-audio.mts",
+    "tcf:new-paper": "tsx scripts/tcf/new-paper.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.97.1",
@@ -27,6 +31,7 @@
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "edge-tts": "^1.0.1",
     "framer-motion": "^12.40.0",
     "highlight.js": "^11.11.1",
     "hyperformula": "^3.3.0",
@@ -50,6 +55,7 @@
     "@types/pg": "^8.11.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",

@@ -10,9 +10,8 @@ services:
     ports:
       - "${APP_PORT:-3080}:3000"
     environment:
-      # Connects to your existing pgvector-db instance
-      # default host.docker.internal allows connecting to the database exposed on your host's port 5432
       DATABASE_URL: postgresql://${DB_USER:-admin}:${DB_PASSWORD:-epaps0991g}@${DB_HOST:-host.docker.internal}:${DB_PORT:-5432}/${DB_NAME:-ailearn}
+      AUDIO_ROOT: /data/audio
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3080}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-secret-change-in-production}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
@@ -21,3 +20,9 @@ services:
       AUTH_TRUST_HOST: "true"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ailearn-audio-data:/data/audio:ro
+
+volumes:
+  ailearn-audio-data:
+    driver: local

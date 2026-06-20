@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Local Claude Code launch config — contains DB credentials, never commit
 .claude/
+
+# Output files
+data/tcf-audio/

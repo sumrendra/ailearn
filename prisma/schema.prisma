@@ -200,3 +200,21 @@ enum Difficulty {
   INTERMEDIATE
   ADVANCED
 }
+
+/// TCF listening audio metadata — MP3 files on AUDIO_ROOT volume (not in DB or app bundle).
+/// Populated via `npm run upload:tcf-audio:server`.
+model AudioAsset {
+  id            String   @id @default(cuid())
+  namespace     String
+  paper         Int
+  questionIndex Int
+  contentHash   String
+  storagePath   String
+  mimeType      String   @default("audio/mpeg")
+  voice         String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([namespace, paper, questionIndex])
+  @@index([namespace, paper])
+}

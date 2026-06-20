@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TCF Paper Manifest",
+  "type": "object",
+  "required": ["paper", "theme", "listening", "reading", "writing", "speaking"],
+  "properties": {
+    "paper": { "type": "integer", "minimum": 1 },
+    "theme": { "type": "string", "minLength": 3 },
+    "listening": {
+      "type": "array",
+      "minItems": 39,
+      "maxItems": 39,
+      "items": { "$ref": "#/definitions/listeningQuestion" }
+    },
+    "reading": {
+      "type": "array",
+      "minItems": 39,
+      "maxItems": 39,
+      "items": { "$ref": "#/definitions/readingQuestion" }
+    },
+    "writing": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/definitions/writingTask" }
+    },
+    "speaking": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/definitions/speakingTask" }
+    }
+  },
+  "definitions": {
+    "level": { "enum": ["A1", "A2", "B1", "B2", "C1", "C2"] },
+    "listeningQuestion": {
+      "type": "object",
+      "required": ["id", "level", "topic", "audioScript", "question", "options", "correctIndex", "explanation"],
+      "properties": {
+        "id": { "type": "integer" },
+        "level": { "$ref": "#/definitions/level" },
+        "topic": { "type": "string" },
+        "audioScript": { "type": "string" },
+        "question": { "type": "string" },
+        "options": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": { "type": "string" }
+        },
+        "correctIndex": { "enum": [0, 1, 2, 3] },
+        "explanation": { "type": "string" }
+      }
+    },
+    "readingQuestion": {
+      "type": "object",
+      "required": ["id", "level", "passageType", "passage", "question", "options", "correctIndex", "explanation"],
+      "properties": {
+        "id": { "type": "integer" },
+        "level": { "$ref": "#/definitions/level" },
+        "passageType": { "type": "string" },
+        "passage": { "type": "string" },
+        "question": { "type": "string" },
+        "options": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": { "type": "string" }
+        },
+        "correctIndex": { "enum": [0, 1, 2, 3] },
+        "explanation": { "type": "string" }
+      }
+    },
+    "writingTask": {
+      "type": "object",
+      "required": ["type", "register", "minWords", "maxWords", "timeMin", "context", "prompt"],
+      "properties": {
+        "type": { "enum": [1, 2, 3] },
+        "register": { "type": "string" },
+        "minWords": { "type": "integer" },
+        "maxWords": { "type": "integer" },
+        "timeMin": { "type": "integer" },
+        "context": { "type": "string" },
+        "prompt": { "type": "string" }
+      }
+    },
+    "speakingTask": {
+      "type": "object",
+      "required": ["type", "label", "prepSeconds", "recordSeconds", "context", "prompt", "tips"],
+      "properties": {
+        "type": { "enum": [1, 2, 3] },
+        "label": { "type": "string" },
+        "prepSeconds": { "type": "integer" },
+        "recordSeconds": { "type": "integer" },
+        "context": { "type": "string" },
+        "prompt": { "type": "string" },
+        "tips": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

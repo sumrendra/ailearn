@@ -4,119 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ChevronRight, RotateCcw, Mic, Square, Loader2, CheckCircle, ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
-
-interface SpeakingTask {
-  type: 1 | 2 | 3;
-  label: string;
-  prepSeconds: number;
-  recordSeconds: number;
-  context: string;
-  prompt: string;
-  tips: string[];
-}
-
-const PAPERS: Record<number, SpeakingTask[]> = {
-  1: [
-    {
-      type: 1, label: "Entretien guidé", prepSeconds: 0, recordSeconds: 120,
-      context: "L'examinateur vous pose des questions personnelles sur votre vie quotidienne et vos expériences.",
-      prompt: "Parlez de votre routine quotidienne au Canada. Comment se passe votre journée typique ? Qu'est-ce que vous aimez ou n'aimez pas dans votre vie ici ?",
-      tips: ["Répondez spontanément", "Développez vos réponses avec des détails", "Utilisez des connecteurs : parce que, donc, cependant"],
-    },
-    {
-      type: 2, label: "Jeu de rôle", prepSeconds: 120, recordSeconds: 210,
-      context: "Vous devez simuler une interaction dans une situation de la vie quotidienne.",
-      prompt: "Vous êtes dans une épicerie et vous cherchez des produits spécifiques. L'employé(e) ne parle pas très bien votre langue maternelle. Simulez la conversation : demandez où trouver les produits, demandez les prix, et demandez si l'épicerie propose des produits biologiques.",
-      tips: ["Utilisez des formules de politesse", "Posez des questions claires", "Réagissez naturellement aux imprévus"],
-    },
-    {
-      type: 3, label: "Monologue d'opinion", prepSeconds: 180, recordSeconds: 270,
-      context: "Vous disposez de 3 minutes de préparation, puis 4,5 minutes pour exposer et défendre votre point de vue sur un sujet général.",
-      prompt: "Pensez-vous que les grandes villes sont un meilleur endroit pour s'installer en tant que nouvel immigrant qu'une ville de taille moyenne ? Développez votre point de vue avec des arguments et des exemples.",
-      tips: ["Utilisez les 3 min de préparation pour noter vos idées clés", "Annoncez votre position clairement dès le début", "Donnez 2-3 arguments structurés avec exemples", "Concluez en reformulant votre opinion"],
-    },
-  ],
-  2: [
-    {
-      type: 1, label: "Entretien guidé", prepSeconds: 0, recordSeconds: 120,
-      context: "Questions personnelles sur vos loisirs et activités préférées.",
-      prompt: "Quelles sont vos activités préférées le week-end ? Comment avez-vous découvert ces loisirs ? Est-ce que ces activités ont changé depuis votre arrivée au Canada ?",
-      tips: ["Soyez précis et concret", "Parlez au passé, présent et futur", "Exprimez vos émotions et préférences"],
-    },
-    {
-      type: 2, label: "Jeu de rôle", prepSeconds: 120, recordSeconds: 210,
-      context: "Situation professionnelle simulée.",
-      prompt: "Vous venez de commencer un nouveau travail. Votre responsable vous demande de vous présenter à l'équipe lors d'une réunion. Présentez-vous, parlez de votre parcours professionnel, de vos compétences et de ce que vous espérez apporter à l'équipe.",
-      tips: ["Structurez votre présentation", "Mettez en valeur vos points forts", "Adaptez le registre au contexte professionnel"],
-    },
-    {
-      type: 3, label: "Monologue d'opinion", prepSeconds: 180, recordSeconds: 270,
-      context: "3 min de préparation, puis 4,5 min d'exposé — sujet de société, donnez votre avis argumenté.",
-      prompt: "Selon vous, quel est l'impact des réseaux sociaux sur l'apprentissage des langues ? Sont-ils plutôt un outil utile ou une distraction ? Justifiez votre réponse avec des exemples.",
-      tips: ["Utilisez les 3 min de préparation pour noter vos idées clés", "Présentez les deux côtés avant de conclure", "Utilisez des expressions d'opinion : À mon avis, Je pense que…", "Gardez un fil directeur clair"],
-    },
-  ],
-  3: [
-    {
-      type: 1, label: "Entretien guidé", prepSeconds: 0, recordSeconds: 120,
-      context: "Questions sur votre expérience d'immigration et d'intégration.",
-      prompt: "Comment s'est passée votre arrivée au Canada ? Quelles ont été les principales difficultés que vous avez rencontrées ? Comment avez-vous surmonté ces obstacles ?",
-      tips: ["Racontez votre histoire personnelle", "Montrez votre capacité à réfléchir sur vos expériences", "Utilisez les temps du passé correctement"],
-    },
-    {
-      type: 2, label: "Jeu de rôle", prepSeconds: 120, recordSeconds: 210,
-      context: "Interaction dans un contexte administratif.",
-      prompt: "Vous devez appeler la clinique médicale pour prendre un rendez-vous. La réceptionniste vous informe que le premier rendez-vous disponible est dans 3 semaines, mais vous avez besoin de voir un médecin plus tôt. Simulez la conversation et essayez de trouver une solution.",
-      tips: ["Expliquez clairement votre situation", "Soyez poli mais assertif", "Proposez des alternatives si nécessaire"],
-    },
-    {
-      type: 3, label: "Monologue d'opinion", prepSeconds: 180, recordSeconds: 270,
-      context: "3 min de préparation, puis 4,5 min d'exposé — question sur l'éducation et la société.",
-      prompt: "Êtes-vous pour ou contre l'enseignement bilingue obligatoire dans les écoles primaires canadiennes ? Défendez votre position en vous appuyant sur des arguments concrets.",
-      tips: ["Utilisez les 3 min de préparation pour noter vos idées clés", "Définissez clairement votre position dès le début", "Anticipez et réfutez les contre-arguments", "Terminez par une conclusion forte"],
-    },
-  ],
-  4: [
-    {
-      type: 1, label: "Entretien guidé", prepSeconds: 0, recordSeconds: 120,
-      context: "Questions sur vos projets et ambitions au Canada.",
-      prompt: "Quels sont vos projets professionnels ou personnels pour les prochaines années ? Comment le Canada vous aide-t-il à réaliser ces objectifs ? Y a-t-il des défis que vous anticipez ?",
-      tips: ["Parlez du futur avec assurance", "Reliez vos réponses à des expériences passées", "Montrez votre motivation"],
-    },
-    {
-      type: 2, label: "Jeu de rôle", prepSeconds: 120, recordSeconds: 210,
-      context: "Situation dans un contexte de service à la clientèle.",
-      prompt: "Vous avez loué un appartement et vous découvrez que le chauffage est en panne depuis deux jours en hiver. Appelez le propriétaire pour lui signaler le problème, expliquer la situation et demander une solution rapide.",
-      tips: ["Soyez factuel et précis", "Exprimez l'urgence sans être agressif", "Proposez une solution ou demandez un délai précis"],
-    },
-    {
-      type: 3, label: "Monologue d'opinion", prepSeconds: 180, recordSeconds: 270,
-      context: "3 min de préparation, puis 4,5 min d'exposé — sujet culturel et social.",
-      prompt: "Dans quelle mesure pensez-vous que les immigrants devraient adopter la culture du pays d'accueil tout en préservant leur propre culture ? Y a-t-il un équilibre possible ? Donnez votre avis argumenté.",
-      tips: ["Utilisez les 3 min de préparation pour noter vos idées clés", "Nuancez votre position", "Utilisez des exemples tirés de votre expérience", "Abordez la question sous différents angles"],
-    },
-  ],
-  5: [
-    {
-      type: 1, label: "Entretien guidé", prepSeconds: 0, recordSeconds: 120,
-      context: "Questions sur vos expériences culturelles.",
-      prompt: "Parlez d'une tradition ou d'une fête culturelle qui est importante pour vous. Comment la célébrez-vous ? Est-ce que ces traditions ont évolué depuis votre installation au Canada ?",
-      tips: ["Utilisez un vocabulaire précis et varié", "Partagez des anecdotes personnelles", "Comparez avec des expériences ici au Canada"],
-    },
-    {
-      type: 2, label: "Jeu de rôle", prepSeconds: 120, recordSeconds: 210,
-      context: "Interaction dans un contexte scolaire.",
-      prompt: "Votre enfant rencontre des difficultés dans son école. Simulez un entretien avec l'enseignant(e). Décrivez les problèmes observés à la maison, posez des questions sur le comportement en classe, et discutez de solutions possibles pour aider votre enfant.",
-      tips: ["Montrez votre implication parentale", "Posez des questions ouvertes", "Cherchez des solutions collaboratives"],
-    },
-    {
-      type: 3, label: "Monologue d'opinion", prepSeconds: 180, recordSeconds: 270,
-      context: "3 min de préparation, puis 4,5 min d'exposé — sujet environnemental et citoyen.",
-      prompt: "Pensez-vous que chaque individu peut faire une différence significative face aux changements climatiques, ou s'agit-il uniquement d'une responsabilité gouvernementale et industrielle ? Défendez votre position.",
-      tips: ["Utilisez les 3 min de préparation pour noter vos idées clés", "Donnez des exemples concrets d'actions individuelles", "Montrez que vous êtes conscient des enjeux globaux", "Concluez avec une position claire et nuancée"],
-    },
-  ],
-};
+import { SPEAKING_PAPERS } from "@/lib/content/tcf-papers";
 
 const TASK_ACCENT = ["#ef4444", "#8b5cf6", "#3b82f6"];
 
@@ -154,7 +42,7 @@ export default function TCFSpeakingPage() {
   const prepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const tasks = PAPERS[paper];
+  const tasks = SPEAKING_PAPERS[paper];
   const task = tasks[taskIdx];
   const accent = TASK_ACCENT[taskIdx];
 
@@ -174,7 +62,7 @@ export default function TCFSpeakingPage() {
     audioBlobsRef.current = [null, null, null];
     mimeTypesRef.current = [null, null, null];
     setEvalError(null);
-    const t = PAPERS[p][0];
+    const t = SPEAKING_PAPERS[p][0];
     if (t.prepSeconds > 0) {
       setPrepLeft(t.prepSeconds);
       setPhase("prep");

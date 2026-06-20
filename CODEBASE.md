@@ -210,7 +210,9 @@ Server component that loads session, user XP/streak, all paths for CommandPalett
 | `/api/tutor/chat` | POST | — | Non-streaming tutor (uses `generateAIChat`) |
 | `/api/interview/chat` | POST | — | Non-streaming interviewer |
 | `/api/quiz/generate` | POST | — | AI quiz JSON generation |
-| `/api/tcf/tts` | POST | — | Gemini TTS for listening passages (requires `GEMINI_API_KEY`) |
+| `/api/tcf/listening/audio/[paper]/[question]` | GET | — | Serve pre-generated listening MP3 from volume |
+| `/api/tcf/listening/audio/status` | GET | — | Audio readiness count per paper |
+| `/api/tcf/tts` | POST | — | Legacy on-demand Gemini TTS fallback |
 | `/api/tcf/writing` | POST | — | AI writing evaluation (French) |
 | `/api/tcf/speaking` | POST | — | Audio → Gemini multimodal eval |
 
@@ -328,14 +330,59 @@ Environment: `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `AUTH_TRUST_HOST=true` in Docker
 
 Separate from the `french-advanced` learning path — dedicated exam simulator.
 
-- **Content:** `src/lib/content/tcf-*.ts` — 5 listening papers, 5 reading papers
+- **Content:** `src/lib/content/tcf-*.ts` — listening, reading, writing, speaking per paper (`tcf-papers.ts` central registry)
 - **Hub:** `/tcf` with CLB/NCLC reference table
-- **Listening:** Client plays TTS audio via `/api/tcf/tts` (Gemini voices by CEFR level)
-- **Reading:** Passages + MCQ in page components
+- **Listening:** Pre-generated Edge TTS MP3 on server volume; served via `/api/tcf/listening/audio/[paper]/[question]` (metadata in `AudioAsset` table)
+- **Reading:** Passages + MCQ from content lib
 - **Writing:** `/api/tcf/writing` — AI scores against TCF rubric
 - **Speaking:** Records audio in browser → base64 → `/api/tcf/speaking` → Gemini multimodal JSON eval
 
-French fundamentals lessons use **browser SpeechSynthesis** (`french-tts.ts`), not the TTS API.
+French fundamentals lessons use **browser SpeechSynthesis** (`french-tts.ts`), not the listening audio API.
+
+### Listening audio (volume + PostgreSQL metadata)
+
+| Layer | Location |
+|-------|----------|
+| MP3 files | Server volume mounted at `/data/audio` (e.g. `/home/sumrendra/ailearn-audio` on labz-server) |
+| Metadata | PostgreSQL `AudioAsset` (`namespace=tcf-listening`, `storagePath`, `contentHash`) |
+| Local generate | `data/tcf-audio/p{N}/q{NN}.mp3` (gitignored) |
+
+```bash
+npm run generate:tcf-audio              # Edge TTS → data/tcf-audio/ (all papers)
+npm run generate:tcf-audio -- --paper=1   # single paper
+npm run upload:tcf-audio:server           # rsync MP3s + register metadata on labz-server
+```
+
+**Production env:** `AUDIO_ROOT=/data/audio`. Portainer bind mount: `/home/sumrendra/ailearn-audio:/data/audio:ro`
+
+**Do not** use auto-migrate entrypoint on deploy — apply migrations via SSH script only.
+
+### Adding a new TCF paper (all 4 modules)
+
+One command generates listening, reading, writing, and speaking content, then audio + server upload:
+
+```bash
+# Generate manifest JSON only (review before emit)
+npm run tcf:new-paper -- --paper=6 --theme="Immigration au Canada" --dry-run
+
+# After editing content/tcf/manifests/paper-06.json if needed
+npm run tcf:new-paper -- --paper=6 --from-manifest
+
+# Full pipeline (Gemini text → TS files → Edge TTS → server upload)
+npm run tcf:new-paper -- --paper=6 --theme="Immigration au Canada"
+```
+
+Pipeline scripts live in `scripts/tcf/`:
+
+| Script | Role |
+|--------|------|
+| `generate-content.mts` | Gemini → manifest JSON |
+| `validate-manifest.mts` | Schema + level-band checks |
+| `emit-typescript.mts` | Manifest → `src/lib/content/tcf-*-pN.ts` |
+| `register-paper.mts` | Updates `tcf-papers.ts` |
+| `new-paper.mts` | Orchestrator |
+
+Requires `GEMINI_API_KEY` for text generation; listening TTS uses free Edge TTS (no API key).
 
 ---
 

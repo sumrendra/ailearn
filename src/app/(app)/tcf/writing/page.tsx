@@ -4,104 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ChevronRight, ChevronLeft, RotateCcw, PenLine, Loader2, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
-
-interface WritingTask {
-  type: 1 | 2 | 3;
-  register: string;
-  minWords: number;
-  maxWords: number;
-  timeMin: number;
-  context: string;
-  prompt: string;
-}
-
-const PAPERS: Record<number, WritingTask[]> = {
-  1: [
-    {
-      type: 1, register: "Informel", minWords: 60, maxWords: 120, timeMin: 15,
-      context: "Votre ami(e) français(e) vous a envoyé un message pour vous demander comment se passe votre apprentissage du français au Canada.",
-      prompt: "Répondez à votre ami(e). Parlez-lui de vos progrès, d'une expérience récente en français et de vos objectifs.",
-    },
-    {
-      type: 2, register: "Semi-formel", minWords: 120, maxWords: 150, timeMin: 20,
-      context: "Vous faites partie de l'association de votre quartier. La présidente vous demande d'écrire un article pour la newsletter mensuelle.",
-      prompt: "Rédigez un article sur un événement communautaire récent auquel vous avez participé. Décrivez l'événement, son intérêt pour le quartier et encouragez la participation future.",
-    },
-    {
-      type: 3, register: "Formel", minWords: 120, maxWords: 180, timeMin: 25,
-      context: "Votre ville souhaite développer de nouveaux espaces verts. La mairie a lancé un appel à propositions des citoyens.",
-      prompt: "Écrivez une lettre au maire pour proposer la création d'un jardin communautaire dans votre quartier. Exposez les bénéfices pour les résidents et demandez le soutien de la municipalité.",
-    },
-  ],
-  2: [
-    {
-      type: 1, register: "Informel", minWords: 60, maxWords: 120, timeMin: 15,
-      context: "Vous avez manqué votre cours de français la semaine dernière en raison d'un imprévu.",
-      prompt: "Écrivez un message à votre professeur pour expliquer votre absence, vous excuser et lui demander les devoirs à rattraper.",
-    },
-    {
-      type: 2, register: "Semi-formel", minWords: 120, maxWords: 150, timeMin: 20,
-      context: "Le blog de votre école de langues organise un débat en ligne sur l'utilisation des technologies dans l'apprentissage.",
-      prompt: "Rédigez une contribution pour ce blog. Donnez votre opinion sur l'utilisation des applications et des outils numériques pour apprendre une langue. Appuyez-vous sur des exemples concrets.",
-    },
-    {
-      type: 3, register: "Formel", minWords: 120, maxWords: 180, timeMin: 25,
-      context: "Vous avez récemment acheté un appareil électronique qui s'est révélé défectueux. Vos tentatives de contact par téléphone ont été infructueuses.",
-      prompt: "Rédigez une lettre de réclamation au service client de la société. Décrivez le problème, expliquez les démarches déjà effectuées et demandez une solution (remboursement ou échange).",
-    },
-  ],
-  3: [
-    {
-      type: 1, register: "Informel", minWords: 60, maxWords: 120, timeMin: 15,
-      context: "Un(e) nouveau(elle) collègue vient de rejoindre votre équipe. Vous souhaitez l'accueillir chaleureusement.",
-      prompt: "Envoyez-lui un message pour l'inviter à un déjeuner d'équipe que vous organisez la semaine prochaine. Donnez les détails pratiques et expliquez pourquoi c'est une bonne occasion pour faire connaissance.",
-    },
-    {
-      type: 2, register: "Semi-formel", minWords: 120, maxWords: 150, timeMin: 20,
-      context: "Un magazine en ligne francophone publie des guides sur les villes canadiennes pour les nouveaux arrivants.",
-      prompt: "Rédigez un article sur une ville canadienne que vous connaissez bien. Présentez ses atouts, sa vie culturelle et les ressources utiles pour les francophones qui s'y installent.",
-    },
-    {
-      type: 3, register: "Formel", minWords: 120, maxWords: 180, timeMin: 25,
-      context: "Vous venez d'être admis dans une université canadienne. Vous souhaitez obtenir des informations sur les services d'accompagnement linguistique.",
-      prompt: "Écrivez une lettre formelle au Bureau des étudiants internationaux pour demander des renseignements sur les services de soutien en français disponibles pour les étudiants non-natifs.",
-    },
-  ],
-  4: [
-    {
-      type: 1, register: "Informel", minWords: 60, maxWords: 120, timeMin: 15,
-      context: "Votre ami(e) va déménager dans une nouvelle ville pour la première fois. Il/elle vous demande des conseils.",
-      prompt: "Écrivez-lui un message avec vos meilleurs conseils pour bien s'installer. Parlez des démarches administratives, des ressources utiles et de la façon de rencontrer des gens.",
-    },
-    {
-      type: 2, register: "Semi-formel", minWords: 120, maxWords: 150, timeMin: 20,
-      context: "Un magazine de voyage francophone cherche des contributeurs pour présenter des destinations dans le monde francophone.",
-      prompt: "Rédigez un article recommandant une destination francophone (ville, région ou pays) que vous avez visitée ou qui vous inspire. Décrivez ce que les voyageurs francophones peuvent y découvrir.",
-    },
-    {
-      type: 3, register: "Formel", minWords: 120, maxWords: 180, timeMin: 25,
-      context: "Votre bibliothèque municipale souhaite élargir ses activités pour mieux servir les nouveaux arrivants francophones.",
-      prompt: "Rédigez une lettre au directeur de la bibliothèque pour proposer la création d'un club de lecture en français destiné aux immigrants. Présentez les objectifs, le fonctionnement proposé et les bénéfices pour la communauté.",
-    },
-  ],
-  5: [
-    {
-      type: 1, register: "Informel", minWords: 60, maxWords: 120, timeMin: 15,
-      context: "Vous souhaitez rejoindre un groupe d'échange linguistique en ligne pour pratiquer votre français avec des natifs.",
-      prompt: "Rédigez un message de présentation pour la page d'inscription du groupe. Présentez-vous, expliquez votre niveau et vos objectifs, et dites pourquoi vous souhaitez participer.",
-    },
-    {
-      type: 2, register: "Semi-formel", minWords: 120, maxWords: 150, timeMin: 20,
-      context: "Le blog communautaire de votre ville publie des articles sur l'environnement local. Vous avez remarqué un problème dans votre quartier.",
-      prompt: "Rédigez un billet de blog sur un problème environnemental local (déchets, pollution, manque d'espaces verts…). Décrivez le problème, ses causes et proposez des solutions concrètes.",
-    },
-    {
-      type: 3, register: "Formel", minWords: 120, maxWords: 180, timeMin: 25,
-      context: "Vous avez trouvé une offre d'emploi pour un poste de conseiller(ère) clientèle dans une entreprise bilingue qui valorise les compétences en français.",
-      prompt: "Rédigez une lettre de motivation formelle pour ce poste. Présentez vos compétences linguistiques et professionnelles, expliquez votre intérêt pour ce rôle et démontrez votre adéquation au profil recherché.",
-    },
-  ],
-};
+import { WRITING_PAPERS, type WritingTask } from "@/lib/content/tcf-papers";
 
 const TASK_ACCENT = ["#f59e0b", "#3b82f6", "#a855f7"];
 const TASK_LABEL = ["Tâche 1", "Tâche 2", "Tâche 3"];
@@ -183,7 +86,7 @@ export default function TCFWritingPage() {
   const paperRef = useRef(paper);
   const [openResult, setOpenResult] = useState<number | null>(null);
 
-  const tasks = PAPERS[paper];
+  const tasks = WRITING_PAPERS[paper];
   const task = tasks[taskIdx];
   const currentWords = wordCount(responses[taskIdx]);
   const isMinMet = currentWords >= task.minWords;
@@ -198,7 +101,7 @@ export default function TCFWritingPage() {
   }, [paper]);
 
   function submitAllForEvaluation(currentResponses: string[]) {
-    const allTasks = PAPERS[paperRef.current];
+    const allTasks = WRITING_PAPERS[paperRef.current];
     setPhase("evaluating");
     Promise.all(
       allTasks.map((t, i) => evaluateWritingTask(t, currentResponses[i])),
@@ -265,7 +168,7 @@ export default function TCFWritingPage() {
     setPhase("evaluating");
     setTimerRunning(false);
     try {
-      const allTasks = PAPERS[paper];
+      const allTasks = WRITING_PAPERS[paper];
       const evals = await Promise.all(
         allTasks.map((t, i) => evaluateWritingTask(t, responses[i])),
       );
