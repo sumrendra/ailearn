@@ -1,7 +1,10 @@
+/** Primary first; fall through on overload, quota, or unavailable model. */
 const EVAL_MODELS = [
-  "gemini-2.0-flash",
-  "gemini-3.1-flash-lite",
   "gemini-3.5-flash",
+  "gemini-3.1-pro",
+  "gemini-3.1-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-2.0-flash",
 ] as const;
 
 interface GeminiResponse {
@@ -41,8 +44,9 @@ export async function callGeminiForJson(
     lastError = errText;
     console.error(`Gemini eval error (${model}):`, errText);
 
-    // Try next model on overload / rate limit
-    if (res.status !== 503 && res.status !== 429) break;
+    // Try next model on overload, quota, or model not available
+    const retryable = res.status === 503 || res.status === 429 || res.status === 404;
+    if (!retryable) break;
   }
 
   throw new Error(lastError);
