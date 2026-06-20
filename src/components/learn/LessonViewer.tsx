@@ -30,6 +30,8 @@ import { FormulaQuiz } from "@/components/excel/FormulaQuiz";
 import { HashMapVisualizer } from "@/components/java/HashMapVisualizer";
 import { CollectionsHierarchy } from "@/components/java/CollectionsHierarchy";
 import { JavaQuiz } from "@/components/java/JavaQuiz";
+import { LabCheckpoint } from "@/components/k8s/LabCheckpoint";
+import { HelmValuesCompare } from "@/components/k8s/HelmValuesCompare";
 import { parseLessonBlock } from "@/lib/lesson-blocks";
 import {
   parseFrenchVocab, parseFrenchSentence, parseFrenchDialogue,
@@ -39,6 +41,7 @@ import {
   parseExcelFormula, parseExcelPivot, parseExcelQuiz,
 } from "@/lib/excel-blocks";
 import { parseJavaQuiz } from "@/lib/java-blocks";
+import { parseK8sCheckpoint } from "@/lib/k8s-blocks";
 import { type FixtureKey } from "@/lib/sql-fixtures";
 import Link from "next/link";
 
@@ -274,6 +277,7 @@ const MD_COMPONENTS = {
     if (lang === "diagram-k8s-cluster") return <K8sClusterMap />;
     if (lang === "diagram-k8s-workloads") return <K8sWorkloadStack />;
     if (lang === "diagram-k8s-routing") return <K8sServiceRouting />;
+    if (lang === "diagram-k8s-helm-values") return <HelmValuesCompare />;
 
     if (lang === "french-vocab") {
       const items = parseFrenchVocab(extractTextContent(children));
@@ -348,6 +352,11 @@ const MD_COMPONENTS = {
           level={data.level}
         />
       ) : null;
+    }
+
+    if (lang === "k8s-checkpoint") {
+      const data = parseK8sCheckpoint(extractTextContent(children));
+      return data ? <LabCheckpoint {...data} /> : null;
     }
 
     return <CodeBlock language={lang}>{children}</CodeBlock>;

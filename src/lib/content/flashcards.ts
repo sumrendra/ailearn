@@ -962,4 +962,32 @@ export const FLASHCARDS: Flashcard[] = [
         back: "Resource requests must be set on containers. HPA compares actual usage against requests to decide scaling. Without requests, CPU utilization metrics are meaningless.",
         tags: ["Kubernetes", "HPA"],
       },
+  {
+        lessonSlug: "k8s-minikube-lab",
+        key: "k8s-minikube-lab:1",
+        front: "First command to debug a pod in CrashLoopBackOff?",
+        back: "kubectl describe pod <name> (Events section), then kubectl logs <name> --previous for the last crashed container's logs.",
+        tags: ["Kubernetes", "Troubleshooting", "Lab"],
+      },
+  {
+        lessonSlug: "k8s-minikube-lab",
+        key: "k8s-minikube-lab:2",
+        front: "How do you roll back a bad Deployment image without editing YAML?",
+        back: "kubectl rollout undo deployment/<name> — reverts to the previous ReplicaSet revision. Also: kubectl rollout history deployment/<name> to see revisions.",
+        tags: ["Kubernetes", "Rollout", "Lab"],
+      },
+  {
+        lessonSlug: "k8s-helm-production",
+        key: "k8s-helm-production:1",
+        front: "What does helm upgrade --install --atomic --wait do in CI?",
+        back: "Installs if missing, upgrades if exists (idempotent). --wait blocks until pods are Ready. --atomic auto-rolls back if the new revision never becomes healthy — CI fails loudly instead of leaving a broken release.",
+        tags: ["Kubernetes", "Helm", "CI/CD"],
+      },
+  {
+        lessonSlug: "k8s-helm-production",
+        key: "k8s-helm-production:2",
+        front: "Chart vs Release vs values.yaml?",
+        back: "Chart = packaged templates (the app package). Release = one installed instance of a chart in a namespace. values.yaml = config overlay — same chart, different values files for dev/staging/prod.",
+        tags: ["Kubernetes", "Helm"],
+      },
 ];

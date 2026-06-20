@@ -274,7 +274,7 @@ Scales Deployment replicas when CPU (or custom metrics) crosses threshold. **Req
 | taint/toleration? | Node repels pods unless tolerated |
 | PDB? | Min pods available during voluntary disruptions |
 
-## Course complete — you can now
+## What you learned (theory)
 
 - Explain the reconciliation loop
 - Draw Pod → Deployment → Service from memory
@@ -282,5 +282,280 @@ Scales Deployment replicas when CPU (or custom metrics) crosses threshold. **Req
 - Debug with describe + logs + endpoints
 - Say when K8s is overkill
 
-Enough to ship apps, pass interviews, and know where to go deeper (RBAC, CNI, operators) when needed.
+**Next:** Put your hands on a real cluster — minikube lab on your Mac.
 `;
+
+export const K8S_L7 = `# Hands-on lab — minikube on your Mac
+
+> **Run commands on your Mac terminal** — not inside Portainer or the AILearn container.
+> One-time setup: \`docs/K8S-LAB.md\` in the repo (install minikube, kubectl, helm).
+
+## What you'll build
+
+A live cluster on your laptop. Deploy nginx, break it on purpose, fix it, roll out a new version, inject config. **This is what interviews assume you've done at least once.**
+
+| Tool | Role |
+|------|------|
+| **minikube** | Local single-node cluster |
+| **kubectl** | Talks to the cluster |
+| **Docker Desktop** | Driver (already on your Mac) |
+
+---
+
+\`\`\`k8s-checkpoint
+step: 1
+title: Start minikube
+command: minikube start --driver=docker
+expect:
+  😄  minikube v1.x.x on Darwin
+  ✨  Using the docker driver
+  🏄  Done! kubectl is now configured to use "minikube"
+hint: First start takes 2–3 min. Docker Desktop must be running.
+\`\`\`
+
+\`\`\`k8s-checkpoint
+step: 2
+title: Verify cluster is alive
+command: kubectl get nodes
+expect:
+  NAME       STATUS   ROLES           AGE   VERSION
+  minikube   Ready    control-plane   1m    v1.x.x
+hint: STATUS must be Ready. If NotReady, run minikube delete && minikube start again.
+\`\`\`
+
+## Deploy your first app
+
+Save this as \`nginx-deploy.yaml\`:
+
+\`\`\`yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: web }
+  template:
+    metadata:
+      labels: { app: web }
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports: [{ containerPort: 80 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  selector: { app: web }
+  ports: [{ port: 80, targetPort: 80 }]
+  type: NodePort
+\`\`\`
+
+\`\`\`k8s-checkpoint
+step: 3
+title: Apply the manifest
+command: kubectl apply -f nginx-deploy.yaml
+expect:
+  deployment.apps/web created
+  service/web created
+\`\`\`
+
+\`\`\`k8s-checkpoint
+step: 4
+title: Confirm pods are running
+command: kubectl get pods -l app=web
+expect:
+  NAME                   READY   STATUS    RESTARTS   AGE
+  web-xxxxxxxxxx-xxxxx   1/1     Running   0          30s
+  web-xxxxxxxxxx-xxxxx   1/1     Running   0          30s
+hint: READY must be 1/1. If ImagePullBackOff, check image name.
+\`\`\`
+
+\`\`\`k8s-checkpoint
+step: 5
+title: Hit the app from your browser
+command: minikube service web --url
+expect:
+  http://127.0.0.1:3xxxx
+hint: Open the URL — you should see the nginx welcome page.
+\`\`\`
+
+## Break it — then fix it (the interview skill)
+
+\`\`\`k8s-checkpoint
+step: 6
+title: Deploy a broken image on purpose
+command: kubectl set image deployment/web nginx=nginx:does-not-exist-tag
+expect:
+  deployment.apps/web image updated
+\`\`\`
+
+Wait ~30 seconds, then:
+
+\`\`\`k8s-checkpoint
+step: 7
+title: Diagnose CrashLoopBackOff
+command: kubectl get pods -l app=web
+expect:
+  STATUS    CrashLoopBackOff
+hint: Now run kubectl describe pod <name> and look at Events. Then kubectl logs <name> --previous
+\`\`\`
+
+Fix it:
+
+\`\`\`k8s-checkpoint
+step: 8
+title: Roll back to a working image
+command: kubectl rollout undo deployment/web
+expect:
+  deployment.apps/web rolled back
+\`\`\`
+
+\`\`\`k8s-checkpoint
+step: 9
+title: Watch a rolling update succeed
+command: kubectl rollout status deployment/web
+expect:
+  deployment "web" successfully rolled out
+\`\`\`
+
+## ConfigMap — change config without rebuilding the image
+
+\`\`\`bash
+kubectl create configmap web-html --from-literal=index.html='<h1>Hello from K8s lab</h1>'
+kubectl set env deployment/web HTML=from-configmap   # placeholder — real mount shown below
+\`\`\`
+
+For a quick win, scale instead:
+
+\`\`\`k8s-checkpoint
+step: 10
+title: Scale replicas — see the scheduler work
+command: kubectl scale deployment/web --replicas=3
+expect:
+  deployment.apps/web scaled
+hint: kubectl get pods -l app=web — you should see 3 Running pods.
+\`\`\`
+
+## Cleanup
+
+\`\`\`bash
+minikube stop          # pause cluster, keep state
+minikube delete        # wipe everything when done for the day
+\`\`\`
+
+## What you just proved
+
+- You can **apply** manifests and **read** pod state
+- You know **CrashLoopBackOff** → describe + logs
+- You've done a **rollout undo** — same as production rollback
+- You've seen **reconciliation** happen live, not just on a diagram
+
+**Next:** Helm — how teams actually ship to production.
+`;
+
+export const K8S_L8 = `# Helm — ship like production
+
+Raw \`kubectl apply -f\` works for learning. **Production teams use Helm** (or Kustomize) because:
+
+- One chart → dev, staging, prod (different values files)
+- Versioned releases with **rollback in one command**
+- CI/CD runs the same \`helm upgrade --install\` every time
+
+## Chart anatomy (30 seconds)
+
+\`\`\`
+my-chart/
+  Chart.yaml          # name + version
+  values.yaml         # defaults (treat as prod-ish)
+  templates/
+    deployment.yaml   # {{ .Values.replicaCount }}
+    service.yaml
+    ingress.yaml
+\`\`\`
+
+**Chart** = templates. **Release** = one installed instance. **Values** = your config overlay.
+
+## Dev vs prod — same chart
+
+\`\`\`diagram-k8s-helm-values
+\`\`\`
+
+Install with the right overlay:
+
+\`\`\`bash
+# Dev
+helm upgrade --install api ./chart -f values-dev.yaml -n dev --create-namespace
+
+# Prod
+helm upgrade --install api ./chart -f values-prod.yaml -n prod --create-namespace \\
+  --atomic --wait --timeout 5m
+\`\`\`
+
+| Flag | Why |
+|------|-----|
+| \`--install\` | Creates release if missing (idempotent CI) |
+| \`--atomic\` | Auto-rollback if upgrade fails |
+| \`--wait\` | Don't return until pods are Ready |
+| \`-f values-prod.yaml\` | Environment-specific config |
+
+## The workflow you'll use at work
+
+\`\`\`
+1. helm lint ./chart
+2. helm template api ./chart -f values-prod.yaml   # preview rendered YAML
+3. helm upgrade --install api ./chart -f values-prod.yaml --atomic --wait
+4. helm history api
+5. helm rollback api 1    # if something's wrong
+\`\`\`
+
+**Never store passwords in values.yaml** — use Sealed Secrets, External Secrets Operator, or your cloud secret manager.
+
+## Map to your homelab
+
+Your AILearn stack in Portainer is already the same idea:
+
+| Portainer / Compose | Helm equivalent |
+|---------------------|-----------------|
+| \`docker-compose.yml\` | Chart templates |
+| \`.env\` / stack env vars | \`values.yaml\` |
+| Pull & redeploy | \`helm upgrade --install\` |
+| Roll back image tag manually | \`helm rollback\` |
+
+## Create a minimal chart (5 min exercise)
+
+\`\`\`bash
+helm create demo-api
+cd demo-api
+# Edit values.yaml: image.repository, replicaCount, ingress.host
+helm install demo . --dry-run   # see rendered YAML without applying
+helm install demo . -n lab --create-namespace
+helm list -n lab
+helm uninstall demo -n lab
+\`\`\`
+
+\`\`\`java-quiz
+level: tricky
+q: CI runs helm upgrade on every merge to main. A bad values change breaks readiness probes. What's the safest production flag combo?
+options: --force only | --atomic --wait with a timeout | --recreate-pods always | Skip helm, use kubectl apply
+correct: 1
+explain: --atomic rolls back automatically if the new revision never becomes healthy. --wait ensures CI fails loudly instead of "deploy succeeded" while pods are crash-looping. --force and --recreate-pods are sledgehammers for emergencies, not default CI. kubectl apply in CI loses Helm release history and rollback.
+\`\`\`
+
+## When to learn next (optional)
+
+| Topic | When |
+|-------|------|
+| **Kustomize** | Team prefers patch overlays over templating |
+| **ArgoCD / Flux** | GitOps — Git is source of truth, cluster reconciles |
+| **kind** | Fast ephemeral clusters in GitHub Actions |
+
+## Course complete
+
+You now have **theory** (lessons 1–6), **hands-on muscle memory** (lesson 7), and **production packaging** (lesson 8). That's the working engineer's Kubernetes — enough to interview, ship, and debug on a real cluster.
+`;
+

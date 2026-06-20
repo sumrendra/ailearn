@@ -33,7 +33,7 @@ import {
 import { GMAT_L1, GMAT_L2, GMAT_L3, GMAT_L4 } from "./gmat-overview-content";
 import { GMAT_L5, GMAT_L6, GMAT_L7 } from "./gmat-quant-content";
 import { GMAT_L8, GMAT_L9, GMAT_L10 } from "./gmat-verbal-content";
-import { K8S_L1, K8S_L2, K8S_L3, K8S_L4, K8S_L5, K8S_L6 } from "./kubernetes-content";
+import { K8S_L1, K8S_L2, K8S_L3, K8S_L4, K8S_L5, K8S_L6, K8S_L7, K8S_L8 } from "./kubernetes-content";
 
 export const PATHS: LearningPath[] = [
   // ── LLM Foundations ───────────────────────────────────────────────────────
@@ -342,8 +342,8 @@ export const PATHS: LearningPath[] = [
     icon: "cloud",
     color: "#326ce5",
     difficulty: "ADVANCED",
-    estimatedHours: 8,
-    tags: ["Kubernetes", "Docker", "DevOps", "Cloud Native", "Containers"],
+    estimatedHours: 12,
+    tags: ["Kubernetes", "Docker", "DevOps", "Cloud Native", "Containers", "Helm"],
     order: 15,
     lessons: [
       { slug: "k8s-why-containers",    title: "Containers → Why Kubernetes?",              description: "The problem Docker Compose can't solve at fleet scale, the one-sentence mental model, and when K8s is actually worth the complexity.", content: K8S_L1, order: 1, estimatedMins: 16, xpReward: 70,  tags: ["Kubernetes", "Docker", "Architecture"] },
@@ -351,7 +351,9 @@ export const PATHS: LearningPath[] = [
       { slug: "k8s-workloads",         title: "Workloads — Pod, Deployment, Service",        description: "The 95% stack, labels & selectors, rolling updates, and liveness vs readiness probes done right.", content: K8S_L3, order: 3, estimatedMins: 20, xpReward: 80,  tags: ["Kubernetes", "Deployment", "Pods", "Probes"] },
       { slug: "k8s-networking",        title: "Networking — Services, DNS & Ingress",        description: "ClusterIP vs NodePort vs LoadBalancer vs Ingress, in-cluster DNS, and a methodical debug checklist.", content: K8S_L4, order: 4, estimatedMins: 18, xpReward: 80,  tags: ["Kubernetes", "Service", "Ingress", "DNS"] },
       { slug: "k8s-config-resources",  title: "Config, secrets & resource limits",           description: "ConfigMap vs Secret, requests/limits, OOMKilled debugging, and graceful shutdown.", content: K8S_L5, order: 5, estimatedMins: 18, xpReward: 80,  tags: ["Kubernetes", "ConfigMap", "Secrets", "Resources"] },
-      { slug: "k8s-production",      title: "Production ops & interview rapid-fire",       description: "CI/CD flow, HPA autoscaling, troubleshooting cheat sheet, and the rapid-fire Q&A table for interviews.", content: K8S_L6, order: 6, estimatedMins: 18, xpReward: 85,  tags: ["Kubernetes", "Production", "HPA", "Interview"] },
+      { slug: "k8s-production",        title: "Production ops & interview rapid-fire",       description: "CI/CD flow, HPA autoscaling, troubleshooting cheat sheet, and the rapid-fire Q&A table for interviews.", content: K8S_L6, order: 6, estimatedMins: 18, xpReward: 85,  tags: ["Kubernetes", "Production", "HPA", "Interview"] },
+      { slug: "k8s-minikube-lab",      title: "Hands-on lab — minikube on your Mac",         description: "10 checkpoint steps: start a cluster, deploy nginx, break it, diagnose CrashLoopBackOff, rollback, scale. Real kubectl muscle memory.", content: K8S_L7, order: 7, estimatedMins: 28, xpReward: 100, tags: ["Kubernetes", "minikube", "Hands-on", "Lab"] },
+      { slug: "k8s-helm-production",   title: "Helm — ship like production",                 description: "Charts, values overlays, upgrade --install --atomic, rollback, and how Helm maps to your Portainer homelab workflow.", content: K8S_L8, order: 8, estimatedMins: 22, xpReward: 95,  tags: ["Kubernetes", "Helm", "CI/CD", "Production"] },
     ],
   },
 ];
