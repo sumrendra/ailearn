@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     weeklyHours?: number;
     examDate?: string | null;
     onboardingDone?: boolean;
+    roadmapPrefs?: Record<string, string>;
   };
 
   const profile = await prisma.tcfProfile.upsert({
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
       weeklyHours: body.weeklyHours ?? 6,
       examDate: body.examDate ? new Date(body.examDate) : null,
       onboardingDone: body.onboardingDone ?? true,
+      roadmapPrefs: body.roadmapPrefs ?? undefined,
     },
     update: {
       ...(body.targetNclc != null ? { targetNclc: body.targetNclc } : {}),
@@ -54,6 +56,7 @@ export async function POST(req: NextRequest) {
         ? { examDate: body.examDate ? new Date(body.examDate) : null }
         : {}),
       ...(body.onboardingDone != null ? { onboardingDone: body.onboardingDone } : {}),
+      ...(body.roadmapPrefs != null ? { roadmapPrefs: body.roadmapPrefs } : {}),
     },
   });
 

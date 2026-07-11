@@ -54,6 +54,38 @@ export function TcfHubClient() {
       <div style={{ maxWidth: 920, margin: "0 auto", padding: "24px 24px 80px" }}>
         <TcfSubnav />
 
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: 10,
+            marginBottom: 20,
+          }}
+        >
+          {[
+            { href: "/tcf/plan", label: "Roadmap", sub: "Phases & tutor plan", color: "#be185d" },
+            { href: "/tcf/learn", label: "Lessons", sub: "62 open units", color: "#7c3aed" },
+            { href: "/tcf/practice", label: "Practice", sub: "4 exam skills", color: "#5b6af0" },
+            { href: "/tcf/progress", label: "Progress", sub: "Scores & history", color: "#0f766e" },
+          ].map(({ href, label, sub, color }) => (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                padding: "14px 16px",
+                borderRadius: 10,
+                border: "1px solid var(--border-subtle)",
+                background: "var(--bg-card)",
+                textDecoration: "none",
+                color: "inherit",
+              }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 14, color }}>{label}</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{sub}</div>
+            </Link>
+          ))}
+        </div>
+
         {needsOnboarding && (
           <Link
             href="/tcf/onboarding"
@@ -89,6 +121,9 @@ export function TcfHubClient() {
         )}
 
         <h2 style={{ fontSize: 16, fontWeight: 700, margin: "32px 0 14px" }}>Practice modules</h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 12px" }}>
+          Or go to the <Link href="/tcf/practice" style={{ color: "#be185d" }}>practice hub</Link> for all four skills.
+        </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
           {PRACTICE.map(({ href, Icon, label, sub, color }) => (
             <Link

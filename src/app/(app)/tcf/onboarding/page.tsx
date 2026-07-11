@@ -25,7 +25,7 @@ export default function TcfOnboardingPage() {
           onboardingDone: true,
         }),
       });
-      router.push("/tcf/learn/tcf-a01-why-tcf");
+      router.push("/tcf/plan");
     } finally {
       setSaving(false);
     }
@@ -109,7 +109,7 @@ export default function TcfOnboardingPage() {
             cursor: saving ? "wait" : "pointer",
           }}
         >
-          {saving ? "Saving…" : "Start Unit 1 — Why TCF Canada?"}
+          {saving ? "Saving…" : "Open my roadmap"}
         </button>
       </div>
     </>

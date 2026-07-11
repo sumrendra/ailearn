@@ -102,6 +102,7 @@ export async function GET() {
       placementCefr: "A0",
       weeklyHours: 6,
       onboardingDone: false,
+      roadmapPrefs: null,
     },
     practicePapers: { listening: 5, reading: 5, writing: 5, speaking: 5 },
     recentAttempts: attempts.slice(0, 5).map((a) => ({

@@ -28,6 +28,13 @@ interface MissionControlProps {
   tracks: { id: string; percent: number; completed: number; total: number }[];
 }
 
+const TRACK_LABELS: Record<string, string> = {
+  foundation: "Foundation",
+  bridge: "Bridge",
+  b2: "NCLC 7",
+  exam: "Exam",
+};
+
 export function MissionControl({
   programPercent,
   completedUnits,
@@ -147,17 +154,31 @@ export function MissionControl({
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginTop: 16 }}>
           {tracks.map((t) => (
             <div key={t.id} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 10, textTransform: "capitalize", color: "var(--text-muted)", marginBottom: 4 }}>
-                {t.id}
+              <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>
+                {TRACK_LABELS[t.id] ?? t.id}
               </div>
               <div style={{ fontSize: 13, fontWeight: 600 }}>{t.percent}%</div>
               <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{t.completed}/{t.total}</div>
             </div>
           ))}
         </div>
+        <Link
+          href="/tcf/plan"
+          style={{
+            display: "block",
+            marginTop: 14,
+            fontSize: 12,
+            fontWeight: 600,
+            color: "#be185d",
+            textDecoration: "none",
+            textAlign: "center",
+          }}
+        >
+          View full roadmap →
+        </Link>
       </div>
 
-      {/* Next unit CTA */}
+      {/* Suggested next — not a lock */}
       {nextUnit && (
         <Link
           href={`/tcf/learn/${nextUnit.slug}`}
@@ -173,7 +194,7 @@ export function MissionControl({
             fontWeight: 600,
           }}
         >
-          <span>Continue: {nextUnit.title}</span>
+          <span>Suggested next: {nextUnit.title}</span>
           <ArrowRight size={18} />
         </Link>
       )}

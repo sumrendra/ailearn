@@ -66,7 +66,7 @@ export function GrammarMap({ topics }: { topics: GrammarCell[] }) {
         );
       })}
       <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-        Complete curriculum units to light up topics. Dark = not yet studied. Bright = mastered.
+        Topics light up when you complete their linked lesson. Browse any lesson anytime — this map shows what you&apos;ve covered.
       </p>
     </div>
   );

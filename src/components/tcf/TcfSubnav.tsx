@@ -4,19 +4,29 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BookOpen, Grid3X3, Library, Headphones,
-  ClipboardCheck, TrendingUp, Calendar,
+  ClipboardCheck, TrendingUp, Map,
 } from "lucide-react";
 
 const TABS = [
   { href: "/tcf", label: "Home", Icon: LayoutDashboard, exact: true },
-  { href: "/tcf/learn", label: "Learn", Icon: BookOpen },
+  { href: "/tcf/plan", label: "Roadmap", Icon: Map },
+  { href: "/tcf/learn", label: "Lessons", Icon: BookOpen },
   { href: "/tcf/grammar", label: "Grammar", Icon: Grid3X3 },
-  { href: "/tcf/vocabulary", label: "Vocabulary", Icon: Library },
-  { href: "/tcf/listening", label: "Practice", Icon: Headphones, match: "/tcf/listening" },
+  { href: "/tcf/vocabulary", label: "Vocab", Icon: Library },
+  { href: "/tcf/practice", label: "Practice", Icon: Headphones, matchPractice: true },
   { href: "/tcf/mocks", label: "Mocks", Icon: ClipboardCheck },
   { href: "/tcf/progress", label: "Progress", Icon: TrendingUp },
-  { href: "/tcf/plan", label: "Plan", Icon: Calendar },
 ];
+
+function isPracticePath(pathname: string) {
+  return (
+    pathname.startsWith("/tcf/practice") ||
+    pathname.startsWith("/tcf/listening") ||
+    pathname.startsWith("/tcf/reading") ||
+    pathname.startsWith("/tcf/writing") ||
+    pathname.startsWith("/tcf/speaking")
+  );
+}
 
 export function TcfSubnav() {
   const pathname = usePathname();
@@ -33,12 +43,13 @@ export function TcfSubnav() {
         background: "var(--bg-elevated)",
         border: "1px solid var(--border-subtle)",
       }}
+      aria-label="TCF program navigation"
     >
-      {TABS.map(({ href, label, Icon, exact, match }) => {
+      {TABS.map(({ href, label, Icon, exact, matchPractice }) => {
         const active = exact
           ? pathname === href
-          : match
-            ? pathname.startsWith(match) || pathname.startsWith("/tcf/reading") || pathname.startsWith("/tcf/writing") || pathname.startsWith("/tcf/speaking")
+          : matchPractice
+            ? isPracticePath(pathname)
             : pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link

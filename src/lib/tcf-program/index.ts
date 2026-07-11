@@ -3,6 +3,7 @@ export { TCF_TRACKS } from "./types";
 export * from "./nclc";
 export * from "./grammar-topics";
 export * from "./vocab-themes";
+export * from "./roadmap";
 
 import { getLessonBySlug } from "@/lib/content";
 import {
