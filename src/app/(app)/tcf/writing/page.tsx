@@ -5,6 +5,10 @@ import Link from "next/link";
 import { ChevronRight, ChevronLeft, RotateCcw, PenLine, Loader2, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import { WRITING_PAPERS, type WritingTask } from "@/lib/content/tcf-papers";
+import { logTcfAttempt } from "@/lib/tcf-log-attempt";
+import { scoreToNclcProduction } from "@/lib/tcf-program/nclc";
+import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
+import { TcfMockBanner, TcfMockCompleteBar } from "@/components/tcf/TcfMockUI";
 
 const TASK_ACCENT = ["#f59e0b", "#3b82f6", "#a855f7"];
 const TASK_LABEL = ["Tâche 1", "Tâche 2", "Tâche 3"];
@@ -84,6 +88,8 @@ export default function TCFWritingPage() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const responsesRef = useRef(responses);
   const paperRef = useRef(paper);
+  const attemptLoggedRef = useRef(false);
+  const { isMock, mockPaper, bootedRef } = useTcfMockFlow("writing");
   const [openResult, setOpenResult] = useState<number | null>(null);
 
   const tasks = WRITING_PAPERS[paper];
@@ -142,6 +148,12 @@ export default function TCFWritingPage() {
     setPhase("writing");
   }
 
+  useEffect(() => {
+    if (!isMock || bootedRef.current) return;
+    bootedRef.current = true;
+    startPaper(mockPaper);
+  }, [isMock, mockPaper, bootedRef]);
+
   function restart() {
     setPhase("select");
     setTaskIdx(0);
@@ -150,6 +162,7 @@ export default function TCFWritingPage() {
     setEvalError(null);
     setSecondsLeft(60 * 60);
     setTimerRunning(false);
+    attemptLoggedRef.current = false;
   }
 
   function handleChange(val: string) {
@@ -184,6 +197,21 @@ export default function TCFWritingPage() {
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
   const ss = String(secondsLeft % 60).padStart(2, "0");
   const timerColor = secondsLeft < 300 ? "#ef4444" : secondsLeft < 600 ? "#f59e0b" : "var(--text-tertiary)";
+
+  useEffect(() => {
+    if (phase !== "complete" || attemptLoggedRef.current) return;
+    const valid = results.filter((r): r is EvalResult => r != null && typeof r.score === "number");
+    if (valid.length === 0) return;
+    const minTaskScore = Math.min(...valid.map((r) => r.score));
+    const avgTaskScore = Math.round(valid.reduce((s, r) => s + r.score, 0) / valid.length);
+    attemptLoggedRef.current = true;
+    logTcfAttempt({
+      module: "writing",
+      paper,
+      scoreRaw: avgTaskScore,
+      scoreNclc: scoreToNclcProduction(minTaskScore),
+    });
+  }, [phase, results, paper]);
 
   // ── Paper Select ───────────────────────────────────────────────
   if (phase === "select") {
@@ -278,6 +306,8 @@ export default function TCFWritingPage() {
     const totalScore = validResults.reduce((s, r) => s + r.score, 0);
     const maxScore = validResults.length * 20;
     const pct = Math.round((totalScore / maxScore) * 100);
+    const minTaskScore = validResults.length ? Math.min(...validResults.map((r) => r.score)) : 0;
+    const avgTaskScore = validResults.length ? Math.round(totalScore / validResults.length) : 0;
 
     const RUBRIC_LABELS = [
       { key: "taskCompletion", label: "Réalisation de la tâche" },
@@ -289,8 +319,13 @@ export default function TCFWritingPage() {
     return (
       <>
         <Topbar title="TCF Writing" subtitle={`Examen ${paper} · Résultats`} />
+        <TcfMockBanner module="writing" />
         <div style={{ maxWidth: 680, margin: "0 auto", padding: "48px 24px 80px" }}>
           <div className="glass-pane" style={{ borderRadius: 20, padding: "36px 36px 32px", marginBottom: 20 }}>
+            <TcfMockCompleteBar
+              module="writing"
+              score={{ scoreRaw: avgTaskScore, scoreNclc: scoreToNclcProduction(minTaskScore) }}
+            />
             <span className="mono-overline" style={{ color: "#f59e0b" }}>Examen {paper} terminé</span>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text-primary)", margin: "10px 0 20px" }}>
               Score total : {totalScore} / {maxScore}
@@ -415,6 +450,7 @@ export default function TCFWritingPage() {
           })}
 
           <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            {!isMock && (
             <button onClick={restart} style={{
               flex: 1, padding: "12px", background: "var(--bg-overlay)", color: "var(--text-primary)",
               border: "1px solid var(--border-default)", borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: "pointer",
@@ -422,6 +458,8 @@ export default function TCFWritingPage() {
             }}>
               <RotateCcw size={14} /> Autre examen
             </button>
+            )}
+            {!isMock && (
             <Link href="/tcf" style={{
               flex: 1, padding: "12px", background: "#f59e0b", color: "white",
               border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer",
@@ -429,6 +467,7 @@ export default function TCFWritingPage() {
             }}>
               Hub TCF
             </Link>
+            )}
           </div>
         </div>
       </>

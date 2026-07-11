@@ -38,6 +38,10 @@ model User {
   achievements      UserAchievement[]
   interviewSessions InterviewSession[]
   chatSessions      ChatSession[]
+  tcfProfile        TcfProfile?
+  tcfUnitProgress   TcfUnitProgress[]
+  tcfGrammarMastery TcfGrammarMastery[]
+  tcfAttempts       TcfAttempt[]
 }
 
 model Account {
@@ -217,4 +221,68 @@ model AudioAsset {
 
   @@unique([namespace, paper, questionIndex])
   @@index([namespace, paper])
+}
+
+// ─── TCF Canada Program (user progress) ───────────────────────────────────
+
+model TcfProfile {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  targetNclc     Int       @default(7)
+  placementCefr  String    @default("A0")
+  weeklyHours    Int       @default(6)
+  examDate       DateTime?
+  onboardingDone Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TcfUnitProgress {
+  id            String         @id @default(cuid())
+  userId        String
+  unitSlug      String
+  status        ProgressStatus @default(NOT_STARTED)
+  completedAt   DateTime?
+  timeSpentMins Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, unitSlug])
+  @@index([unitSlug])
+}
+
+model TcfGrammarMastery {
+  id        String   @id @default(cuid())
+  userId    String
+  topicId   String
+  state     String   @default("available")
+  lastScore Int?
+  attempts  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+}
+
+model TcfAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  module      String
+  paper       Int?
+  scoreRaw    Float?
+  scoreNclc   Int?
+  score699    Int?
+  durationSec Int      @default(0)
+  detailJson  Json?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, module])
+  @@index([userId, createdAt])
 }

@@ -56,10 +56,11 @@ function usePrefersReducedMotion() {
 
 interface Props {
   lessonSlug?: string;
+  themeId?: string;
   deckName?: string;
 }
 
-export function FlashcardDeck({ lessonSlug, deckName = "All flashcards" }: Props) {
+export function FlashcardDeck({ lessonSlug, themeId, deckName = "All flashcards" }: Props) {
   type DeckState =
     | { status: "loading" }
     | { status: "error"; message: string }
@@ -80,7 +81,10 @@ export function FlashcardDeck({ lessonSlug, deckName = "All flashcards" }: Props
   // react-hooks/set-state-in-effect lint guard.
   useEffect(() => {
     let cancelled = false;
-    const url = lessonSlug ? `/api/flashcards?lesson=${encodeURIComponent(lessonSlug)}` : "/api/flashcards";
+    const params = new URLSearchParams();
+    if (lessonSlug) params.set("lesson", lessonSlug);
+    if (themeId) params.set("theme", themeId);
+    const url = params.size ? `/api/flashcards?${params}` : "/api/flashcards";
 
     const load = async () => {
       try {
@@ -96,7 +100,7 @@ export function FlashcardDeck({ lessonSlug, deckName = "All flashcards" }: Props
 
     void load();
     return () => { cancelled = true; };
-  }, [lessonSlug]);
+  }, [lessonSlug, themeId]);
 
   const loading = deck.status === "loading";
   const error = deck.status === "error" ? deck.message : null;

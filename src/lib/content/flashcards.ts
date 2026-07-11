@@ -990,4 +990,25 @@ export const FLASHCARDS: Flashcard[] = [
         back: "Chart = packaged templates (the app package). Release = one installed instance of a chart in a namespace. values.yaml = config overlay — same chart, different values files for dev/staging/prod.",
         tags: ["Kubernetes", "Helm"],
       },
+  {
+        lessonSlug: "tcf-a01-why-tcf",
+        key: "tcf-a01-why-tcf:1",
+        front: "What NCLC level do most Express Entry French bonus programs require?",
+        back: "NCLC 7 in all four skills (listening, reading, writing, speaking). IRCC uses your lowest skill — one weak section caps your whole profile.",
+        tags: ["TCF Canada", "NCLC", "Immigration"],
+      },
+  {
+        lessonSlug: "tcf-a03-greetings",
+        key: "tcf-a03-greetings:1",
+        front: "When should you say Bonjour vs Salut?",
+        back: "Bonjour: strangers, shops, work, anyone older — never wrong. Salut: friends and family only. After ~6pm use Bonsoir in any context.",
+        tags: ["TCF Canada", "French", "Greetings"],
+      },
+  {
+        lessonSlug: "tcf-a03-greetings",
+        key: "tcf-a03-greetings:2",
+        front: "How do you say 'My name is…' in French?",
+        back: "Je m'appelle [name] — literally 'I call myself [name]'. Not 'Je suis [name]' for introductions (that means 'I am [name]' but sounds like stating identity, not giving your name in formal contexts).",
+        tags: ["TCF Canada", "French"],
+      },
 ];

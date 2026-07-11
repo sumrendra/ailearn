@@ -13,9 +13,12 @@
 
 import { PATHS } from "./paths";
 import { FLASHCARDS } from "./flashcards";
+import { TCF_VOCAB_FLASHCARDS, getTcfVocabFlashcardsForTheme } from "./tcf-vocab-flashcards";
 import { QUIZ_QUESTIONS } from "./quizzes";
 import { ACHIEVEMENTS } from "./achievements";
 import type { LearningPath, Lesson, Flashcard, QuizQuestion, Achievement } from "./types";
+
+const ALL_FLASHCARDS: Flashcard[] = [...FLASHCARDS, ...TCF_VOCAB_FLASHCARDS];
 
 export type { LearningPath, Lesson, Flashcard, QuizQuestion, Achievement } from "./types";
 
@@ -52,15 +55,19 @@ export function getLessonsForPath(pathSlug: string): Lesson[] {
 /* ── Flashcards ─────────────────────────────────────────────────────────── */
 
 export function getAllFlashcards(): Flashcard[] {
-  return FLASHCARDS;
+  return ALL_FLASHCARDS;
 }
 
 export function getFlashcardsForLesson(lessonSlug: string): Flashcard[] {
-  return FLASHCARDS.filter((f) => f.lessonSlug === lessonSlug);
+  return ALL_FLASHCARDS.filter((f) => f.lessonSlug === lessonSlug);
+}
+
+export function getFlashcardsForTheme(themeId: string): Flashcard[] {
+  return getTcfVocabFlashcardsForTheme(themeId);
 }
 
 export function getFlashcardByKey(key: string): Flashcard | undefined {
-  return FLASHCARDS.find((f) => f.key === key);
+  return ALL_FLASHCARDS.find((f) => f.key === key);
 }
 
 /* ── Quiz questions ─────────────────────────────────────────────────────── */

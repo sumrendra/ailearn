@@ -5,6 +5,10 @@ import Link from "next/link";
 import { ChevronRight, RotateCcw, Mic, Square, Loader2, CheckCircle, ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import { SPEAKING_PAPERS } from "@/lib/content/tcf-papers";
+import { logTcfAttempt } from "@/lib/tcf-log-attempt";
+import { scoreToNclcProduction } from "@/lib/tcf-program/nclc";
+import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
+import { TcfMockBanner, TcfMockCompleteBar } from "@/components/tcf/TcfMockUI";
 
 const TASK_ACCENT = ["#ef4444", "#8b5cf6", "#3b82f6"];
 
@@ -41,6 +45,8 @@ export default function TCFSpeakingPage() {
   const chunksRef = useRef<Blob[]>([]);
   const prepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const attemptLoggedRef = useRef(false);
+  const { isMock, mockPaper, bootedRef } = useTcfMockFlow("speaking");
 
   const tasks = SPEAKING_PAPERS[paper];
   const task = tasks[taskIdx];
@@ -72,6 +78,12 @@ export default function TCFSpeakingPage() {
       setPrepLeft(0);
     }
   }
+
+  useEffect(() => {
+    if (!isMock || bootedRef.current) return;
+    bootedRef.current = true;
+    selectPaper(mockPaper);
+  }, [isMock, mockPaper, bootedRef]);
 
   function startPrepTimer(seconds: number) {
     clearInterval(prepTimerRef.current!);
@@ -225,10 +237,26 @@ export default function TCFSpeakingPage() {
     audioBlobsRef.current = [null, null, null];
     mimeTypesRef.current = [null, null, null];
     setEvalError(null);
+    attemptLoggedRef.current = false;
   }
 
   const formatTime = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  useEffect(() => {
+    if (phase !== "complete" || attemptLoggedRef.current) return;
+    const valid = results.filter((r): r is EvalResult => r != null && typeof r.score === "number");
+    if (valid.length === 0) return;
+    const minTaskScore = Math.min(...valid.map((r) => r.score));
+    const avgTaskScore = Math.round(valid.reduce((s, r) => s + r.score, 0) / valid.length);
+    attemptLoggedRef.current = true;
+    logTcfAttempt({
+      module: "speaking",
+      paper,
+      scoreRaw: avgTaskScore,
+      scoreNclc: scoreToNclcProduction(minTaskScore),
+    });
+  }, [phase, results, paper]);
 
   // ── Paper Select ───────────────────────────────────────────────
   if (phase === "select") {
@@ -335,6 +363,8 @@ export default function TCFSpeakingPage() {
     const totalScore = validResults.reduce((s, r) => s + r.score, 0);
     const maxScore = validResults.length * 20;
     const pct = Math.round((totalScore / maxScore) * 100);
+    const minTaskScore = validResults.length ? Math.min(...validResults.map((r) => r.score)) : 0;
+    const avgTaskScore = validResults.length ? Math.round(totalScore / validResults.length) : 0;
 
     const RUBRIC_LABELS = [
       { key: "fluency", label: "Aisance et fluidité" },
@@ -346,8 +376,13 @@ export default function TCFSpeakingPage() {
     return (
       <>
         <Topbar title="TCF Speaking" subtitle={`Examen ${paper} · Résultats`} />
+        <TcfMockBanner module="speaking" />
         <div style={{ maxWidth: 680, margin: "0 auto", padding: "48px 24px 80px" }}>
           <div className="glass-pane" style={{ borderRadius: 20, padding: "36px 36px 32px", marginBottom: 20 }}>
+            <TcfMockCompleteBar
+              module="speaking"
+              score={{ scoreRaw: avgTaskScore, scoreNclc: scoreToNclcProduction(minTaskScore) }}
+            />
             <span className="mono-overline" style={{ color: "#ef4444" }}>Examen {paper} terminé</span>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 400, color: "var(--text-primary)", margin: "10px 0 20px" }}>
               Score total : {totalScore} / {maxScore}
@@ -467,6 +502,7 @@ export default function TCFSpeakingPage() {
           })}
 
           <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            {!isMock && (
             <button onClick={restart} style={{
               flex: 1, padding: "12px", background: "var(--bg-overlay)", color: "var(--text-primary)",
               border: "1px solid var(--border-default)", borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: "pointer",
@@ -474,6 +510,8 @@ export default function TCFSpeakingPage() {
             }}>
               <RotateCcw size={14} /> Autre examen
             </button>
+            )}
+            {!isMock && (
             <Link href="/tcf" style={{
               flex: 1, padding: "12px", background: "#ef4444", color: "white",
               border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600,
@@ -481,6 +519,7 @@ export default function TCFSpeakingPage() {
             }}>
               Hub TCF
             </Link>
+            )}
           </div>
         </div>
       </>

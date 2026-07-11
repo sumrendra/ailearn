@@ -1,0 +1,45 @@
+"use client";
+
+import { useCallback, useEffect, useRef, type MutableRefObject } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  getMockSession,
+  nextMockHref,
+  recordMockScore,
+  type MockModule,
+  type MockModuleScore,
+} from "@/lib/tcf-program/mock-session";
+
+export function useTcfMockFlow(module: MockModule) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const bootedRef = useRef(false);
+
+  const isMock = searchParams.get("mock") === "1";
+  const mockPaper = Math.min(5, Math.max(1, Number(searchParams.get("paper") ?? "1") || 1));
+  const session = isMock ? getMockSession() : null;
+
+  const advanceMock = useCallback(
+    (score: MockModuleScore) => {
+      const updated = recordMockScore(module, score);
+      if (updated) router.push(nextMockHref(updated));
+    },
+    [module, router],
+  );
+
+  return { isMock, mockPaper, session, advanceMock, bootedRef };
+}
+
+/** Call once on mount to skip paper select and enable exam mode for mock flow. */
+export function useTcfMockAutoStart(
+  isMock: boolean,
+  mockPaper: number,
+  bootedRef: MutableRefObject<boolean>,
+  start: (paper: number, exam: boolean) => void,
+) {
+  useEffect(() => {
+    if (!isMock || bootedRef.current) return;
+    bootedRef.current = true;
+    start(mockPaper, true);
+  }, [isMock, mockPaper, bootedRef, start]);
+}

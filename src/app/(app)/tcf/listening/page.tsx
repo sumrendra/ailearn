@@ -10,6 +10,10 @@ import {
   PAPER_COUNT,
   type TCFListeningQuestion,
 } from "@/lib/content/tcf-papers";
+import { logTcfAttempt } from "@/lib/tcf-log-attempt";
+import { scoreToNclcListening } from "@/lib/tcf-program/nclc";
+import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
+import { TcfMockBanner, TcfMockCompleteBar } from "@/components/tcf/TcfMockUI";
 
 const LEVEL_COLOR: Record<string, string> = {
   A1: "#22c55e", A2: "#84cc16",
@@ -68,6 +72,8 @@ export default function TCFListeningPage() {
   const [secondsLeft, setSecondsLeft] = useState(35 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const attemptLoggedRef = useRef(false);
+  const { isMock, mockPaper, bootedRef } = useTcfMockFlow("listening");
 
   const questions: TCFListeningQuestion[] = LISTENING_PAPERS[paper] ?? LISTENING_PAPERS[1];
   const q = questions[idx];
@@ -262,6 +268,13 @@ export default function TCFListeningPage() {
     setPhase("intro");
   }
 
+  useEffect(() => {
+    if (!isMock || bootedRef.current) return;
+    bootedRef.current = true;
+    setExamMode(true);
+    startPaper(mockPaper);
+  }, [isMock, mockPaper, bootedRef]);
+
   async function beginExam() {
     if (examMode) {
       setPhase("preparing");
@@ -292,6 +305,7 @@ export default function TCFListeningPage() {
 
   function restart() {
     prefetchAbortRef.current = true;
+    attemptLoggedRef.current = false;
     audioRef.current?.pause();
     clearAudioCache();
     setIdx(0);
@@ -311,6 +325,20 @@ export default function TCFListeningPage() {
 
   const totalAnswered = answers.filter((a) => a !== null).length;
   const totalCorrect = answers.filter((a, i) => a === questions[i].correctIndex).length;
+
+  useEffect(() => {
+    if (phase !== "complete" || attemptLoggedRef.current) return;
+    const correct = answers.filter((a, i) => a === questions[i].correctIndex).length;
+    const clb = estimateCLBFromListening(correct);
+    attemptLoggedRef.current = true;
+    logTcfAttempt({
+      module: "listening",
+      paper,
+      scoreRaw: correct,
+      scoreNclc: scoreToNclcListening(clb.score699),
+      score699: clb.score699,
+    });
+  }, [phase, answers, questions, paper]);
 
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
   const ss = String(secondsLeft % 60).padStart(2, "0");
@@ -596,8 +624,17 @@ export default function TCFListeningPage() {
     return (
       <>
         <Topbar title="TCF Listening" subtitle={`Examen ${paper} · Résultats`} />
+        <TcfMockBanner module="listening" />
         <div style={{ maxWidth: 620, margin: "0 auto", padding: "48px 24px 80px" }}>
           <div className="glass-pane" style={{ borderRadius: 20, padding: "40px 40px 36px" }}>
+            <TcfMockCompleteBar
+              module="listening"
+              score={{
+                scoreRaw: totalCorrect,
+                scoreNclc: scoreToNclcListening(clbResult.score699),
+                score699: clbResult.score699,
+              }}
+            />
             <span className="mono-overline" style={{ color: "#5b6af0" }}>Examen {paper} terminé</span>
             <h1 style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 400, color: "var(--text-primary)", margin: "10px 0 24px", letterSpacing: "-0.01em" }}>
               {totalCorrect} / 39 correct
@@ -724,6 +761,7 @@ export default function TCFListeningPage() {
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
+              {!isMock && (
               <button
                 onClick={restart}
                 style={{
@@ -744,6 +782,8 @@ export default function TCFListeningPage() {
               >
                 <RotateCcw size={14} /> Autre examen
               </button>
+              )}
+              {!isMock && (
               <Link
                 href="/tcf"
                 style={{
@@ -764,6 +804,7 @@ export default function TCFListeningPage() {
               >
                 Hub TCF
               </Link>
+              )}
             </div>
           </div>
         </div>

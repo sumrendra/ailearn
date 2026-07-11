@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getLessonBySlug } from "@/lib/content";
+import { getLearnableBySlug } from "@/lib/tcf-program";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
 
   // Validate the slug refers to a real lesson — content is in code, not DB,
   // so we check the content module rather than a join.
-  const lesson = getLessonBySlug(lessonSlug);
+  const lesson = getLearnableBySlug(lessonSlug);
   if (!lesson) {
     return new Response(JSON.stringify({ error: "unknown_lesson" }), {
       status: 404,

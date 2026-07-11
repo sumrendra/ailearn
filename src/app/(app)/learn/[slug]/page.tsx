@@ -1,5 +1,5 @@
 export const dynamic = "force-dynamic";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
@@ -18,6 +18,10 @@ export default async function LearningPathPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+
+  if (slug === "french-fundamentals" || slug === "french-advanced") {
+    redirect("/tcf");
+  }
 
   const path = getPathBySlug(slug);
   if (!path) notFound();
