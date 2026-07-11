@@ -481,6 +481,12 @@ interface LessonViewerProps {
   onMarkComplete?: () => void;
   /** True while the mark-complete request is in flight */
   marking?: boolean;
+  /** Base path for prev/next lesson links (default `/lessons`) */
+  lessonHrefPrefix?: string;
+  /** Link when there is no next lesson (default `/learn/{pathSlug}`) */
+  pathOverviewHref?: string;
+  /** Optional block rendered after lesson body, before the completion CTA */
+  supplement?: React.ReactNode;
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -505,6 +511,9 @@ export function LessonViewer({
   isCompleted = false,
   onMarkComplete,
   marking = false,
+  lessonHrefPrefix = "/lessons",
+  pathOverviewHref,
+  supplement,
 }: LessonViewerProps) {
   const [tutorOpen, setTutorOpen]   = useState(false);
   const [readPct,   setReadPct]     = useState(0);
@@ -731,6 +740,8 @@ export function LessonViewer({
           {markdownElement}
         </div>
 
+        {supplement}
+
         {/* ── Lesson complete CTA ───────────────────────────────────────── */}
         <div style={{
           marginTop: 72, padding: "36px 40px",
@@ -814,7 +825,7 @@ export function LessonViewer({
               borderTop: "1px solid var(--border-subtle)", paddingTop: 20, gap: 12,
             }}>
               {prevLesson ? (
-                <Link href={`/lessons/${prevLesson.slug}`} style={{ textDecoration: "none" }}>
+                <Link href={`${lessonHrefPrefix}/${prevLesson.slug}`} style={{ textDecoration: "none" }}>
                   <div style={{
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "9px 16px", borderRadius: "var(--radius-md)",
@@ -833,7 +844,7 @@ export function LessonViewer({
               ) : <div />}
 
               {nextLesson ? (
-                <Link href={`/lessons/${nextLesson.slug}`} style={{ textDecoration: "none" }}>
+                <Link href={`${lessonHrefPrefix}/${nextLesson.slug}`} style={{ textDecoration: "none" }}>
                   <div style={{
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "9px 16px", borderRadius: "var(--radius-md)",
@@ -855,7 +866,7 @@ export function LessonViewer({
                   </div>
                 </Link>
               ) : (
-                <Link href={pathSlug ? `/learn/${pathSlug}` : "/learn"} style={{ textDecoration: "none" }}>
+                <Link href={pathOverviewHref ?? (pathSlug ? `/learn/${pathSlug}` : "/learn")} style={{ textDecoration: "none" }}>
                   <div style={{
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "9px 18px", borderRadius: "var(--radius-md)",
