@@ -45,12 +45,18 @@ export default function TCFSpeakingPage() {
   const chunksRef = useRef<Blob[]>([]);
   const prepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const phaseRef = useRef<Phase>("select");
+  const taskIdxRef = useRef(0);
+  const startRecordingRef = useRef<(forTaskIdx: number) => Promise<void>>(async () => {});
   const attemptLoggedRef = useRef(false);
   const { isMock, mockPaper, bootedRef } = useTcfMockFlow("speaking");
 
   const tasks = SPEAKING_PAPERS[paper];
   const task = tasks[taskIdx];
   const accent = TASK_ACCENT[taskIdx];
+
+  phaseRef.current = phase;
+  taskIdxRef.current = taskIdx;
 
   useEffect(() => {
     return () => {
@@ -61,9 +67,23 @@ export default function TCFSpeakingPage() {
     };
   }, []);
 
-  function selectPaper(p: number) {
+  function startPrepTimer(seconds: number, forTaskIdx: number) {
+    clearInterval(prepTimerRef.current!);
+    let s = seconds;
+    prepTimerRef.current = setInterval(() => {
+      s--;
+      setPrepLeft(s);
+      if (s <= 0) {
+        clearInterval(prepTimerRef.current!);
+        startRecordingRef.current(forTaskIdx);
+      }
+    }, 1000);
+  }
+
+  function beginPaper(p: number) {
     setPaper(p);
     setTaskIdx(0);
+    taskIdxRef.current = 0;
     setResults([null, null, null]);
     audioBlobsRef.current = [null, null, null];
     mimeTypesRef.current = [null, null, null];
@@ -72,31 +92,22 @@ export default function TCFSpeakingPage() {
     if (t.prepSeconds > 0) {
       setPrepLeft(t.prepSeconds);
       setPhase("prep");
-      startPrepTimer(t.prepSeconds);
+      startPrepTimer(t.prepSeconds, 0);
     } else {
       setPhase("prep");
       setPrepLeft(0);
     }
   }
 
+  function selectPaper(p: number) {
+    beginPaper(p);
+  }
+
   useEffect(() => {
     if (!isMock || bootedRef.current) return;
     bootedRef.current = true;
-    selectPaper(mockPaper);
+    beginPaper(mockPaper);
   }, [isMock, mockPaper, bootedRef]);
-
-  function startPrepTimer(seconds: number) {
-    clearInterval(prepTimerRef.current!);
-    let s = seconds;
-    prepTimerRef.current = setInterval(() => {
-      s--;
-      setPrepLeft(s);
-      if (s <= 0) {
-        clearInterval(prepTimerRef.current!);
-        startRecording();
-      }
-    }, 1000);
-  }
 
   function blobToBase64(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -157,9 +168,14 @@ export default function TCFSpeakingPage() {
   const finishRecording = useCallback((currentTaskIdx: number) => {
     clearInterval(recTimerRef.current!);
     const mr = mediaRecorderRef.current;
-    if (!mr || mr.state === "inactive") return;
-    mr.stop();
-    streamRef.current?.getTracks().forEach((t) => t.stop());
+    if (!mr || mr.state === "inactive") {
+      if (phaseRef.current === "recording") {
+        setPhase("prep");
+        setPrepLeft(0);
+      }
+      return;
+    }
+
     mr.onstop = () => {
       const mime = mimeTypeRef.current;
       const blob = new Blob(chunksRef.current, { type: mime });
@@ -172,12 +188,13 @@ export default function TCFSpeakingPage() {
 
       if (currentTaskIdx < 2) {
         const nextTaskIdx = currentTaskIdx + 1;
+        taskIdxRef.current = nextTaskIdx;
         setTaskIdx(nextTaskIdx);
         const nextTask = tasks[nextTaskIdx];
         if (nextTask.prepSeconds > 0) {
           setPrepLeft(nextTask.prepSeconds);
           setPhase("prep");
-          startPrepTimer(nextTask.prepSeconds);
+          startPrepTimer(nextTask.prepSeconds, nextTaskIdx);
         } else {
           setPhase("prep");
           setPrepLeft(0);
@@ -186,44 +203,52 @@ export default function TCFSpeakingPage() {
         evaluateAll(updated, updatedMimes);
       }
     };
+
+    mr.stop();
+    streamRef.current?.getTracks().forEach((t) => t.stop());
   }, [tasks, evaluateAll]);
 
-  const startRecording = useCallback(async () => {
+  const startRecording = useCallback(async (forTaskIdx: number) => {
+    if (phaseRef.current === "recording") return;
+    clearInterval(recTimerRef.current!);
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       streamRef.current = stream;
       chunksRef.current = [];
-      // Prefer webm/opus (Chrome/Firefox), fall back to mp4 (Safari), then bare webm
       const supported = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
       const mimeType = supported.find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
       mimeTypeRef.current = mimeType || "audio/webm";
       const mr = new MediaRecorder(stream, {
         ...(mimeType ? { mimeType } : {}),
-        audioBitsPerSecond: 32000, // ~240KB/min → stays well under 4.5MB Vercel limit
+        audioBitsPerSecond: 32000,
       });
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.start(100);
       mediaRecorderRef.current = mr;
       setPhase("recording");
 
-      const t = tasks[taskIdx];
+      const t = tasks[forTaskIdx];
       let s = t.recordSeconds;
       setRecLeft(s);
-      const capturedIdx = taskIdx;
       recTimerRef.current = setInterval(() => {
         s--;
         setRecLeft(s);
         if (s <= 0) {
-          finishRecording(capturedIdx);
+          finishRecording(forTaskIdx);
         }
       }, 1000);
     } catch {
       setEvalError("Impossible d'accéder au microphone. Vérifiez les permissions.");
+      setPhase("prep");
+      setPrepLeft(0);
     }
-  }, [tasks, taskIdx, finishRecording]);
+  }, [tasks, finishRecording]);
+
+  startRecordingRef.current = startRecording;
 
   function stopEarly() {
-    finishRecording(taskIdx);
+    finishRecording(taskIdxRef.current);
   }
 
   function restart() {
@@ -541,6 +566,11 @@ export default function TCFSpeakingPage() {
       />
 
       <div style={{ maxWidth: 620, margin: "0 auto", padding: "32px 20px 80px" }}>
+        {evalError && (
+          <div style={{ padding: "10px 14px", background: "#ef444412", border: "1px solid #ef444433", borderRadius: 8, marginBottom: 16, fontSize: 13, color: "#ef4444" }}>
+            {evalError}
+          </div>
+        )}
         {/* Task progress */}
         <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
           {[0, 1, 2].map((i) => (
@@ -606,6 +636,21 @@ export default function TCFSpeakingPage() {
               <div style={{ height: 4, background: "var(--bg-overlay)", borderRadius: 2, overflow: "hidden", marginTop: 16 }}>
                 <div style={{ height: "100%", width: `${((task.prepSeconds - prepLeft) / task.prepSeconds) * 100}%`, background: "#f59e0b", borderRadius: 2, transition: "width 1s linear" }} />
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  clearInterval(prepTimerRef.current!);
+                  setPrepLeft(0);
+                  startRecording(taskIdx);
+                }}
+                style={{
+                  marginTop: 16, padding: "8px 16px", background: "transparent",
+                  border: "1px solid var(--border-default)", borderRadius: 8,
+                  fontSize: 12, color: "var(--text-secondary)", cursor: "pointer",
+                }}
+              >
+                Passer la préparation
+              </button>
             </div>
           )}
 
@@ -621,7 +666,7 @@ export default function TCFSpeakingPage() {
                   : "Aucun temps de préparation pour cette tâche. Cliquez pour démarrer directement."}
               </p>
               <button
-                onClick={startRecording}
+                onClick={() => startRecording(taskIdx)}
                 style={{
                   padding: "14px 32px", background: accent, color: "white",
                   border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: "pointer",

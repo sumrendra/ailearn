@@ -22,24 +22,25 @@ import { TCF_SPEAKING_P2 } from "./tcf-speaking-p2";
 import { TCF_SPEAKING_P3 } from "./tcf-speaking-p3";
 import { TCF_SPEAKING_P4 } from "./tcf-speaking-p4";
 import { TCF_SPEAKING_P5 } from "./tcf-speaking-p5";
+import { normalizeMcqPaper } from "@/lib/tcf-program/normalize-mcq";
 
 export type { TCFListeningQuestion, TCFReadingQuestion, WritingTask, SpeakingTask };
 export { estimateCLBFromListening, estimateCLBFromReading };
 
 export const LISTENING_PAPERS: Record<number, TCFListeningQuestion[]> = {
-  1: TCF_LISTENING,
-  2: TCF_LISTENING_P2,
-  3: TCF_LISTENING_P3,
-  4: TCF_LISTENING_P4,
-  5: TCF_LISTENING_P5,
+  1: normalizeMcqPaper(TCF_LISTENING),
+  2: normalizeMcqPaper(TCF_LISTENING_P2),
+  3: normalizeMcqPaper(TCF_LISTENING_P3),
+  4: normalizeMcqPaper(TCF_LISTENING_P4),
+  5: normalizeMcqPaper(TCF_LISTENING_P5),
 };
 
 export const READING_PAPERS: Record<number, TCFReadingQuestion[]> = {
-  1: TCF_READING,
-  2: TCF_READING_P2,
-  3: TCF_READING_P3,
-  4: TCF_READING_P4,
-  5: TCF_READING_P5,
+  1: normalizeMcqPaper(TCF_READING),
+  2: normalizeMcqPaper(TCF_READING_P2),
+  3: normalizeMcqPaper(TCF_READING_P3),
+  4: normalizeMcqPaper(TCF_READING_P4),
+  5: normalizeMcqPaper(TCF_READING_P5),
 };
 
 export const WRITING_PAPERS: Record<number, WritingTask[]> = {

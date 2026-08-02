@@ -45,32 +45,44 @@ export async function POST(req: NextRequest) {
     3: "texte formel ou argumentatif (120–180 mots)",
   };
 
-  const systemPrompt = `Vous êtes un correcteur officiel certifié TCF Canada. Évaluez la production écrite suivante selon les critères officiels du TCF (Test de connaissance du français).
+  const systemPrompt = `Vous êtes un correcteur officiel certifié TCF Canada. Évaluez la production écrite selon la grille FEI (France Éducation international) — double correction, critères standardisés.
 
 Type de tâche: ${taskLabels[taskNumber] ?? "production écrite"}
-Consigne donnée à l'apprenant: "${taskPrompt}"
-Réponse de l'apprenant (${wordCount} mots): "${response}"
+Consigne: "${taskPrompt}"
+Réponse du candidat (${wordCount} mots): "${response}"
+Fourchette officielle: ${minWords}–${maxWords} mots.
 
-Fourchette de mots recommandée: ${minWords}–${maxWords} mots.
+Objectifs FEI par tâche:
+- Tâche 1: message clair à un destinataire identifié (décrire, raconter, expliquer, informer).
+- Tâche 2: compte rendu ou récit avec commentaire/opinion/argument selon la consigne.
+- Tâche 3: comparer deux points de vue (partie 1) puis prendre position argumentée (partie 2).
 
-Critères d'évaluation TCF (chaque critère est noté de 0 à 5):
-1. Réalisation de la tâche — Adéquation au sujet, respect des consignes, pertinence du contenu
-2. Cohérence et organisation — Structure logique, utilisation des connecteurs, progression des idées
-3. Étendue et maîtrise du vocabulaire — Richesse lexicale, précision, registre approprié
-4. Maîtrise grammaticale — Morphologie, syntaxe, orthographe
+Barème (chaque critère 0–5, total = somme des 4 critères, max 20):
+1. Réalisation de la tâche — pertinence, respect de la consigne, informations demandées
+2. Cohérence et organisation — structure, connecteurs, progression logique
+3. Étendue et maîtrise du vocabulaire — richesse, précision, registre adapté
+4. Maîtrise grammaticale et orthographe — morphologie, syntaxe, orthographe
 
-Score total: somme des 4 critères, maximum 20 points.
+Pénalités FEI (appliquer sur le critère concerné):
+- Hors sujet ou consigne non respectée: Réalisation ≤ 2
+- Moins de 50% du minimum de mots: Réalisation ≤ 2
+- Texte très court ou fragmentaire: Cohérence ≤ 2
+- Registre inadapté (tâche 2/3): Vocabulaire −1
 
-Répondez UNIQUEMENT en JSON valide (pas de markdown, pas de texte avant ou après):
+Référence IRCC: NCLC 7 ≈ 10–11/20 par tâche. Soyez exigeant comme un correcteur FEI, pas indulgent.
+
+Le score total DOIT être exactement la somme des 4 critères.
+
+Répondez UNIQUEMENT en JSON valide:
 {
-  "score": <entier 0-20>,
+  "score": <entier 0-20, = taskCompletion + coherence + vocabulary + grammar>,
   "taskCompletion": <entier 0-5>,
   "coherence": <entier 0-5>,
   "vocabulary": <entier 0-5>,
   "grammar": <entier 0-5>,
-  "feedback": "<2-3 phrases en français résumant l'évaluation globale>",
+  "feedback": "<2-3 phrases en français>",
   "strengths": ["<point fort 1>", "<point fort 2>"],
-  "improvements": ["<axe d'amélioration 1>", "<axe d'amélioration 2>"]
+  "improvements": ["<axe 1>", "<axe 2>"]
 }`;
 
   const geminiBody = {
@@ -84,12 +96,17 @@ Répondez UNIQUEMENT en JSON valide (pas de markdown, pas de texte avant ou apr�
   try {
     const { text } = await callGeminiForJson(apiKey, geminiBody);
     const parsed = JSON.parse(text) as Partial<EvalResult>;
+    const taskCompletion = Math.min(5, Math.max(0, Number(parsed.taskCompletion) || 0));
+    const coherence = Math.min(5, Math.max(0, Number(parsed.coherence) || 0));
+    const vocabulary = Math.min(5, Math.max(0, Number(parsed.vocabulary) || 0));
+    const grammar = Math.min(5, Math.max(0, Number(parsed.grammar) || 0));
+    const rubricSum = taskCompletion + coherence + vocabulary + grammar;
     const result: EvalResult = {
-      score: Math.min(20, Math.max(0, Number(parsed.score) || 0)),
-      taskCompletion: Math.min(5, Math.max(0, Number(parsed.taskCompletion) || 0)),
-      coherence: Math.min(5, Math.max(0, Number(parsed.coherence) || 0)),
-      vocabulary: Math.min(5, Math.max(0, Number(parsed.vocabulary) || 0)),
-      grammar: Math.min(5, Math.max(0, Number(parsed.grammar) || 0)),
+      score: rubricSum,
+      taskCompletion,
+      coherence,
+      vocabulary,
+      grammar,
       feedback: parsed.feedback ?? "",
       strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
       improvements: Array.isArray(parsed.improvements) ? parsed.improvements : [],

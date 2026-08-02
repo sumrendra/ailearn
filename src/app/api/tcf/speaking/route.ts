@@ -39,32 +39,45 @@ export async function POST(req: NextRequest) {
     3: "monologue d'opinion (4,5 minutes, argumentation)",
   };
 
-  const systemPrompt = `Vous êtes un évaluateur officiel certifié TCF Canada pour la section Expression orale. Transcrivez et évaluez la production orale suivante selon les critères officiels du TCF.
+  const systemPrompt = `Vous êtes un évaluateur officiel certifié TCF Canada (grille FEI). Transcrivez et évaluez selon les critères standardisés d'expression orale.
 
 Type de tâche: ${taskLabels[taskNumber] ?? "production orale"}
-Consigne donnée au candidat: "${taskPrompt}"
+Consigne: "${taskPrompt}"
 
-Critères d'évaluation TCF Expression orale (chaque critère est noté de 0 à 5):
-1. Aisance et fluidité — Débit, hésitations, capacité à maintenir la communication
-2. Étendue et maîtrise du vocabulaire — Richesse lexicale, précision, registre
-3. Maîtrise grammaticale — Morphologie, syntaxe, complexité des structures
-4. Prononciation et intelligibilité — Clarté, accent, intonation
+Objectifs FEI par tâche:
+- Tâche 1 (entretien dirigé, 2 min): échanger avec un inconnu, parler de soi et son environnement.
+- Tâche 2 (interaction, 2 min préparation + 3 min 30): obtenir des informations dans une situation quotidienne.
+- Tâche 3 (point de vue, 4 min 30): argumentation spontanée, structurée et convaincante.
 
-Score total: somme des 4 critères, maximum 20 points.
+Barème (chaque critère 0–5, total = somme des 4 critères, max 20):
+1. Aisance et fluidité — débit, hésitations, capacité à maintenir la communication
+2. Étendue et maîtrise du vocabulaire — richesse, précision, registre
+3. Maîtrise grammaticale — morphologie, syntaxe, complexité
+4. Prononciation et intelligibilité — clarté, accent, intonation
 
-Si l'audio est inaudible ou vide, attribuez un score de 0 et indiquez le problème dans le feedback.
+Pénalités:
+- Audio vide/inaudible: tous critères = 0
+- Réponse hors sujet: Vocabulaire et Grammaire ≤ 2
+- Monologue < 30 secondes: Aisance ≤ 2
+- Silence prolongé ou réponse en anglais: score global ≤ 5
 
-Répondez UNIQUEMENT en JSON valide (pas de markdown, pas de texte avant ou après):
+Référence IRCC: NCLC 7 ≈ 10–11/20. Calibrage exigeant comme correcteur FEI.
+
+Le score total DOIT être exactement la somme des 4 critères.
+
+Si l'audio est inaudible ou vide, score = 0.
+
+Répondez UNIQUEMENT en JSON valide:
 {
-  "transcript": "<transcription fidèle de la réponse orale>",
-  "score": <entier 0-20>,
+  "transcript": "<transcription fidèle>",
+  "score": <entier 0-20, = fluency + vocabulary + grammar + pronunciation>,
   "fluency": <entier 0-5>,
   "vocabulary": <entier 0-5>,
   "grammar": <entier 0-5>,
   "pronunciation": <entier 0-5>,
-  "feedback": "<2-3 phrases en français résumant l'évaluation globale>",
+  "feedback": "<2-3 phrases en français>",
   "strengths": ["<point fort 1>", "<point fort 2>"],
-  "improvements": ["<axe d'amélioration 1>", "<axe d'amélioration 2>"]
+  "improvements": ["<axe 1>", "<axe 2>"]
 }`;
 
   const geminiBody = {
@@ -85,12 +98,17 @@ Répondez UNIQUEMENT en JSON valide (pas de markdown, pas de texte avant ou apr�
   try {
     const { text } = await callGeminiForJson(apiKey, geminiBody);
     const parsed = JSON.parse(text) as Partial<SpeakingEvalResult>;
+    const fluency = Math.min(5, Math.max(0, Number(parsed.fluency) || 0));
+    const vocabulary = Math.min(5, Math.max(0, Number(parsed.vocabulary) || 0));
+    const grammar = Math.min(5, Math.max(0, Number(parsed.grammar) || 0));
+    const pronunciation = Math.min(5, Math.max(0, Number(parsed.pronunciation) || 0));
+    const rubricSum = fluency + vocabulary + grammar + pronunciation;
     const result: SpeakingEvalResult = {
-      score: Math.min(20, Math.max(0, Number(parsed.score) || 0)),
-      fluency: Math.min(5, Math.max(0, Number(parsed.fluency) || 0)),
-      vocabulary: Math.min(5, Math.max(0, Number(parsed.vocabulary) || 0)),
-      grammar: Math.min(5, Math.max(0, Number(parsed.grammar) || 0)),
-      pronunciation: Math.min(5, Math.max(0, Number(parsed.pronunciation) || 0)),
+      score: rubricSum,
+      fluency,
+      vocabulary,
+      grammar,
+      pronunciation,
       transcript: parsed.transcript ?? "",
       feedback: parsed.feedback ?? "",
       strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
