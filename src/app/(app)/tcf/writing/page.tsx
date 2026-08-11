@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ChevronRight, ChevronLeft, RotateCcw, PenLine, Loader2, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
-import { WRITING_PAPERS, type WritingTask } from "@/lib/content/tcf-papers";
+import { PAPER_COUNT, WRITING_PAPERS, type WritingTask } from "@/lib/content/tcf-papers";
 import { logTcfAttempt } from "@/lib/tcf-log-attempt";
 import { scoreToNclcProduction } from "@/lib/tcf-program/nclc";
 import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
@@ -231,7 +231,7 @@ export default function TCFWritingPage() {
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
-              {[1, 2, 3, 4, 5].map((p) => (
+              {Array.from({ length: PAPER_COUNT }, (_, i) => i + 1).map((p) => (
                 <button
                   key={p}
                   onClick={() => startPaper(p)}

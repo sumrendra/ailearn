@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ChevronRight, RotateCcw, Mic, Square, Loader2, CheckCircle, ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
-import { SPEAKING_PAPERS } from "@/lib/content/tcf-papers";
+import { PAPER_COUNT, SPEAKING_PAPERS } from "@/lib/content/tcf-papers";
 import { logTcfAttempt } from "@/lib/tcf-log-attempt";
 import { scoreToNclcProduction } from "@/lib/tcf-program/nclc";
 import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
@@ -55,8 +55,11 @@ export default function TCFSpeakingPage() {
   const task = tasks[taskIdx];
   const accent = TASK_ACCENT[taskIdx];
 
-  phaseRef.current = phase;
-  taskIdxRef.current = taskIdx;
+  /** Timer callbacks read these outside render, so keep them synced. */
+  useEffect(() => {
+    phaseRef.current = phase;
+    taskIdxRef.current = taskIdx;
+  }, [phase, taskIdx]);
 
   useEffect(() => {
     return () => {
@@ -245,7 +248,10 @@ export default function TCFSpeakingPage() {
     }
   }, [tasks, finishRecording]);
 
-  startRecordingRef.current = startRecording;
+  /** The prep timer fires after this render, so it must call the latest version. */
+  useEffect(() => {
+    startRecordingRef.current = startRecording;
+  }, [startRecording]);
 
   function stopEarly() {
     finishRecording(taskIdxRef.current);
@@ -311,7 +317,7 @@ export default function TCFSpeakingPage() {
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
-              {[1, 2, 3, 4, 5].map((p) => (
+              {Array.from({ length: PAPER_COUNT }, (_, i) => i + 1).map((p) => (
                 <button
                   key={p}
                   onClick={() => selectPaper(p)}

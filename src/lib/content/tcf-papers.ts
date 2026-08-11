@@ -22,6 +22,10 @@ import { TCF_SPEAKING_P2 } from "./tcf-speaking-p2";
 import { TCF_SPEAKING_P3 } from "./tcf-speaking-p3";
 import { TCF_SPEAKING_P4 } from "./tcf-speaking-p4";
 import { TCF_SPEAKING_P5 } from "./tcf-speaking-p5";
+import { TCF_LISTENING_P6 } from "./tcf-listening-p6";
+import { TCF_READING_P6 } from "./tcf-reading-p6";
+import { TCF_WRITING_P6 } from "./tcf-writing-p6";
+import { TCF_SPEAKING_P6 } from "./tcf-speaking-p6";
 import { normalizeMcqPaper } from "@/lib/tcf-program/normalize-mcq";
 
 export type { TCFListeningQuestion, TCFReadingQuestion, WritingTask, SpeakingTask };
@@ -33,6 +37,7 @@ export const LISTENING_PAPERS: Record<number, TCFListeningQuestion[]> = {
   3: normalizeMcqPaper(TCF_LISTENING_P3),
   4: normalizeMcqPaper(TCF_LISTENING_P4),
   5: normalizeMcqPaper(TCF_LISTENING_P5),
+  6: normalizeMcqPaper(TCF_LISTENING_P6),
 };
 
 export const READING_PAPERS: Record<number, TCFReadingQuestion[]> = {
@@ -41,6 +46,7 @@ export const READING_PAPERS: Record<number, TCFReadingQuestion[]> = {
   3: normalizeMcqPaper(TCF_READING_P3),
   4: normalizeMcqPaper(TCF_READING_P4),
   5: normalizeMcqPaper(TCF_READING_P5),
+  6: normalizeMcqPaper(TCF_READING_P6),
 };
 
 export const WRITING_PAPERS: Record<number, WritingTask[]> = {
@@ -49,6 +55,7 @@ export const WRITING_PAPERS: Record<number, WritingTask[]> = {
   3: TCF_WRITING_P3,
   4: TCF_WRITING_P4,
   5: TCF_WRITING_P5,
+  6: TCF_WRITING_P6,
 };
 
 export const SPEAKING_PAPERS: Record<number, SpeakingTask[]> = {
@@ -57,6 +64,7 @@ export const SPEAKING_PAPERS: Record<number, SpeakingTask[]> = {
   3: TCF_SPEAKING_P3,
   4: TCF_SPEAKING_P4,
   5: TCF_SPEAKING_P5,
+  6: TCF_SPEAKING_P6,
 };
 
-export const PAPER_COUNT = 5;
+export const PAPER_COUNT = 6;

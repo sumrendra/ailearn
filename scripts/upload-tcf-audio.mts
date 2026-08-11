@@ -15,6 +15,7 @@ import { TCF_LISTENING_P2 } from "../src/lib/content/tcf-listening-p2";
 import { TCF_LISTENING_P3 } from "../src/lib/content/tcf-listening-p3";
 import { TCF_LISTENING_P4 } from "../src/lib/content/tcf-listening-p4";
 import { TCF_LISTENING_P5 } from "../src/lib/content/tcf-listening-p5";
+import { TCF_LISTENING_P6 } from "../src/lib/content/tcf-listening-p6";
 import {
   TCF_LISTENING_NAMESPACE,
   TCF_LISTENING_VOICES,
@@ -23,13 +24,14 @@ import {
 } from "../src/lib/tcf-audio";
 import { hashAudioScript, randomUUID } from "../src/lib/tcf-tts-server";
 
-const PAPER_COUNT = 5;
+const PAPER_COUNT = 6;
 const LISTENING_PAPERS: Record<number, TCFListeningQuestion[]> = {
   1: TCF_LISTENING,
   2: TCF_LISTENING_P2,
   3: TCF_LISTENING_P3,
   4: TCF_LISTENING_P4,
   5: TCF_LISTENING_P5,
+  6: TCF_LISTENING_P6,
 };
 
 config({ path: ".env.local" });
@@ -142,7 +144,7 @@ async function main() {
   }
 
   const total = await countAll();
-  console.log(`\nDone. registered=${created} skipped=${skipped} total_in_db=${total}/195`);
+  console.log(`\nDone. registered=${created} skipped=${skipped} total_in_db=${total}/${PAPER_COUNT * 39}`);
 }
 
 main()

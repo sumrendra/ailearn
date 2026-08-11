@@ -11,6 +11,7 @@ import {
   mockModuleHref,
   startMockSession,
 } from "@/lib/tcf-program/mock-session";
+import { PAPER_COUNT } from "@/lib/content/tcf-papers";
 
 const SECTIONS = [
   { key: "listening" as const, icon: Headphones, mins: 35, color: "#5b6af0" },
@@ -78,7 +79,7 @@ export default function TcfFullMockPage() {
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
-            {[1, 2, 3, 4, 5].map((p) => (
+            {Array.from({ length: PAPER_COUNT }, (_, i) => i + 1).map((p) => (
               <button
                 key={p}
                 type="button"

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, type MutableRefObject } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PAPER_COUNT } from "@/lib/content/tcf-papers";
 import {
   getMockSession,
   nextMockHref,
@@ -16,7 +17,7 @@ export function useTcfMockFlow(module: MockModule) {
   const bootedRef = useRef(false);
 
   const isMock = searchParams.get("mock") === "1";
-  const mockPaper = Math.min(5, Math.max(1, Number(searchParams.get("paper") ?? "1") || 1));
+  const mockPaper = Math.min(PAPER_COUNT, Math.max(1, Number(searchParams.get("paper") ?? "1") || 1));
   const session = isMock ? getMockSession() : null;
   const seedParam = Number(searchParams.get("seed"));
   /** Exam mode draws from the whole bank; the seed keeps the sitting stable. */
