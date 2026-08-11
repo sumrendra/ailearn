@@ -408,6 +408,22 @@ Pipeline scripts live in `scripts/tcf/`:
 
 Requires `GEMINI_API_KEY` for text generation; listening TTS uses free Edge TTS (no API key).
 
+Papers may also be hand-authored, which is preferred when distractor quality
+matters: generated options tend to make the correct answer the longest and most
+detailed, which `normalize-mcq.ts` can only partly repair. Paper 6 was written by
+hand. A hand-authored paper still needs registering and audio:
+
+```bash
+# after adding src/lib/content/tcf-{listening,reading,writing,speaking}-pN.ts
+# and referencing them in tcf-papers.ts (+ PAPER_COUNT)
+npm run generate:tcf-audio -- --paper=N   # Edge TTS → data/tcf-audio/pN/
+npm run upload:tcf-audio:server -- --paper=N
+```
+
+`scripts/generate-tcf-audio.mts`, `scripts/upload-tcf-audio.mts` and
+`scripts/upload-tcf-audio-server.sh` each list the listening papers explicitly —
+add the new one to all three.
+
 ---
 
 ## 13. UI / design system
