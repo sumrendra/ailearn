@@ -5,26 +5,56 @@ import { PAPER_COUNT } from "@/lib/content/tcf-papers";
 
 const QUESTIONS_PER_PAPER = 39;
 
-export async function GET(req: NextRequest) {
-  const paper = parseInt(req.nextUrl.searchParams.get("paper") ?? "", 10);
+function parsePapers(req: NextRequest): number[] | null {
+  const raw = req.nextUrl.searchParams.get("papers") ?? req.nextUrl.searchParams.get("paper");
+  if (!raw) return null;
 
-  if (!Number.isFinite(paper) || paper < 1 || paper > PAPER_COUNT) {
+  const papers = [
+    ...new Set(
+      raw
+        .split(",")
+        .map((value) => parseInt(value.trim(), 10))
+        .filter((n) => Number.isFinite(n) && n >= 1 && n <= PAPER_COUNT),
+    ),
+  ].sort((a, b) => a - b);
+
+  return papers.length > 0 ? papers : null;
+}
+
+/**
+ * A randomized sitting pulls audio from several papers at once, so readiness is
+ * reported for every paper the exam needs.
+ */
+export async function GET(req: NextRequest) {
+  const papers = parsePapers(req);
+
+  if (!papers) {
     return NextResponse.json(
-      { error: `paper query param required (1-${PAPER_COUNT})` },
+      { error: `papers query param required (1-${PAPER_COUNT}, comma separated)` },
       { status: 400 },
     );
   }
 
   const rows = await prisma.audioAsset.findMany({
-    where: { namespace: TCF_LISTENING_NAMESPACE, paper },
-    select: { questionIndex: true },
-    orderBy: { questionIndex: "asc" },
+    where: { namespace: TCF_LISTENING_NAMESPACE, paper: { in: papers } },
+    select: { paper: true, questionIndex: true },
+  });
+
+  const storedByPaper = new Map<number, number>();
+  for (const row of rows) {
+    storedByPaper.set(row.paper, (storedByPaper.get(row.paper) ?? 0) + 1);
+  }
+
+  const perPaper = papers.map((paper) => {
+    const stored = storedByPaper.get(paper) ?? 0;
+    return { paper, stored, total: QUESTIONS_PER_PAPER, ready: stored === QUESTIONS_PER_PAPER };
   });
 
   return NextResponse.json({
-    paper,
+    papers,
+    perPaper,
     stored: rows.length,
-    total: QUESTIONS_PER_PAPER,
-    ready: rows.length === QUESTIONS_PER_PAPER,
+    total: papers.length * QUESTIONS_PER_PAPER,
+    ready: perPaper.every((p) => p.ready),
   });
 }

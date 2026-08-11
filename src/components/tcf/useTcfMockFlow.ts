@@ -18,6 +18,11 @@ export function useTcfMockFlow(module: MockModule) {
   const isMock = searchParams.get("mock") === "1";
   const mockPaper = Math.min(5, Math.max(1, Number(searchParams.get("paper") ?? "1") || 1));
   const session = isMock ? getMockSession() : null;
+  const seedParam = Number(searchParams.get("seed"));
+  /** Exam mode draws from the whole bank; the seed keeps the sitting stable. */
+  const mockSeed = isMock
+    ? (Number.isFinite(seedParam) && seedParam > 0 ? seedParam : session?.seed ?? null)
+    : null;
 
   const advanceMock = useCallback(
     (score: MockModuleScore) => {
@@ -27,7 +32,7 @@ export function useTcfMockFlow(module: MockModule) {
     [module, router],
   );
 
-  return { isMock, mockPaper, session, advanceMock, bootedRef };
+  return { isMock, mockPaper, mockSeed, session, advanceMock, bootedRef };
 }
 
 /** Call once on mount to skip paper select and enable exam mode for mock flow. */

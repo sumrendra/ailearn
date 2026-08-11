@@ -5,13 +5,13 @@ import Link from "next/link";
 import { ChevronRight, ChevronLeft, Check, X, RotateCcw, Lock, BookOpen } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import {
-  READING_PAPERS,
   PAPER_COUNT,
   type TCFReadingQuestion,
 } from "@/lib/content/tcf-papers";
 import { logTcfAttempt } from "@/lib/tcf-log-attempt";
 import { scoreToNclcReading } from "@/lib/tcf-program/nclc";
 import { describeComprehensionScore, scoreComprehension } from "@/lib/tcf-program/scoring";
+import { resolveExamSection } from "@/lib/tcf-program/exam-draw";
 import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
 import { TcfMockBanner, TcfMockCompleteBar } from "@/components/tcf/TcfMockUI";
 
@@ -46,9 +46,13 @@ export default function TCFReadingPage() {
   const [timerRunning, setTimerRunning] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const attemptLoggedRef = useRef(false);
-  const { isMock, mockPaper, bootedRef } = useTcfMockFlow("reading");
+  const { isMock, mockPaper, mockSeed, bootedRef } = useTcfMockFlow("reading");
 
-  const questions: TCFReadingQuestion[] = READING_PAPERS[paper] ?? READING_PAPERS[1];
+  /** Mock sittings draw from the whole bank; practice keeps the chosen paper. */
+  const questions = useMemo(
+    () => resolveExamSection<TCFReadingQuestion>("reading", { paper, seed: mockSeed }),
+    [paper, mockSeed],
+  );
   const q = questions[idx];
   const userAnswer = answers[idx];
   const hasSelection = userAnswer !== null;

@@ -5,13 +5,18 @@ import Link from "next/link";
 import { Play, Square, RotateCcw, ChevronRight, ChevronLeft, Check, X, Volume2, Loader2, Lock, BookOpen } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import {
-  LISTENING_PAPERS,
   PAPER_COUNT,
   type TCFListeningQuestion,
 } from "@/lib/content/tcf-papers";
 import { logTcfAttempt } from "@/lib/tcf-log-attempt";
 import { scoreToNclcListening } from "@/lib/tcf-program/nclc";
 import { describeComprehensionScore, scoreComprehension } from "@/lib/tcf-program/scoring";
+import {
+  resolveExamSection,
+  sourcePapersOf,
+  type DrawnItem,
+  type ExamItemSource,
+} from "@/lib/tcf-program/exam-draw";
 import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
 import { TcfMockBanner, TcfMockCompleteBar } from "@/components/tcf/TcfMockUI";
 
@@ -66,6 +71,7 @@ export default function TCFListeningPage() {
   const audioCache = useRef<Map<string, string>>(new Map());
   const idxRef = useRef(0);
   const paperRef = useRef(1);
+  const questionsRef = useRef<DrawnItem<TCFListeningQuestion>[]>([]);
   const prefetchAbortRef = useRef(false);
 
   // Timer
@@ -73,16 +79,25 @@ export default function TCFListeningPage() {
   const [timerRunning, setTimerRunning] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const attemptLoggedRef = useRef(false);
-  const { isMock, mockPaper, bootedRef } = useTcfMockFlow("listening");
+  const { isMock, mockPaper, mockSeed, bootedRef } = useTcfMockFlow("listening");
 
-  const questions: TCFListeningQuestion[] = LISTENING_PAPERS[paper] ?? LISTENING_PAPERS[1];
+  /** Mock sittings draw from the whole bank; practice keeps the chosen paper. */
+  const questions = useMemo(
+    () => resolveExamSection<TCFListeningQuestion>("listening", { paper, seed: mockSeed }),
+    [paper, mockSeed],
+  );
   const q = questions[idx];
-  idxRef.current = idx;
-  paperRef.current = paper;
   const userAnswer = answers[idx];
   const hasSelection = userAnswer !== null;
   /** Real TCF exam: no correct/incorrect feedback until the section ends. */
   const showFeedback = !examMode && hasSelection;
+
+  /** Timers and audio callbacks read these outside render, so keep them synced. */
+  useEffect(() => {
+    idxRef.current = idx;
+    paperRef.current = paper;
+    questionsRef.current = questions;
+  }, [idx, paper, questions]);
 
   useEffect(() => {
     return () => {
@@ -100,45 +115,57 @@ export default function TCFListeningPage() {
     audioCache.current.clear();
   }
 
-  function cacheKeyFor(qIdx: number, p = paperRef.current) {
-    return `p${p}-q${qIdx}`;
+  /** Audio is keyed by where an item came from, not by its position in the exam. */
+  function sourceOf(position: number): ExamItemSource {
+    const item = questionsRef.current[position];
+    return {
+      sourcePaper: item?.sourcePaper ?? paperRef.current,
+      sourceQuestionIndex: item?.sourceQuestionIndex ?? position,
+    };
   }
 
-  async function ensureAudioCached(qIdx: number, p = paperRef.current): Promise<string> {
-    const cacheKey = cacheKeyFor(qIdx, p);
+  function cacheKeyFor(position: number) {
+    const { sourcePaper, sourceQuestionIndex } = sourceOf(position);
+    return `p${sourcePaper}-q${sourceQuestionIndex}`;
+  }
+
+  async function ensureAudioCached(position: number): Promise<string> {
+    const cacheKey = cacheKeyFor(position);
     const existing = audioCache.current.get(cacheKey);
     if (existing) return existing;
-    const blob = await fetchStoredAudio(p, qIdx);
+    const { sourcePaper, sourceQuestionIndex } = sourceOf(position);
+    const blob = await fetchStoredAudio(sourcePaper, sourceQuestionIndex);
     const blobUrl = URL.createObjectURL(blob);
     audioCache.current.set(cacheKey, blobUrl);
     return blobUrl;
   }
 
-  async function prefetchPaperFromDb(p: number): Promise<boolean> {
+  async function prefetchExamAudio(): Promise<boolean> {
     prefetchAbortRef.current = false;
     setPrefetchError(null);
     setPrefetchDone(0);
-    const indices = Array.from({ length: 39 }, (_, i) => i);
+    const positions = questionsRef.current.map((_, i) => i);
     let done = 0;
     const missing: number[] = [];
 
-    for (let i = 0; i < indices.length; i += PREFETCH_CONCURRENCY) {
+    for (let i = 0; i < positions.length; i += PREFETCH_CONCURRENCY) {
       if (prefetchAbortRef.current) return false;
-      const batch = indices.slice(i, i + PREFETCH_CONCURRENCY);
+      const batch = positions.slice(i, i + PREFETCH_CONCURRENCY);
       await Promise.all(
-        batch.map(async (qIdx) => {
-          if (audioCache.current.has(cacheKeyFor(qIdx, p))) {
+        batch.map(async (position) => {
+          if (audioCache.current.has(cacheKeyFor(position))) {
             done++;
             setPrefetchDone(done);
             return;
           }
           try {
-            const blob = await fetchStoredAudio(p, qIdx);
-            audioCache.current.set(cacheKeyFor(qIdx, p), URL.createObjectURL(blob));
+            const { sourcePaper, sourceQuestionIndex } = sourceOf(position);
+            const blob = await fetchStoredAudio(sourcePaper, sourceQuestionIndex);
+            audioCache.current.set(cacheKeyFor(position), URL.createObjectURL(blob));
             done++;
             setPrefetchDone(done);
           } catch {
-            missing.push(qIdx);
+            missing.push(position);
           }
         }),
       );
@@ -147,7 +174,7 @@ export default function TCFListeningPage() {
     if (prefetchAbortRef.current) return false;
     if (missing.length > 0) {
       setPrefetchError(
-        `${missing.length} audio(s) missing for exam ${p}. Run: npm run upload:tcf-audio:server`,
+        `${missing.length} audio(s) manquant(s). Lancez : npm run upload:tcf-audio:server`,
       );
       return false;
     }
@@ -278,7 +305,7 @@ export default function TCFListeningPage() {
   async function beginExam() {
     if (examMode) {
       setPhase("preparing");
-      const ok = await prefetchPaperFromDb(paperRef.current);
+      const ok = await prefetchExamAudio();
       if (!ok) {
         setPhase("intro");
         return;
@@ -289,10 +316,12 @@ export default function TCFListeningPage() {
     if (examMode) scheduleExamAutoPlay(0);
   }
 
+  const neededPapers = useMemo(() => sourcePapersOf(questions).join(","), [questions]);
+
   useEffect(() => {
     if (phase !== "intro") return;
     let cancelled = false;
-    fetch(`/api/tcf/listening/audio/status?paper=${paper}`)
+    fetch(`/api/tcf/listening/audio/status?papers=${neededPapers}`)
       .then((r) => r.json())
       .then((data: { ready?: boolean }) => {
         if (!cancelled) setDbAudioReady(Boolean(data.ready));
@@ -301,7 +330,7 @@ export default function TCFListeningPage() {
         if (!cancelled) setDbAudioReady(false);
       });
     return () => { cancelled = true; };
-  }, [phase, paper]);
+  }, [phase, neededPapers]);
 
   function restart() {
     prefetchAbortRef.current = true;

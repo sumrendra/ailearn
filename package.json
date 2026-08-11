@@ -12,7 +12,8 @@
     "generate:tcf-audio": "tsx scripts/generate-tcf-audio.mts",
     "tcf:new-paper": "tsx scripts/tcf/new-paper.mts",
     "tcf:verify-mcq": "tsx scripts/tcf/verify-mcq-bias.mts",
-    "tcf:verify-scoring": "tsx scripts/tcf/verify-scoring.mts"
+    "tcf:verify-scoring": "tsx scripts/tcf/verify-scoring.mts",
+    "tcf:verify-draw": "tsx scripts/tcf/verify-exam-draw.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.97.1",

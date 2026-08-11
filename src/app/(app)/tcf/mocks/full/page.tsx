@@ -23,8 +23,8 @@ export default function TcfFullMockPage() {
   const router = useRouter();
 
   const begin = (paper: number) => {
-    startMockSession(paper);
-    router.push(mockModuleHref("listening", paper));
+    const session = startMockSession(paper);
+    router.push(mockModuleHref("listening", paper, session.seed));
   };
 
   return (
@@ -39,8 +39,9 @@ export default function TcfFullMockPage() {
             <div>
               <h1 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px" }}>4-section TCF Canada simulation</h1>
               <p style={{ margin: 0, fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.55 }}>
-                One sitting, four skills, same paper number throughout. Listening and reading run in strict exam mode.
-                Writing and speaking use official timers and AI scoring. Plan a quiet block of ~3 hours.
+                One sitting, four skills. Listening and reading are drawn fresh from the whole
+                question bank each time, so no two sittings repeat. They run in strict exam mode;
+                writing and speaking use official timers and AI scoring. Plan a quiet block of ~3 hours.
               </p>
             </div>
           </div>
