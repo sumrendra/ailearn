@@ -33,6 +33,23 @@ Each MCQ has exactly 4 options and `correctIndex` 0–3.
 | 2 | Semi-formel | 120 | 150 | 20 |
 | 3 | Formel | 120 | 180 | 25 |
 
+Task 3 follows the official FEI format: the candidate is shown **two short
+opposing documents of ~90 words each**, compares them (40–60 words), then argues
+their own position (80–120 words). Do **not** write task 3 as a single letter.
+
+Task 3 must therefore also include:
+
+```json
+"partWords": { "comparison": { "min": 40, "max": 60 }, "position": { "min": 80, "max": 120 } },
+"documents": [
+  { "label": "Document 1", "author": "<name, role>", "text": "<~90 words, one clear stance>" },
+  { "label": "Document 2", "author": "<name, role>", "text": "<~90 words, opposing stance>" }
+]
+```
+
+The two documents must disagree on the same concrete question, stay at B1–B2
+reading level, and argue from different angles (not a mirror-image rebuttal).
+
 ## Speaking task constraints
 
 | type | label | prepSeconds | recordSeconds |

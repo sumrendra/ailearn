@@ -47,6 +47,8 @@ async function evaluateWritingTask(
       response,
       minWords: task.minWords,
       maxWords: task.maxWords,
+      documents: task.documents,
+      partWords: task.partWords,
     }),
   });
   if (!res.ok) {
@@ -538,6 +540,60 @@ export default function TCFWritingPage() {
           <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.6, marginBottom: 20 }}>
             {task.prompt}
           </p>
+
+          {/* Task 3: the two opposing viewpoints to compare */}
+          {task.documents && (
+            <div style={{ display: "grid", gap: 12, marginBottom: 20 }}>
+              {task.documents.map((doc) => (
+                <div
+                  key={doc.label}
+                  style={{
+                    padding: "14px 16px",
+                    background: "var(--bg-overlay)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: accent,
+                      fontFamily: "var(--font-mono)",
+                      marginBottom: 2,
+                    }}
+                  >
+                    {doc.label}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 8 }}>{doc.author}</div>
+                  <p style={{ fontSize: 13.5, color: "var(--text-secondary)", lineHeight: 1.7, margin: 0 }}>
+                    {doc.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {task.partWords && (
+            <div
+              style={{
+                padding: "10px 14px",
+                background: `${accent}0d`,
+                border: `1px solid ${accent}33`,
+                borderRadius: 8,
+                marginBottom: 20,
+                fontSize: 12,
+                color: "var(--text-secondary)",
+                lineHeight: 1.6,
+              }}
+            >
+              <strong style={{ color: "var(--text-primary)" }}>Structure attendue</strong> — Partie 1 :
+              comparez les deux points de vue ({task.partWords.comparison.min}–{task.partWords.comparison.max} mots).
+              Partie 2 : prenez position et argumentez ({task.partWords.position.min}–{task.partWords.position.max} mots).
+            </div>
+          )}
 
           {/* Textarea */}
           <textarea

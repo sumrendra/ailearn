@@ -1,4 +1,4 @@
-import type { WritingTask } from "./tcf-writing";
+import { TASK3_PART_WORDS, type WritingTask } from "./tcf-writing";
 
 export const TCF_WRITING_P2: WritingTask[] = [
   {
@@ -13,7 +13,20 @@ export const TCF_WRITING_P2: WritingTask[] = [
   },
   {
     type: 3, register: "Formel", minWords: 120, maxWords: 180, timeMin: 25,
-    context: "Vous avez récemment acheté un appareil électronique qui s'est révélé défectueux. Vos tentatives de contact par téléphone ont été infructueuses.",
-    prompt: "Rédigez une lettre de réclamation au service client de la société. Décrivez le problème, expliquez les démarches déjà effectuées et demandez une solution (remboursement ou échange).",
+    context: "Un site d'information consacre un dossier à la réparation des appareils électroniques. Deux lecteurs y répondent de façon opposée.",
+    prompt: "Rédigez une contribution pour ce site. Dans une première partie, comparez les deux points de vue exprimés ci-dessous (40 à 60 mots). Dans une seconde partie, prenez position sur la question et justifiez votre avis (80 à 120 mots).",
+    partWords: TASK3_PART_WORDS,
+    documents: [
+      {
+        label: "Document 1",
+        author: "Sonia Berger, ingénieure",
+        text: "Nous avons pris l'habitude de jeter un appareil dès qu'il tombe en panne, souvent pour une pièce à quelques euros. Obliger les fabricants à fournir des pièces détachées pendant dix ans changerait complètement la donne. Les ateliers de réparation créeraient des emplois locaux, difficilement délocalisables, et les montagnes de déchets électroniques que nous exportons diminueraient nettement. Un téléphone réparé deux fois, c'est aussi deux appareils qui n'ont pas été fabriqués, avec tout ce que cela suppose de métaux extraits. Réparer coûte presque toujours moins cher que remplacer, à condition que la pièce existe encore.",
+      },
+      {
+        label: "Document 2",
+        author: "Julien Roy, commerçant",
+        text: "Imposer dix ans de pièces détachées paraît généreux, mais quelqu'un paiera la facture. Stocker des composants pour des modèles disparus coûte cher, et ce coût se retrouvera dans le prix d'achat, y compris pour les clients qui gardent leur appareil trois ans. Dans ma boutique, une réparation atteint parfois la moitié du prix du neuf, pour un appareil moins performant et bien moins économe en énergie. Les clients renoncent alors et achètent quand même. Mieux vaudrait investir dans des filières de recyclage réellement efficaces.",
+      },
+    ],
   },
 ];

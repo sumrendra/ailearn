@@ -91,7 +91,7 @@ async function writeModule(
     } else if (module === "reading") {
       header = `import type { TCFLevel } from "./tcf-listening";\n\nexport interface TCFReadingQuestion {\n  id: number;\n  level: TCFLevel;\n  passageType: string;\n  passage: string;\n  question: string;\n  options: [string, string, string, string];\n  correctIndex: 0 | 1 | 2 | 3;\n  explanation: string;\n}\n\n`;
     } else if (module === "writing") {
-      header = `export interface WritingTask {\n  type: 1 | 2 | 3;\n  register: string;\n  minWords: number;\n  maxWords: number;\n  timeMin: number;\n  context: string;\n  prompt: string;\n}\n\n`;
+      header = `export interface WritingDocument {\n  label: string;\n  author: string;\n  text: string;\n}\n\nexport interface WritingTask {\n  type: 1 | 2 | 3;\n  register: string;\n  minWords: number;\n  maxWords: number;\n  timeMin: number;\n  context: string;\n  prompt: string;\n  /** Task 3 only: the two viewpoints to compare. */\n  documents?: [WritingDocument, WritingDocument];\n  /** Task 3 only: official split of the total word count. */\n  partWords?: {\n    comparison: { min: number; max: number };\n    position: { min: number; max: number };\n  };\n}\n\nexport const TASK3_PART_WORDS = {\n  comparison: { min: 40, max: 60 },\n  position: { min: 80, max: 120 },\n} as const;\n\n`;
     } else {
       header = `export interface SpeakingTask {\n  type: 1 | 2 | 3;\n  label: string;\n  prepSeconds: number;\n  recordSeconds: number;\n  context: string;\n  prompt: string;\n  tips: string[];\n}\n\n`;
     }

@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callGeminiForJson, evalErrorMessage } from "@/lib/gemini-eval";
 
+interface EvalDocument {
+  label: string;
+  author: string;
+  text: string;
+}
+
 interface EvalRequest {
   taskNumber: 1 | 2 | 3;
   taskPrompt: string;
   response: string;
   minWords: number;
   maxWords: number;
+  /** Task 3: the two viewpoints the candidate had to compare. */
+  documents?: EvalDocument[];
+  partWords?: {
+    comparison: { min: number; max: number };
+    position: { min: number; max: number };
+  };
 }
 
 interface EvalResult {
@@ -27,7 +39,7 @@ function countWords(text: string): number {
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as EvalRequest;
-  const { taskNumber, taskPrompt, response, minWords, maxWords } = body;
+  const { taskNumber, taskPrompt, response, minWords, maxWords, documents, partWords } = body;
 
   if (!response?.trim()) {
     return NextResponse.json({ error: "response is required" }, { status: 400 });
@@ -41,9 +53,32 @@ export async function POST(req: NextRequest) {
   const wordCount = countWords(response);
   const taskLabels: Record<number, string> = {
     1: "message informel (60–120 mots)",
-    2: "article ou lettre semi-formelle (120–150 mots)",
-    3: "texte formel ou argumentatif (120–180 mots)",
+    2: "compte rendu ou récit avec commentaire (120–150 mots)",
+    3: "comparaison de deux points de vue puis prise de position (120–180 mots)",
   };
+
+  /**
+   * Task 3 is scored against the two source documents: a candidate who argues
+   * well but never compares the viewpoints has not done the task.
+   */
+  const task3Block =
+    taskNumber === 3 && documents?.length
+      ? `
+Documents fournis au candidat :
+${documents.map((d) => `[${d.label} — ${d.author}] ${d.text}`).join("\n")}
+
+Structure officielle imposée :
+- Partie 1 (${partWords?.comparison.min ?? 40}–${partWords?.comparison.max ?? 60} mots) : comparer les deux points de vue.
+- Partie 2 (${partWords?.position.min ?? 80}–${partWords?.position.max ?? 120} mots) : prendre position et argumenter.
+
+Exigences supplémentaires pour la tâche 3 :
+- Si la comparaison des deux documents est absente, Réalisation de la tâche ≤ 2.
+- Si le candidat résume les documents sans les mettre en relation, Réalisation ≤ 3.
+- Si la prise de position personnelle est absente ou non justifiée, Réalisation ≤ 3.
+- Si les deux parties ne sont pas distinctes, Cohérence ≤ 3.
+- Recopier des phrases entières des documents ne compte pas comme production : Vocabulaire ≤ 2.
+`
+      : "";
 
   const systemPrompt = `Vous êtes un correcteur officiel certifié TCF Canada. Évaluez la production écrite selon la grille FEI (France Éducation international) — double correction, critères standardisés.
 
@@ -56,7 +91,7 @@ Objectifs FEI par tâche:
 - Tâche 1: message clair à un destinataire identifié (décrire, raconter, expliquer, informer).
 - Tâche 2: compte rendu ou récit avec commentaire/opinion/argument selon la consigne.
 - Tâche 3: comparer deux points de vue (partie 1) puis prendre position argumentée (partie 2).
-
+${task3Block}
 Barème (chaque critère 0–5, total = somme des 4 critères, max 20):
 1. Réalisation de la tâche — pertinence, respect de la consigne, informations demandées
 2. Cohérence et organisation — structure, connecteurs, progression logique

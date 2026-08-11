@@ -35,6 +35,11 @@ export interface TcfPaperManifest {
     timeMin: number;
     context: string;
     prompt: string;
+    documents?: Array<{ label: string; author: string; text: string }>;
+    partWords?: {
+      comparison: { min: number; max: number };
+      position: { min: number; max: number };
+    };
   }>;
   speaking: Array<{
     type: 1 | 2 | 3;
@@ -115,6 +120,24 @@ export function validateManifest(manifest: TcfPaperManifest): string[] {
     if (!spec) errors.push(`writing task ${i + 1}: invalid type ${t.type}`);
     else if (t.type !== (i + 1) as 1 | 2 | 3) {
       errors.push(`writing task ${i + 1}: type should be ${i + 1}`);
+    }
+
+    // Task 3 is the compare-two-viewpoints task, not a single letter.
+    if (t.type === 3) {
+      if (!t.documents || t.documents.length !== 2) {
+        errors.push("writing task 3: expected exactly 2 documents to compare");
+      } else {
+        t.documents.forEach((doc, d) => {
+          const words = doc.text.trim().split(/\s+/).filter(Boolean).length;
+          if (words < 70 || words > 110) {
+            errors.push(`writing task 3, document ${d + 1}: ${words} words (expected ~90)`);
+          }
+          if (!doc.author?.trim()) {
+            errors.push(`writing task 3, document ${d + 1}: missing author`);
+          }
+        });
+      }
+      if (!t.partWords) errors.push("writing task 3: missing partWords split");
     }
   });
 
