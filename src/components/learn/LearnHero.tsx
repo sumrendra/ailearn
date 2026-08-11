@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Waypoints } from "lucide-react";
 import { PathObjectSafe } from "./PathObjectSafe";
 import type { PathCardData } from "./PathCard";
 
@@ -143,6 +143,38 @@ export function LearnHero({ stats, featured }: LearnHeroProps) {
               >
                 {cta.label}
                 <ArrowRight size={16} strokeWidth={2.25} />
+              </button>
+            </Link>
+            <Link href="/map" style={{ textDecoration: "none" }}>
+              <button
+                type="button"
+                className="glow-ring"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "14px 20px",
+                  background: "var(--bg-surface)",
+                  color: "var(--text-secondary)",
+                  border: "1px solid var(--border-default)",
+                  borderRadius: "var(--radius-md, 10px)",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  letterSpacing: "-0.005em",
+                  cursor: "pointer",
+                  transition: "border-color 0.18s ease, color 0.18s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "var(--text-primary)";
+                  e.currentTarget.style.borderColor = "var(--accent)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "var(--text-secondary)";
+                  e.currentTarget.style.borderColor = "var(--border-default)";
+                }}
+              >
+                <Waypoints size={15} strokeWidth={2.25} />
+                Knowledge map
               </button>
             </Link>
             {cta.subline && (

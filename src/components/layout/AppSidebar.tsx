@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BookOpen, FileText, MessageCircle, Trophy, Search,
-  Sparkles, ChevronsLeft, Settings, LogIn, ListTree, Mic, GraduationCap,
+  Sparkles, ChevronsLeft, Settings, LogIn, ListTree, Mic, GraduationCap, Waypoints,
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -23,6 +23,7 @@ interface AppSidebarProps {
 const NAV_ITEMS = [
   { href: "/dashboard", Icon: LayoutDashboard, label: "Dashboard", shortcut: "G D" },
   { href: "/learn",     Icon: BookOpen,        label: "Learn",     shortcut: "G L" },
+  { href: "/map",       Icon: Waypoints,       label: "Knowledge Map", shortcut: "G M" },
   { href: "/lessons",   Icon: ListTree,        label: "All lessons", shortcut: "G A" },
   { href: "/flashcards", Icon: FileText,       label: "Flashcards", shortcut: "G F" },
   { href: "/quiz",      Icon: Trophy,          label: "Quizzes",    shortcut: "G Q" },

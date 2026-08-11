@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Search, CornerDownLeft, Sparkles, MessageSquare,
-  Trophy, FileText, ListChecks, Brain, type LucideIcon,
+  Trophy, FileText, ListChecks, Brain, Waypoints, type LucideIcon,
 } from "lucide-react";
 import { getPathMeta } from "@/lib/learning-paths";
 
@@ -41,6 +41,15 @@ interface PaletteItem {
 }
 
 const TOOL_ITEMS: PaletteItem[] = [
+  {
+    id: "tool-map",
+    type: "tool",
+    title: "Knowledge Map",
+    subtitle: "Explore every course and lesson as a connected graph",
+    href: "/map",
+    Icon: Waypoints,
+    haystack: "knowledge map atlas graph mind map explore nodes web",
+  },
   {
     id: "tool-tutor",
     type: "tool",

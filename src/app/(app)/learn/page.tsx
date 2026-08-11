@@ -1,5 +1,7 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
+import { Waypoints } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { getAllPaths } from "@/lib/content";
@@ -90,6 +92,61 @@ export default async function LearnPage() {
           }}
           featured={featured}
         />
+
+        <Link
+          href="/map"
+          className="glass-pane glow-ring"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            marginBottom: 40,
+            padding: "16px 20px",
+            borderRadius: "var(--radius-lg, 12px)",
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+            <span
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: "var(--accent-soft)",
+                color: "var(--accent-text)",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Waypoints size={18} strokeWidth={2.25} />
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: "var(--text-primary)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Explore the knowledge map
+              </div>
+              <div style={{ fontSize: 13, color: "var(--text-tertiary)", marginTop: 2 }}>
+                Every course and lesson as one connected graph — pan, zoom, and open any page.
+              </div>
+            </div>
+          </div>
+          <span
+            className="mono-overline"
+            style={{ fontSize: 10, color: "var(--text-muted)", flexShrink: 0 }}
+          >
+            Open
+          </span>
+        </Link>
 
         <PathBentoGrid paths={cardData} />
       </div>

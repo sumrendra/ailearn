@@ -234,6 +234,7 @@ function ContinuePanel({
         </p>
         <div style={{ marginTop: "auto", display: "flex", gap: 12, flexWrap: "wrap" }}>
           <PrimaryCTA href="/learn" label="Browse paths" />
+          <SecondaryCTA href="/map" label="Knowledge map" />
           {!isLoggedIn && (
             <SecondaryCTA href="/signup" label="Create account" />
           )}
