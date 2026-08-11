@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { Play, Square, RotateCcw, ChevronRight, ChevronLeft, Check, X, Volume2, Loader2, Lock, BookOpen } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import {
   LISTENING_PAPERS,
-  estimateCLBFromListening,
   PAPER_COUNT,
   type TCFListeningQuestion,
 } from "@/lib/content/tcf-papers";
 import { logTcfAttempt } from "@/lib/tcf-log-attempt";
 import { scoreToNclcListening } from "@/lib/tcf-program/nclc";
+import { describeComprehensionScore, scoreComprehension } from "@/lib/tcf-program/scoring";
 import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
 import { TcfMockBanner, TcfMockCompleteBar } from "@/components/tcf/TcfMockUI";
 
@@ -324,21 +324,23 @@ export default function TCFListeningPage() {
   }
 
   const totalAnswered = answers.filter((a) => a !== null).length;
-  const totalCorrect = answers.filter((a, i) => a === questions[i].correctIndex).length;
+
+  const sectionScore = useMemo(
+    () => scoreComprehension("listening", answers, questions.map((q) => q.correctIndex)),
+    [answers, questions],
+  );
 
   useEffect(() => {
     if (phase !== "complete" || attemptLoggedRef.current) return;
-    const correct = answers.filter((a, i) => a === questions[i].correctIndex).length;
-    const clb = estimateCLBFromListening(correct);
     attemptLoggedRef.current = true;
     logTcfAttempt({
       module: "listening",
       paper,
-      scoreRaw: correct,
-      scoreNclc: scoreToNclcListening(clb.score699),
-      score699: clb.score699,
+      scoreRaw: sectionScore.correct,
+      scoreNclc: scoreToNclcListening(sectionScore.score699),
+      score699: sectionScore.score699,
     });
-  }, [phase, answers, questions, paper]);
+  }, [phase, sectionScore, paper]);
 
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
   const ss = String(secondsLeft % 60).padStart(2, "0");
@@ -612,8 +614,8 @@ export default function TCFListeningPage() {
 
   // ── Complete ───────────────────────────────────────────────────
   if (phase === "complete") {
-    const clbResult = estimateCLBFromListening(totalCorrect);
-    const pct = Math.round((totalCorrect / 39) * 100);
+    const clbResult = describeComprehensionScore("listening", sectionScore.score699);
+    const pct = Math.round((sectionScore.score699 / sectionScore.maxScore) * 100);
 
     const byBand = [0, 1, 2].map((b) => {
       const qs = questions.filter((q) => bandOf(q.id) === b);
@@ -630,15 +632,19 @@ export default function TCFListeningPage() {
             <TcfMockCompleteBar
               module="listening"
               score={{
-                scoreRaw: totalCorrect,
-                scoreNclc: scoreToNclcListening(clbResult.score699),
-                score699: clbResult.score699,
+                scoreRaw: sectionScore.correct,
+                scoreNclc: scoreToNclcListening(sectionScore.score699),
+                score699: sectionScore.score699,
               }}
             />
             <span className="mono-overline" style={{ color: "#5b6af0" }}>Examen {paper} terminé</span>
-            <h1 style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 400, color: "var(--text-primary)", margin: "10px 0 24px", letterSpacing: "-0.01em" }}>
-              {totalCorrect} / 39 correct
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 400, color: "var(--text-primary)", margin: "10px 0 8px", letterSpacing: "-0.01em" }}>
+              {sectionScore.score699} / 699
             </h1>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20, lineHeight: 1.55 }}>
+              {sectionScore.correct} / 39 bonnes réponses — converties avec le barème officiel,
+              où les questions difficiles pèsent beaucoup plus que les premières.
+            </p>
 
             {/* Score bar */}
             <div style={{ height: 8, background: "var(--bg-overlay)", borderRadius: 4, overflow: "hidden", marginBottom: 8 }}>
@@ -679,7 +685,8 @@ export default function TCFListeningPage() {
                 {clbResult.cefr} · {clbResult.description}
               </div>
               <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 6 }}>
-                Estimation seulement — basée sur les performances en pratique, non sur la notation officielle TCF (IRT).
+                Estimation calibrée sur le barème pondéré du TCF. La notation officielle utilise
+                un modèle IRT propriétaire : prévoyez une marge d&apos;environ ±1 niveau NCLC.
               </div>
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--border-subtle)", fontSize: 12, color: "var(--text-secondary)" }}>
                 <strong style={{ color: clbResult.score699 >= 458 ? "#22c55e" : "#f59e0b" }}>

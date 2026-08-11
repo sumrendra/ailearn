@@ -11,7 +11,8 @@
     "upload:tcf-audio:server": "bash scripts/upload-tcf-audio-server.sh",
     "generate:tcf-audio": "tsx scripts/generate-tcf-audio.mts",
     "tcf:new-paper": "tsx scripts/tcf/new-paper.mts",
-    "tcf:verify-mcq": "tsx scripts/tcf/verify-mcq-bias.mts"
+    "tcf:verify-mcq": "tsx scripts/tcf/verify-mcq-bias.mts",
+    "tcf:verify-scoring": "tsx scripts/tcf/verify-scoring.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.97.1",
