@@ -53,7 +53,7 @@ As of migration `20260524060101_content_out_of_db`:
 | Flashcard definitions | `LessonProgress` (keyed by `lessonSlug`) |
 | Static quiz questions | `FlashcardReview` (keyed by `cardKey`) — **schema only, no API yet** |
 | Achievements catalog | `QuizAttempt`, `QuizAttemptQuestion` — **schema only, no API yet** |
-| TCF listening/reading papers | `Note` — **schema only, UI stub** |
+| TCF papers (listening/reading/writing/speaking) | `Note` — **schema only, UI stub** |
 | | `UserAchievement` — **schema only, no unlock logic** |
 | | `InterviewSession`, `ChatSession` — **schema only, no persistence** |
 
@@ -178,8 +178,8 @@ Server component that loads session, user XP/streak, all paths for CommandPalett
 | `/tutor` | AI tutor chat |
 | `/interview` | Mock AI interview |
 | `/tcf` | TCF Canada hub |
-| `/tcf/listening` | Listening practice (5 papers) |
-| `/tcf/reading` | Reading practice (5 papers) |
+| `/tcf/listening` | Listening practice (fixed paper) or exam mode (randomized draw) |
+| `/tcf/reading` | Reading practice (fixed paper) or exam mode (randomized draw) |
 | `/tcf/writing` | Writing tasks + AI eval |
 | `/tcf/speaking` | Speaking tasks + audio AI eval |
 | `/settings` | User settings |
@@ -330,12 +330,36 @@ Environment: `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `AUTH_TRUST_HOST=true` in Docker
 
 Separate from the `french-advanced` learning path — dedicated exam simulator.
 
-- **Content:** `src/lib/content/tcf-*.ts` — listening, reading, writing, speaking per paper (`tcf-papers.ts` central registry)
+- **Content:** `src/lib/content/tcf-*.ts` — listening, reading, writing, speaking per paper (`tcf-papers.ts` central registry, `PAPER_COUNT` papers)
 - **Hub:** `/tcf` with CLB/NCLC reference table
 - **Listening:** Pre-generated Edge TTS MP3 on server volume; served via `/api/tcf/listening/audio/[paper]/[question]` (metadata in `AudioAsset` table)
 - **Reading:** Passages + MCQ from content lib
-- **Writing:** `/api/tcf/writing` — AI scores against TCF rubric
+- **Writing:** `/api/tcf/writing` — AI scores against the FEI rubric; task 3 is the compare-two-viewpoints task
 - **Speaking:** Records audio in browser → base64 → `/api/tcf/speaking` → Gemini multimodal JSON eval
+
+### Exam fidelity
+
+The mock exists to predict the official result, so three pieces deliberately
+mirror FEI behaviour rather than being convenient:
+
+| Concern | Module | Behaviour |
+|---------|--------|-----------|
+| Scoring | `tcf-program/scoring.ts` | Difficulty-weighted 0–699 barème. Q1–10 carry ~9% of the scale, Q20–39 ~71%; band weights sum to exactly 699. A flat `correct/39` overstates candidates who only clear the easy third. |
+| Verdict | `tcf-program/readiness.ts` | Effective NCLC is the **lowest** section (IRCC rule), never an average. Each skill has a safety margin above the band floor, so a score exactly on the threshold reports `borderline`, not `ready`. |
+| Item selection | `tcf-program/exam-draw.ts` | Exam mode draws 39 items from the whole pooled bank, stratified so each slot keeps the CEFR level its scoring band assumes, seeded so a sitting survives reloads. Practice mode serves a fixed paper for review. |
+
+Because a drawn sitting spans several source papers, listening resolves audio
+per item (`sourcePaper` / `sourceQuestionIndex`) and the readiness endpoint takes
+`?papers=1,2,3`.
+
+```bash
+npm run tcf:verify-scoring   # scale integrity, weighting, NCLC boundary, verdicts
+npm run tcf:verify-draw      # composition, uniqueness, ordering, determinism
+npm run tcf:verify-mcq       # option-length and position bias vs official samples
+```
+
+MCQ options are normalised at load (`tcf-program/normalize-mcq.ts`) so no surface
+heuristic — longest option, always B — beats reading the question.
 
 French fundamentals lessons use **browser SpeechSynthesis** (`french-tts.ts`), not the listening audio API.
 
