@@ -328,9 +328,29 @@ export function TcfVocabularyHub() {
       )}
 
       <section aria-labelledby="vocab-path-heading">
-        <h2 id="vocab-path-heading" style={{ fontSize: 18, fontWeight: 700, margin: "0 0 6px" }}>
-          Main path
-        </h2>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
+          <h2 id="vocab-path-heading" style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
+            Main path
+          </h2>
+          <Link
+            href="/tcf/vocabulary/quiz"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(190,24,93,0.35)",
+              background: "rgba(190,24,93,0.08)",
+              color: "#be185d",
+              fontSize: 13,
+              fontWeight: 700,
+              textDecoration: "none",
+            }}
+          >
+            Vocabulary quiz →
+          </Link>
+        </div>
         <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 16px", lineHeight: 1.5 }}>
           Work in order. Each step opens flashcards: French on the front, English on the back (use &quot;EN hint&quot; or flip).
         </p>
