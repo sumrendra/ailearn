@@ -11,6 +11,7 @@ import {
 } from "@/lib/content";
 import type { TcfExamBand } from "@/lib/content/tcf-exam-lexique";
 import { loadUserCardReviews } from "@/lib/tcf-program/vocab-progress";
+import { toComprehensionDisplay } from "@/lib/tcf-program/flashcard-display";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
   const result = cards.slice(0, limit).map((c) => {
     const lesson = getLessonBySlug(c.lessonSlug);
     const rev = reviews.get(c.key);
-    return {
+    return toComprehensionDisplay({
       id: c.key,
       front: c.front,
       back: c.back,
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
       lessonSlug: c.lessonSlug,
       nextReview: rev?.nextReview.toISOString() ?? null,
       due: rev ? rev.nextReview.getTime() <= Date.now() : true,
-    };
+    });
   });
 
   return new Response(JSON.stringify({ cards: result }), {

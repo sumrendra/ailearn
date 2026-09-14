@@ -30,10 +30,13 @@ export default function TcfVocabBandPage() {
       <Topbar title={meta.title} subtitle={`${meta.count} mots · ${meta.cefr} · aligné Q${band === "a" ? "1–10" : band === "b" ? "11–29" : "30–39"}`} />
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px 80px" }}>
         <TcfSubnav />
-        <p style={{ color: "var(--text-secondary)", lineHeight: 1.55, marginBottom: 20 }}>{meta.blurb}</p>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24 }}>
-          Les cartes sont triées par échéance si vous êtes connecté.{" "}
-          <Link href="/tcf/vocabulary" style={{ color: "var(--accent)" }}>Autres bandes et packs</Link>
+        <p style={{ color: "var(--text-secondary)", lineHeight: 1.55, marginBottom: 12 }}>{meta.blurb}</p>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20, lineHeight: 1.5 }}>
+          Cartes : <strong>mot en français</strong> → retournez pour l&apos;anglais. Boutons « Écouter » et « Indice EN »
+          avant de retourner.{" "}
+          <Link href="/tcf/vocabulary" style={{ color: "var(--accent)" }}>
+            Autres bandes
+          </Link>
         </p>
         <FlashcardDeck bandId={band} deckName={meta.title} />
       </div>

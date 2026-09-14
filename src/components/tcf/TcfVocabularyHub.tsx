@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { BookOpen, Layers, Sparkles, Zap } from "lucide-react";
+import { Gamepad2, Library, Sparkles, Target, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { EXAM_BAND_META, TCF_CONTEXT_PACKS } from "@/lib/content/tcf-exam-lexique";
 import { VOCAB_THEMES } from "@/lib/tcf-program/vocab-themes";
 import { readVocabPile } from "@/lib/tcf-program/vocab-pile";
 import { VocabThemeGrid } from "@/components/tcf/GrammarMap";
+
+const P0_TARGET = 450;
+const TOTAL_LEMMAS =
+  EXAM_BAND_META.reduce((s, b) => s + b.count, 0) + TCF_CONTEXT_PACKS.reduce((s, p) => s + p.items.length, 0);
+
+type TabId = "start" | "bands" | "packs" | "themes";
 
 interface VocabDashboard {
   vocabDue?: number;
@@ -50,7 +55,53 @@ function Ring({ percent, color }: { percent: number; color: string }) {
 
 const BAND_COLOR: Record<string, string> = { a: "#22c55e", b: "#6366f1", c: "#be185d" };
 
+const TABS: { id: TabId; label: string }[] = [
+  { id: "start", label: "Par où commencer" },
+  { id: "bands", label: "Bandes examen" },
+  { id: "packs", label: "Packs + quiz" },
+  { id: "themes", label: "Thèmes" },
+];
+
+function ActionCard({
+  href,
+  icon: Icon,
+  title,
+  subtitle,
+  accent,
+}: {
+  href: string;
+  icon: typeof Zap;
+  title: string;
+  subtitle: string;
+  accent: string;
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: "block",
+        padding: 16,
+        borderRadius: 14,
+        border: `1px solid ${accent}44`,
+        background: `linear-gradient(135deg, ${accent}14 0%, var(--bg-card) 65%)`,
+        textDecoration: "none",
+        color: "inherit",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <Icon size={20} color={accent} />
+        <span style={{ fontWeight: 700, fontSize: 14 }}>{title}</span>
+      </div>
+      <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: 0, lineHeight: 1.45 }}>{subtitle}</p>
+      <span style={{ display: "inline-block", marginTop: 10, fontSize: 12, fontWeight: 700, color: accent }}>
+        Ouvrir →
+      </span>
+    </Link>
+  );
+}
+
 export function TcfVocabularyHub() {
+  const [tab, setTab] = useState<TabId>("start");
   const [dash, setDash] = useState<VocabDashboard | null>(null);
   const [pileSize, setPileSize] = useState(0);
   const [pileKeys, setPileKeys] = useState("");
@@ -75,158 +126,228 @@ export function TcfVocabularyHub() {
     return { ...b, percent: remote?.percent ?? 0 };
   });
 
+  const totalWithThemes = TOTAL_LEMMAS + VOCAB_THEMES.reduce((s, t) => s + t.cardCount, 0);
+  const pctOfP0 = Math.round((totalWithThemes / P0_TARGET) * 100);
+
   return (
     <>
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 12,
-          marginBottom: 28,
+          padding: "14px 16px",
+          borderRadius: 12,
+          border: "1px solid rgba(245,158,11,0.35)",
+          background: "rgba(245,158,11,0.08)",
+          marginBottom: 20,
         }}
       >
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          style={{
-            padding: 16,
-            borderRadius: 14,
-            background: "linear-gradient(135deg, rgba(190,24,93,0.12) 0%, var(--bg-card) 70%)",
-            border: "1px solid rgba(190,24,93,0.25)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <Zap size={18} color="#be185d" />
-            <span style={{ fontWeight: 700, fontSize: 14 }}>À réviser</span>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <Target size={18} color="#f59e0b" style={{ marginTop: 2, flexShrink: 0 }} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Couverture lexique (estimation)</div>
+            <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+              Environ <strong>{totalWithThemes}</strong> entrées ici (~{pctOfP0}% du objectif « must-know » ~{P0_TARGET} mots).
+              Ce n&apos;est <strong>pas suffisant seul</strong> pour l&apos;examen : combinez avec les{" "}
+              <Link href="/tcf/mocks" style={{ color: "#be185d", fontWeight: 600 }}>
+                examens blancs
+              </Link>{" "}
+              (390 Q par compétence). Nous enrichissons la banque en continu.
+            </p>
           </div>
-          <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "var(--font-mono)", color: "#be185d" }}>
-            {dash?.vocabDue ?? "—"}
-          </div>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "6px 0 10px" }}>cartes TCF (connecté)</p>
-          <Link href="/flashcards?band=b" style={{ fontSize: 13, color: "#be185d", fontWeight: 600 }}>
-            Lancer une session →
-          </Link>
-        </motion.div>
-
-        {pileSize > 0 && (
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            style={{
-              padding: 16,
-              borderRadius: 14,
-              border: "1px solid var(--border-subtle)",
-              background: "var(--bg-card)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Sparkles size={18} color="var(--accent)" />
-              <span style={{ fontWeight: 700, fontSize: 14 }}>Mon paquet</span>
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "var(--font-mono)" }}>{pileSize}</div>
-            <Link
-              href={`/flashcards?keys=${encodeURIComponent(pileKeys)}`}
-              style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600 }}
-            >
-              Réviser le paquet →
-            </Link>
-          </motion.div>
-        )}
-
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          style={{
-            padding: 16,
-            borderRadius: 14,
-            border: "1px solid var(--border-subtle)",
-            background: "var(--bg-card)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <Layers size={18} color="#6366f1" />
-            <span style={{ fontWeight: 700, fontSize: 14 }}>Lexique examen</span>
-          </div>
-          <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.45, margin: 0 }}>
-            ~{bands.reduce((s, b) => s + b.count, 0)} mots par bandes A/B/C + {TCF_CONTEXT_PACKS.length} packs en contexte.
-          </p>
-          <Link href="/docs/lexique-sources.md" style={{ display: "none" }} />
-          <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
-            Curated from Lexique 4 + nos sujets (voir docs/lexique-sources.md in repo)
-          </p>
-        </motion.div>
+        </div>
       </div>
 
-      <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-        <BookOpen size={18} color="#22c55e" /> Bandes d&apos;examen
-      </h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12, marginBottom: 36 }}>
-        {bands.map((b, i) => (
-          <motion.div key={b.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-            <Link
-              href={`/tcf/vocabulary/band/${b.id}`}
-              style={{
-                display: "flex",
-                gap: 14,
-                padding: 16,
-                borderRadius: 14,
-                border: "1px solid var(--border-subtle)",
-                background: "var(--bg-card)",
-                textDecoration: "none",
-                color: "inherit",
-              }}
-            >
-              <Ring percent={b.percent} color={BAND_COLOR[b.id] ?? "#6366f1"} />
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: BAND_COLOR[b.id], letterSpacing: "0.06em" }}>{b.cefr}</div>
-                <div style={{ fontWeight: 600, fontSize: 14, marginTop: 4 }}>{b.title}</div>
-                <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>{b.count} cartes · flashcards SM-2</div>
-              </div>
-            </Link>
-          </motion.div>
+      <div
+        role="tablist"
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 6,
+          marginBottom: 20,
+          padding: 4,
+          borderRadius: 10,
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-subtle)",
+        }}
+      >
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 8,
+              border: "none",
+              cursor: "pointer",
+              fontSize: 13,
+              fontWeight: tab === t.id ? 700 : 500,
+              background: tab === t.id ? "rgba(190,24,93,0.15)" : "transparent",
+              color: tab === t.id ? "#be185d" : "var(--text-secondary)",
+            }}
+          >
+            {t.label}
+          </button>
         ))}
       </div>
 
-      <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Dans le contexte — mini-jeu</h2>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 36 }}>
-        {TCF_CONTEXT_PACKS.map((p, i) => (
-          <motion.div key={p.id} whileHover={{ x: 4 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
+      {tab === "start" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0, lineHeight: 1.55 }}>
+            Trois parcours — choisissez <strong>un</strong> point d&apos;entrée. Les cartes montrent le{" "}
+            <strong>français d&apos;abord</strong> ; retournez pour l&apos;anglais (bouton « Indice EN » avant de retourner).
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+            <ActionCard
+              href="/tcf/vocabulary/band/b"
+              icon={Zap}
+              title="Révision rapide"
+              subtitle={
+                dash?.vocabDue
+                  ? `${dash.vocabDue} cartes dues · bande B (Q11–29)`
+                  : "Bande B — le cœur de l'examen CO/CE"
+              }
+              accent="#be185d"
+            />
+            <ActionCard
+              href={`/tcf/vocabulary/pack/${TCF_CONTEXT_PACKS[0]?.id ?? "p6-work-orientation"}`}
+              icon={Gamepad2}
+              title="Apprendre en contexte"
+              subtitle="Extrait + quiz associer · puis flashcards"
+              accent="#6366f1"
+            />
+            <ActionCard
+              href="/tcf/vocabulary/theme/immigration"
+              icon={Library}
+              title="Thème Canada"
+              subtitle="150 cartes par thème immigration, travail…"
+              accent="#0f766e"
+            />
+          </div>
+
+          {pileSize > 0 && (
             <Link
-              href={`/tcf/vocabulary/pack/${p.id}`}
+              href={`/flashcards?keys=${encodeURIComponent(pileKeys)}`}
               style={{
-                padding: "14px 16px",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: 14,
                 borderRadius: 12,
                 border: "1px solid var(--border-subtle)",
                 background: "var(--bg-card)",
                 textDecoration: "none",
                 color: "inherit",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 12,
               }}
             >
+              <Sparkles size={18} color="var(--accent)" />
               <div>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{p.title}</div>
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{p.subtitle}</div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>Mon paquet ({pileSize} mots)</div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Suite à un examen blanc · réviser →</div>
               </div>
-              <span
+            </Link>
+          )}
+
+          <Link
+            href="/flashcards?band=b"
+            style={{
+              fontSize: 13,
+              color: "var(--accent)",
+              fontWeight: 600,
+            }}
+          >
+            Ouvrir les flashcards bande B directement →
+          </Link>
+        </div>
+      )}
+
+      {tab === "bands" && (
+        <>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>
+            Q1–10 · Q11–29 · Q30–39 — aligné sur la difficulté progressive du TCF.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+            {bands.map((b) => (
+              <Link
+                key={b.id}
+                href={`/tcf/vocabulary/band/${b.id}`}
                 style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: "6px 10px",
-                  borderRadius: 999,
-                  background: `${BAND_COLOR[p.band]}22`,
-                  color: BAND_COLOR[p.band],
-                  whiteSpace: "nowrap",
+                  display: "flex",
+                  gap: 14,
+                  padding: 16,
+                  borderRadius: 14,
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-card)",
+                  textDecoration: "none",
+                  color: "inherit",
                 }}
               >
-                Match · {p.items.length} mots
-              </span>
-            </Link>
-          </motion.div>
-        ))}
-      </div>
+                <Ring percent={b.percent} color={BAND_COLOR[b.id] ?? "#6366f1"} />
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: BAND_COLOR[b.id] }}>{b.cefr}</div>
+                  <div style={{ fontWeight: 600, fontSize: 14, marginTop: 4 }}>{b.title}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>{b.count} cartes</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
 
-      <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Thèmes Canada</h2>
-      <VocabThemeGrid themes={themes} />
+      {tab === "packs" && (
+        <>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>
+            Lisez l&apos;extrait, jouez au match, puis passez aux cartes.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {TCF_CONTEXT_PACKS.map((p) => (
+              <Link
+                key={p.id}
+                href={`/tcf/vocabulary/pack/${p.id}`}
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: 12,
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-card)",
+                  textDecoration: "none",
+                  color: "inherit",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{p.title}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{p.subtitle}</div>
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    background: `${BAND_COLOR[p.band]}22`,
+                    color: BAND_COLOR[p.band],
+                  }}
+                >
+                  {p.items.length} mots
+                </span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+
+      {tab === "themes" && (
+        <>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>
+            Decks thématiques (anglais → français à l&apos;origine ; affichage FR d&apos;abord dans les cartes).
+          </p>
+          <VocabThemeGrid themes={themes} />
+        </>
+      )}
     </>
   );
 }

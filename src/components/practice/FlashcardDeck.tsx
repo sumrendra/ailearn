@@ -3,16 +3,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, BookOpen } from "lucide-react";
+import { Loader2, BookOpen, Volume2, Eye, EyeOff } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PracticeStage } from "./PracticeStage";
 import { Kbd } from "./Kbd";
+import { speak } from "@/lib/french-tts";
 
 type Card = {
   id: string;
   front: string;
   back: string;
+  englishHint?: string | null;
   tags: string[];
   lessonTitle: string | null;
   lessonSlug: string | null;
@@ -82,6 +84,7 @@ export function FlashcardDeck({
   const [done, setDone] = useState(false);
   const [stats, setStats] = useState({ again: 0, hard: 0, good: 0, easy: 0 });
   const [streak, setStreak] = useState(0); // consecutive Good/Easy in this session
+  const [showEnHint, setShowEnHint] = useState(false);
 
   const reducedMotion = usePrefersReducedMotion();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -140,6 +143,7 @@ export function FlashcardDeck({
     } else {
       setIdx((i) => i + 1);
       setFlipped(false);
+      setShowEnHint(false);
     }
   }, [idx, cards.length, cards]);
 
@@ -500,18 +504,81 @@ export function FlashcardDeck({
         reducedMotion={reducedMotion}
         onClick={() => setFlipped((f) => !f)}
         front={
-          <div
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 30,
-              fontWeight: 400,
-              color: "var(--text-primary)",
-              lineHeight: 1.25,
-              letterSpacing: "-0.005em",
-              textAlign: "center",
-            }}
-          >
-            {card?.front}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, width: "100%" }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--text-muted)",
+              }}
+            >
+              {card?.englishHint ? "En français — sens en anglais ?" : "Question"}
+            </div>
+            <div
+              style={{
+                fontFamily: card?.englishHint ? "var(--font-sans)" : "var(--font-display)",
+                fontSize: card?.englishHint ? 26 : 30,
+                fontWeight: card?.englishHint ? 600 : 400,
+                color: "var(--text-primary)",
+                lineHeight: 1.35,
+                letterSpacing: card?.englishHint ? "0" : "-0.005em",
+                textAlign: "center",
+              }}
+            >
+              {card?.front}
+            </div>
+            {card?.englishHint && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void speak(card.front);
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid var(--border-subtle)",
+                    background: "var(--bg-overlay)",
+                    fontSize: 12,
+                    cursor: "pointer",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <Volume2 size={14} /> Écouter
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowEnHint((v) => !v);
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid var(--border-subtle)",
+                    background: showEnHint ? "var(--accent-soft)" : "var(--bg-overlay)",
+                    fontSize: 12,
+                    cursor: "pointer",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  {showEnHint ? <EyeOff size={14} /> : <Eye size={14} />}
+                  {showEnHint ? "Masquer l'indice" : "Indice EN"}
+                </button>
+              </div>
+            )}
+            {showEnHint && card?.englishHint && (
+              <p style={{ fontSize: 14, color: "var(--accent)", margin: 0, fontWeight: 600 }}>{card.englishHint}</p>
+            )}
           </div>
         }
         back={
