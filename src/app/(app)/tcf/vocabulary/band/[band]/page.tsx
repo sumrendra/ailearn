@@ -32,10 +32,9 @@ export default function TcfVocabBandPage() {
         <TcfSubnav />
         <p style={{ color: "var(--text-secondary)", lineHeight: 1.55, marginBottom: 12 }}>{meta.blurb}</p>
         <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20, lineHeight: 1.5 }}>
-          Cartes : <strong>mot en français</strong> → retournez pour l&apos;anglais. Boutons « Écouter » et « Indice EN »
-          avant de retourner.{" "}
+          Flashcards show <strong>French first</strong>, English on the back. Use <strong>EN hint</strong> or flip.{" "}
           <Link href="/tcf/vocabulary" style={{ color: "var(--accent)" }}>
-            Autres bandes
+            Back to word path
           </Link>
         </p>
         <FlashcardDeck bandId={band} deckName={meta.title} />

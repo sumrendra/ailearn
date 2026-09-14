@@ -77,3 +77,48 @@ export async function countDueFlashcards(userId: string): Promise<number> {
 export function getPackProgressKeys(packId: string): string[] {
   return getPackFlashcards(packId).map((c) => c.key);
 }
+
+export function getCoreExamCardKeys(): string[] {
+  return [
+    ...getExamLemmaFlashcards("a").map((c) => c.key),
+    ...getExamLemmaFlashcards("b").map((c) => c.key),
+    ...getExamLemmaFlashcards("c").map((c) => c.key),
+  ];
+}
+
+function countMasteredKeys(
+  cardKeys: string[],
+  reviews: Map<string, { interval: number; rating: number }>,
+): number {
+  let mastered = 0;
+  for (const key of cardKeys) {
+    const r = reviews.get(key);
+    if (r && isMasteredForProgress(r.interval, r.rating)) mastered += 1;
+  }
+  return mastered;
+}
+
+export async function getCoreVocabProgress(userId: string): Promise<{
+  mastered: number;
+  total: number;
+  due: number;
+  byBand: Record<"a" | "b" | "c", { mastered: number; total: number }>;
+}> {
+  const reviews = await loadUserCardReviews(userId);
+  const reviewSimple = new Map(
+    [...reviews.entries()].map(([k, v]) => [k, { interval: v.interval, rating: v.rating }]),
+  );
+  const bands = ["a", "b", "c"] as const;
+  const byBand = {} as Record<"a" | "b" | "c", { mastered: number; total: number }>;
+  let total = 0;
+  let mastered = 0;
+  for (const band of bands) {
+    const keys = getExamLemmaFlashcards(band).map((c) => c.key);
+    const m = countMasteredKeys(keys, reviewSimple);
+    byBand[band] = { mastered: m, total: keys.length };
+    total += keys.length;
+    mastered += m;
+  }
+  const due = await countDueFlashcards(userId);
+  return { mastered, total, due, byBand };
+}

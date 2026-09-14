@@ -5,8 +5,14 @@ import { GRAMMAR_TOPICS } from "@/lib/tcf-program/grammar-topics";
 import { VOCAB_THEMES } from "@/lib/tcf-program/vocab-themes";
 import { scoreToNclcListening, scoreToNclcProduction, scoreToNclcReading, weakestNclc } from "@/lib/tcf-program/nclc";
 import { PAPER_COUNT } from "@/lib/content/tcf-papers";
-import { countDueFlashcards, getExamBandPercents, getVocabThemePercents } from "@/lib/tcf-program/vocab-progress";
+import { countDueFlashcards, getCoreVocabProgress, getExamBandPercents, getVocabThemePercents } from "@/lib/tcf-program/vocab-progress";
 import { EXAM_BAND_META } from "@/lib/content/tcf-exam-lexique";
+import {
+  CORE_EXAM_WORD_TARGET,
+  getCoreExamWordCountInApp,
+  getOptionalWordCounts,
+  getWordsStillToAuthor,
+} from "@/lib/tcf-program/vocab-catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +24,7 @@ export async function GET() {
   const stats = getTcfProgramStats();
 
   if (!userId) {
+    const optional = getOptionalWordCounts();
     return Response.json({
       authed: false,
       stats,
@@ -28,6 +35,13 @@ export async function GET() {
       tracks: buildTrackProgress([], units),
       skills: defaultSkills(),
       profile: null,
+      vocabCatalog: {
+        coreInApp: getCoreExamWordCountInApp(),
+        coreTarget: CORE_EXAM_WORD_TARGET,
+        stillToAuthor: getWordsStillToAuthor(),
+        optionalTotal: optional.total,
+      },
+      vocabProgress: null,
     });
   }
 
@@ -83,11 +97,14 @@ export async function GET() {
     ? Math.ceil((stats.totalHours * (1 - programPercent / 100)) / profile.weeklyHours)
     : null;
 
-  const [vocabPercents, bandPercents, vocabDue] = await Promise.all([
+  const [vocabPercents, bandPercents, vocabDue, coreVocab] = await Promise.all([
     getVocabThemePercents(userId),
     getExamBandPercents(userId),
     countDueFlashcards(userId),
+    getCoreVocabProgress(userId),
   ]);
+
+  const optional = getOptionalWordCounts();
 
   return Response.json({
     authed: true,
@@ -111,6 +128,18 @@ export async function GET() {
       percent: bandPercents[b.id] ?? 0,
     })),
     vocabDue,
+    vocabCatalog: {
+      coreInApp: getCoreExamWordCountInApp(),
+      coreTarget: CORE_EXAM_WORD_TARGET,
+      stillToAuthor: getWordsStillToAuthor(),
+      optionalTotal: optional.total,
+    },
+    vocabProgress: {
+      mastered: coreVocab.mastered,
+      total: coreVocab.total,
+      due: coreVocab.due,
+      byBand: coreVocab.byBand,
+    },
     profile: profile ?? {
       targetNclc: 7,
       placementCefr: "A0",

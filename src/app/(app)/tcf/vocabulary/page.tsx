@@ -6,14 +6,14 @@ import { TcfVocabularyHub } from "@/components/tcf/TcfVocabularyHub";
 export default function TcfVocabularyPage() {
   return (
     <>
-      <Topbar title="Vocabulary" subtitle="Lexique TCF — français d'abord, puis sens en anglais" />
-      <div style={{ maxWidth: 920, margin: "0 auto", padding: "24px 24px 80px" }}>
+      <Topbar title="Vocabulary" subtitle="TCF Canada word path · progress tracked when signed in" />
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "24px 24px 80px" }}>
         <TcfSubnav />
         <TcfVocabularyHub />
-        <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 28 }}>
-          Connectez-vous pour la révision espacée (SM-2).{" "}
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 32 }}>
+          Spaced repetition (SM-2) runs when you rate flashcards while signed in.{" "}
           <Link href="/tcf" style={{ color: "var(--accent)" }}>
-            Tableau de bord TCF
+            TCF dashboard
           </Link>
         </p>
       </div>
