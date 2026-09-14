@@ -13,6 +13,7 @@ import { TCF_LISTENING_P3 } from "../src/lib/content/tcf-listening-p3";
 import { TCF_LISTENING_P4 } from "../src/lib/content/tcf-listening-p4";
 import { TCF_LISTENING_P5 } from "../src/lib/content/tcf-listening-p5";
 import { TCF_LISTENING_P6 } from "../src/lib/content/tcf-listening-p6";
+import { TCF_LISTENING_P7 } from "../src/lib/content/tcf-listening-p7";
 
 function hashAudioScript(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
@@ -25,6 +26,7 @@ const papers = [
   TCF_LISTENING_P4,
   TCF_LISTENING_P5,
   TCF_LISTENING_P6,
+  TCF_LISTENING_P7,
 ];
 
 // Voices for different levels (Canadian/France Neural voices)

@@ -57,10 +57,18 @@ function usePrefersReducedMotion() {
 interface Props {
   lessonSlug?: string;
   themeId?: string;
+  bandId?: string;
+  packId?: string;
   deckName?: string;
 }
 
-export function FlashcardDeck({ lessonSlug, themeId, deckName = "All flashcards" }: Props) {
+export function FlashcardDeck({
+  lessonSlug,
+  themeId,
+  bandId,
+  packId,
+  deckName = "All flashcards",
+}: Props) {
   type DeckState =
     | { status: "loading" }
     | { status: "error"; message: string }
@@ -84,6 +92,8 @@ export function FlashcardDeck({ lessonSlug, themeId, deckName = "All flashcards"
     const params = new URLSearchParams();
     if (lessonSlug) params.set("lesson", lessonSlug);
     if (themeId) params.set("theme", themeId);
+    if (bandId) params.set("band", bandId);
+    if (packId) params.set("pack", packId);
     const url = params.size ? `/api/flashcards?${params}` : "/api/flashcards";
 
     const load = async () => {
@@ -100,7 +110,7 @@ export function FlashcardDeck({ lessonSlug, themeId, deckName = "All flashcards"
 
     void load();
     return () => { cancelled = true; };
-  }, [lessonSlug, themeId]);
+  }, [lessonSlug, themeId, bandId, packId]);
 
   const loading = deck.status === "loading";
   const error = deck.status === "error" ? deck.message : null;
@@ -109,6 +119,17 @@ export function FlashcardDeck({ lessonSlug, themeId, deckName = "All flashcards"
   const card = cards[idx];
 
   const rate = useCallback((rating: Rating) => {
+    const cardKey = cards[idx]?.id;
+    if (cardKey) {
+      void fetch("/api/flashcards/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cardKey,
+          rating: { Again: 1, Hard: 2, Good: 3, Easy: 4 }[rating],
+        }),
+      }).catch(() => {});
+    }
     setStats((prev) => ({ ...prev, [rating.toLowerCase()]: prev[rating.toLowerCase() as keyof typeof prev] + 1 }));
     setStreak((s) => (rating === "Good" || rating === "Easy" ? s + 1 : 0));
     if (idx >= cards.length - 1) {
@@ -117,7 +138,7 @@ export function FlashcardDeck({ lessonSlug, themeId, deckName = "All flashcards"
       setIdx((i) => i + 1);
       setFlipped(false);
     }
-  }, [idx, cards.length]);
+  }, [idx, cards.length, cards]);
 
   const reset = useCallback(() => {
     setIdx(0);

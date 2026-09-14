@@ -49,7 +49,9 @@ tar -czf /tmp/ailearn-tcf-upload.tgz \
   src/lib/content/tcf-listening-p3.ts \
   src/lib/content/tcf-listening-p4.ts \
   src/lib/content/tcf-listening-p5.ts \
-  src/lib/content/tcf-listening-p6.ts
+  src/lib/content/tcf-listening-p6.ts \
+  src/lib/content/tcf-listening-p7.ts \
+  src/lib/content/tcf-listening-p7.ts
 scp -i "$SSH_KEY" -o UserKnownHostsFile="$KNOWN_HOSTS" /tmp/ailearn-tcf-upload.tgz "$REMOTE:$REMOTE_DIR/bundle.tgz"
 rm -f /tmp/ailearn-tcf-upload.tgz
 

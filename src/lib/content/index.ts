@@ -14,11 +14,17 @@
 import { PATHS } from "./paths";
 import { FLASHCARDS } from "./flashcards";
 import { TCF_VOCAB_FLASHCARDS, getTcfVocabFlashcardsForTheme } from "./tcf-vocab-flashcards";
+import {
+  ALL_TCF_LEXIQUE_FLASHCARDS,
+  getExamLemmaFlashcards,
+  getPackFlashcards,
+  type TcfExamBand,
+} from "./tcf-exam-lexique";
 import { QUIZ_QUESTIONS } from "./quizzes";
 import { ACHIEVEMENTS } from "./achievements";
 import type { LearningPath, Lesson, Flashcard, QuizQuestion, Achievement } from "./types";
 
-const ALL_FLASHCARDS: Flashcard[] = [...FLASHCARDS, ...TCF_VOCAB_FLASHCARDS];
+const ALL_FLASHCARDS: Flashcard[] = [...FLASHCARDS, ...TCF_VOCAB_FLASHCARDS, ...ALL_TCF_LEXIQUE_FLASHCARDS];
 
 export type { LearningPath, Lesson, Flashcard, QuizQuestion, Achievement } from "./types";
 
@@ -64,6 +70,14 @@ export function getFlashcardsForLesson(lessonSlug: string): Flashcard[] {
 
 export function getFlashcardsForTheme(themeId: string): Flashcard[] {
   return getTcfVocabFlashcardsForTheme(themeId);
+}
+
+export function getFlashcardsForBand(band: TcfExamBand): Flashcard[] {
+  return getExamLemmaFlashcards(band);
+}
+
+export function getFlashcardsForPack(packId: string): Flashcard[] {
+  return getPackFlashcards(packId);
 }
 
 export function getFlashcardByKey(key: string): Flashcard | undefined {

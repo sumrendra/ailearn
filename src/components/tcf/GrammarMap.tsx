@@ -82,7 +82,7 @@ export function VocabThemeGrid({
       {themes.map((t) => (
         <Link
           key={t.id}
-          href={`/flashcards?theme=${t.id}`}
+          href={`/tcf/vocabulary/theme/${t.id}`}
           style={{
             padding: 16,
             borderRadius: 12,

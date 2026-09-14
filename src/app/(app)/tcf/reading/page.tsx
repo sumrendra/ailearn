@@ -460,6 +460,60 @@ export default function TCFReadingPage() {
               ))}
             </div>
 
+            {(() => {
+              const weakestIdx = byBand.reduce(
+                (best, b, i) =>
+                  b.total > 0 && b.correct / b.total < byBand[best].correct / byBand[best].total ? i : best,
+                0,
+              );
+              const bandHref = weakestIdx === 0 ? "a" : weakestIdx === 1 ? "b" : "c";
+              return (
+                <div
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: 12,
+                    background: "var(--bg-overlay)",
+                    border: "1px solid var(--border-subtle)",
+                    marginBottom: 28,
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Vocabulaire — prochaine étape</div>
+                  <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 12 }}>
+                    Beaucoup d&apos;erreurs viennent de mots inconnus. Ciblez la bande où vous avez le plus de lacunes.
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                    <Link
+                      href={`/tcf/vocabulary/band/${bandHref}`}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: 8,
+                        background: "var(--accent)",
+                        color: "#fff",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        textDecoration: "none",
+                      }}
+                    >
+                      Bande {bandHref.toUpperCase()} — flashcards
+                    </Link>
+                    <Link
+                      href="/tcf/vocabulary"
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: 8,
+                        border: "1px solid var(--border-subtle)",
+                        fontSize: 13,
+                        color: "var(--text-primary)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      Packs en contexte
+                    </Link>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div style={{ marginBottom: 32 }}>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 12 }}>
                 Revue des réponses

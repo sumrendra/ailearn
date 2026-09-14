@@ -4,6 +4,9 @@ import { getAllTcfUnits, getNextTcfUnit, getTcfProgramStats } from "@/lib/tcf-pr
 import { GRAMMAR_TOPICS } from "@/lib/tcf-program/grammar-topics";
 import { VOCAB_THEMES } from "@/lib/tcf-program/vocab-themes";
 import { scoreToNclcListening, scoreToNclcProduction, scoreToNclcReading, weakestNclc } from "@/lib/tcf-program/nclc";
+import { PAPER_COUNT } from "@/lib/content/tcf-papers";
+import { countDueFlashcards, getExamBandPercents, getVocabThemePercents } from "@/lib/tcf-program/vocab-progress";
+import { EXAM_BAND_META } from "@/lib/content/tcf-exam-lexique";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +83,12 @@ export async function GET() {
     ? Math.ceil((stats.totalHours * (1 - programPercent / 100)) / profile.weeklyHours)
     : null;
 
+  const [vocabPercents, bandPercents, vocabDue] = await Promise.all([
+    getVocabThemePercents(userId),
+    getExamBandPercents(userId),
+    countDueFlashcards(userId),
+  ]);
+
   return Response.json({
     authed: true,
     stats,
@@ -95,8 +104,13 @@ export async function GET() {
     grammarMastery,
     vocabThemes: VOCAB_THEMES.map((v) => ({
       ...v,
-      percent: 0,
+      percent: vocabPercents[v.id] ?? 0,
     })),
+    examBands: EXAM_BAND_META.map((b) => ({
+      ...b,
+      percent: bandPercents[b.id] ?? 0,
+    })),
+    vocabDue,
     profile: profile ?? {
       targetNclc: 7,
       placementCefr: "A0",
@@ -104,7 +118,12 @@ export async function GET() {
       onboardingDone: false,
       roadmapPrefs: null,
     },
-    practicePapers: { listening: 5, reading: 5, writing: 5, speaking: 5 },
+    practicePapers: {
+      listening: PAPER_COUNT,
+      reading: PAPER_COUNT,
+      writing: PAPER_COUNT,
+      speaking: PAPER_COUNT,
+    },
     recentAttempts: attempts.slice(0, 5).map((a) => ({
       module: a.module,
       scoreNclc: a.scoreNclc,
