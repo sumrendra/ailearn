@@ -17,6 +17,9 @@ import { TCF_LISTENING_P4 } from "../src/lib/content/tcf-listening-p4";
 import { TCF_LISTENING_P5 } from "../src/lib/content/tcf-listening-p5";
 import { TCF_LISTENING_P6 } from "../src/lib/content/tcf-listening-p6";
 import { TCF_LISTENING_P7 } from "../src/lib/content/tcf-listening-p7";
+import { TCF_LISTENING_P8 } from "../src/lib/content/tcf-listening-p8";
+import { TCF_LISTENING_P9 } from "../src/lib/content/tcf-listening-p9";
+import { TCF_LISTENING_P10 } from "../src/lib/content/tcf-listening-p10";
 import {
   TCF_LISTENING_NAMESPACE,
   TCF_LISTENING_VOICES,
@@ -25,7 +28,7 @@ import {
 } from "../src/lib/tcf-audio";
 import { hashAudioScript, randomUUID } from "../src/lib/tcf-tts-server";
 
-const PAPER_COUNT = 7;
+const PAPER_COUNT = 10;
 const LISTENING_PAPERS: Record<number, TCFListeningQuestion[]> = {
   1: TCF_LISTENING,
   2: TCF_LISTENING_P2,
@@ -34,6 +37,9 @@ const LISTENING_PAPERS: Record<number, TCFListeningQuestion[]> = {
   5: TCF_LISTENING_P5,
   6: TCF_LISTENING_P6,
   7: TCF_LISTENING_P7,
+  8: TCF_LISTENING_P8,
+  9: TCF_LISTENING_P9,
+  10: TCF_LISTENING_P10,
 };
 
 config({ path: ".env.local" });
