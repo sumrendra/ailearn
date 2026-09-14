@@ -2,6 +2,7 @@ import type { Flashcard } from "./types";
 import type { VocabItem } from "@/components/french/VocabList";
 import type { MatchPair } from "@/components/french/MatchQuiz";
 import { BATCH2_A, BATCH2_B, BATCH2_C } from "./tcf-exam-lexique-batch2";
+import { BATCH3_A, BATCH3_B, BATCH3_C } from "./tcf-exam-lexique-batch3";
 
 export type TcfExamBand = "a" | "b" | "c";
 
@@ -160,9 +161,9 @@ const BAND_C: LemmaRow[] = [
   ["Subtlety", "la subtilité", "La subtilité du texte échappe au lecteur pressé."],
 ];
 
-const FULL_BAND_A = mergeLemmaRows(BAND_A, BATCH2_A);
-const FULL_BAND_B = mergeLemmaRows(BAND_B, BATCH2_B);
-const FULL_BAND_C = mergeLemmaRows(BAND_C, BATCH2_C);
+const FULL_BAND_A = mergeLemmaRows(mergeLemmaRows(BAND_A, BATCH2_A), BATCH3_A);
+const FULL_BAND_B = mergeLemmaRows(mergeLemmaRows(BAND_B, BATCH2_B), BATCH3_B);
+const FULL_BAND_C = mergeLemmaRows(mergeLemmaRows(BAND_C, BATCH2_C), BATCH3_C);
 
 export const EXAM_LEXIQUE_FLASHCARDS: Flashcard[] = [
   ...bandCards("a", FULL_BAND_A),

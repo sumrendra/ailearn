@@ -2,6 +2,8 @@
 
 Curated vocabulary in `src/lib/content/tcf-exam-lexique.ts` is **not** copied from commercial prep lists or leaked exams.
 
+**Core inventory (2026):** 450 exam-band flashcards (bands A/B/C), merged from base lists plus `tcf-exam-lexique-batch2.ts` and `tcf-exam-lexique-batch3.ts`. Regenerate batch3 source via `npm run tcf:build-batch3`. Owner dashboard: `/tcf/vocabulary/content-status`.
+
 | Source | Use |
 |--------|-----|
 | [FEI TCF Canada](https://www.france-education-international.fr/en/test/tcf-canada) + *Manuel du candidat* (Version P, 2026) | Text types, progressive difficulty, format only |

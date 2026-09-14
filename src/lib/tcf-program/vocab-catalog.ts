@@ -21,3 +21,35 @@ export function getOptionalWordCounts() {
 export function getFirstContextPackId(): string {
   return TCF_CONTEXT_PACKS[0]?.id ?? "p6-work-orientation";
 }
+
+export type VocabContentStatus = {
+  coreInApp: number;
+  coreTarget: number;
+  stillToAuthor: number;
+  optional: { packWords: number; themeWords: number; total: number };
+  bands: { id: "a" | "b" | "c"; label: string; inApp: number; targetShare: number; gap: number }[];
+};
+
+export function getVocabContentStatus(): VocabContentStatus {
+  const coreInApp = getCoreExamWordCountInApp();
+  const coreTarget = CORE_EXAM_WORD_TARGET;
+  const optional = getOptionalWordCounts();
+  const bands = EXAM_BAND_META.map((b) => {
+    const targetShare =
+      coreInApp > 0 ? Math.round((coreTarget * b.count) / coreInApp) : Math.round(coreTarget / 3);
+    return {
+      id: b.id,
+      label: b.title,
+      inApp: b.count,
+      targetShare,
+      gap: Math.max(0, targetShare - b.count),
+    };
+  });
+  return {
+    coreInApp,
+    coreTarget,
+    stillToAuthor: getWordsStillToAuthor(),
+    optional,
+    bands,
+  };
+}

@@ -264,9 +264,15 @@ export function TcfVocabularyHub() {
             <div style={{ height: "100%", width: `${corePct}%`, background: "#be185d", borderRadius: 999 }} />
           </div>
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 12, lineHeight: 1.5 }}>
-            Content on this site: <strong>{coreInApp}</strong> core words live today. We plan{" "}
-            <strong>{coreTarget}</strong> for strong mock coverage (~<strong>{stillToAuthor}</strong> still to write).
-            Passing NCLC 7 also needs full mock exams in all four skills, not words alone.
+            This site ships <strong>{coreInApp}</strong> core exam words (target <strong>{coreTarget}</strong>
+            {stillToAuthor > 0 ? (
+              <>
+                , about <strong>{stillToAuthor}</strong> still to add
+              </>
+            ) : (
+              <> · core list complete</>
+            )}
+            . NCLC 7 also requires full mock exams in all four skills.
           </p>
         </div>
       </section>
@@ -446,6 +452,12 @@ export function TcfVocabularyHub() {
           </div>
         </div>
       </section>
+
+      <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
+        <Link href="/tcf/vocabulary/content-status" style={{ color: "var(--text-muted)" }}>
+          Content status (admin)
+        </Link>
+      </p>
     </div>
   );
 }

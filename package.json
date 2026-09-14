@@ -13,7 +13,10 @@
     "tcf:new-paper": "tsx scripts/tcf/new-paper.mts",
     "tcf:verify-mcq": "tsx scripts/tcf/verify-mcq-bias.mts",
     "tcf:verify-scoring": "tsx scripts/tcf/verify-scoring.mts",
-    "tcf:verify-draw": "tsx scripts/tcf/verify-exam-draw.mts"
+    "tcf:verify-draw": "tsx scripts/tcf/verify-exam-draw.mts",
+    "tcf:vocab-gap": "tsx scripts/report-vocab-gap.mts",
+    "tcf:mine-vocab": "tsx scripts/mine-tcf-mock-vocab.mts",
+    "tcf:build-batch3": "tsx scripts/build-batch3-lexique.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.97.1",
