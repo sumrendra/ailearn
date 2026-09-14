@@ -59,6 +59,7 @@ interface Props {
   themeId?: string;
   bandId?: string;
   packId?: string;
+  cardKeys?: string;
   deckName?: string;
 }
 
@@ -67,6 +68,7 @@ export function FlashcardDeck({
   themeId,
   bandId,
   packId,
+  cardKeys,
   deckName = "All flashcards",
 }: Props) {
   type DeckState =
@@ -94,6 +96,7 @@ export function FlashcardDeck({
     if (themeId) params.set("theme", themeId);
     if (bandId) params.set("band", bandId);
     if (packId) params.set("pack", packId);
+    if (cardKeys) params.set("keys", cardKeys);
     const url = params.size ? `/api/flashcards?${params}` : "/api/flashcards";
 
     const load = async () => {
@@ -110,7 +113,7 @@ export function FlashcardDeck({
 
     void load();
     return () => { cancelled = true; };
-  }, [lessonSlug, themeId, bandId, packId]);
+  }, [lessonSlug, themeId, bandId, packId, cardKeys]);
 
   const loading = deck.status === "loading";
   const error = deck.status === "error" ? deck.message : null;

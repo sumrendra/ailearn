@@ -19,6 +19,7 @@ import {
 } from "@/lib/tcf-program/exam-draw";
 import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
 import { TcfMockBanner, TcfMockCompleteBar } from "@/components/tcf/TcfMockUI";
+import { TcfLexiqueNextStep } from "@/components/tcf/TcfLexiqueNextStep";
 
 const LEVEL_COLOR: Record<string, string> = {
   A1: "#22c55e", A2: "#84cc16",
@@ -748,6 +749,8 @@ export default function TCFListeningPage() {
                 </div>
               ))}
             </div>
+
+            <TcfLexiqueNextStep bands={byBand} accent="#5b6af0" />
 
             {/* Per-question review — essential in exam mode where inline feedback is hidden */}
             <div style={{ marginBottom: 32 }}>

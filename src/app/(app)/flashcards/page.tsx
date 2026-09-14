@@ -12,6 +12,7 @@ function FlashcardsInner() {
   const theme = searchParams.get("theme");
   const band = searchParams.get("band");
   const pack = searchParams.get("pack");
+  const keys = searchParams.get("keys");
 
   const themeMeta = theme ? VOCAB_THEMES.find((t) => t.id === theme) : undefined;
   const bandMeta = band ? EXAM_BAND_META.find((b) => b.id === band) : undefined;
@@ -40,6 +41,7 @@ function FlashcardsInner() {
         themeId={theme ?? undefined}
         bandId={band && ["a", "b", "c"].includes(band) ? band : undefined}
         packId={pack ?? undefined}
+        cardKeys={keys ?? undefined}
         deckName={deckName}
       />
     </>

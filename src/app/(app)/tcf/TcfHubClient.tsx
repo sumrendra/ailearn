@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Topbar } from "@/components/layout/Topbar";
 import { TcfSubnav } from "@/components/tcf/TcfSubnav";
 import { MissionControl } from "@/components/tcf/MissionControl";
+import { TcfVocabMissionCard } from "@/components/tcf/TcfVocabMissionCard";
 import { Headphones, BookOpen, PenLine, Mic, ChevronRight } from "lucide-react";
 
 interface DashboardData {
@@ -24,6 +25,8 @@ interface DashboardData {
   tracks: { id: string; percent: number; completed: number; total: number }[];
   profile: { onboardingDone?: boolean } | null;
   stats: { totalUnits: number; totalHours: number };
+  vocabDue?: number;
+  practicePapers?: { listening: number; reading: number; writing: number; speaking: number };
 }
 
 const PRACTICE = [
@@ -63,7 +66,8 @@ export function TcfHubClient() {
           }}
         >
           {[
-            { href: "/tcf/plan", label: "Roadmap", sub: "Phases & tutor plan", color: "#be185d" },
+            { href: "/tcf/vocabulary", label: "Vocabulary", sub: "Lexique & packs", color: "#be185d" },
+            { href: "/tcf/plan", label: "Roadmap", sub: "Phases & tutor plan", color: "#7c3aed" },
             { href: "/tcf/learn", label: "Lessons", sub: "62 open units", color: "#7c3aed" },
             { href: "/tcf/practice", label: "Practice", sub: "4 exam skills", color: "#5b6af0" },
             { href: "/tcf/progress", label: "Progress", sub: "Scores & history", color: "#0f766e" },
@@ -107,15 +111,23 @@ export function TcfHubClient() {
         )}
 
         {data ? (
-          <MissionControl
-            programPercent={data.programPercent}
-            completedUnits={data.completedUnits}
-            totalUnits={data.totalUnits}
-            weeksRemaining={data.weeksRemaining}
-            nextUnit={data.nextUnit}
-            skills={data.skills}
-            tracks={data.tracks}
-          />
+          <>
+            <MissionControl
+              programPercent={data.programPercent}
+              completedUnits={data.completedUnits}
+              totalUnits={data.totalUnits}
+              weeksRemaining={data.weeksRemaining}
+              nextUnit={data.nextUnit}
+              skills={data.skills}
+              tracks={data.tracks}
+            />
+            <div style={{ marginTop: 16 }}>
+              <TcfVocabMissionCard
+                vocabDue={data.vocabDue ?? 0}
+                weakestSkill={data.skills.weakest.skill}
+              />
+            </div>
+          </>
         ) : (
           <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>Loading…</div>
         )}
@@ -155,7 +167,8 @@ export function TcfHubClient() {
 
         {data?.stats && (
           <p style={{ marginTop: 24, fontSize: 13, color: "var(--text-muted)", textAlign: "center" }}>
-            {data.stats.totalUnits} curriculum units · ~{data.stats.totalHours} hours · 5 mock papers per skill
+            {data.stats.totalUnits} curriculum units · ~{data.stats.totalHours} hours ·{" "}
+            {data.practicePapers?.reading ?? 10} mock papers per skill
           </p>
         )}
       </div>

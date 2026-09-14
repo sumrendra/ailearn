@@ -1,10 +1,23 @@
 import type { Flashcard } from "./types";
 import type { VocabItem } from "@/components/french/VocabList";
 import type { MatchPair } from "@/components/french/MatchQuiz";
+import { BATCH2_A, BATCH2_B, BATCH2_C } from "./tcf-exam-lexique-batch2";
 
 export type TcfExamBand = "a" | "b" | "c";
 
 type LemmaRow = [en: string, fr: string, exampleFr: string];
+
+function mergeLemmaRows(base: LemmaRow[], extra: LemmaRow[]): LemmaRow[] {
+  const seen = new Set(base.map((r) => r[0].toLowerCase()));
+  const out = [...base];
+  for (const row of extra) {
+    const key = row[0].toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
 
 function bandCards(band: TcfExamBand, rows: LemmaRow[]): Flashcard[] {
   return rows.map(([front, fr, exampleFr], i) => ({
@@ -129,7 +142,7 @@ const BAND_C: LemmaRow[] = [
   ["Multilateralism", "le multilatéralisme", "Le multilatéralisme facilite les accords."],
   ["Populism", "le populisme", "Le populisme simplifie des enjeux complexes."],
   ["Polarization", "la polarisation", "La polarisation complique le compromis."],
-  ["Consolidation", "le consolidation", "La consolidation des acquis reste fragile."],
+  ["Consolidation", "la consolidation", "La consolidation des acquis reste fragile."],
   ["Divergence", "la divergence", "Une divergence persiste entre les régions."],
   ["Consensus", "le consensus", "Le consensus demeure hors de portée."],
   ["Ethical dilemma", "le dilemme éthique", "Le dilemme éthique divise les experts."],
@@ -147,10 +160,14 @@ const BAND_C: LemmaRow[] = [
   ["Subtlety", "la subtilité", "La subtilité du texte échappe au lecteur pressé."],
 ];
 
+const FULL_BAND_A = mergeLemmaRows(BAND_A, BATCH2_A);
+const FULL_BAND_B = mergeLemmaRows(BAND_B, BATCH2_B);
+const FULL_BAND_C = mergeLemmaRows(BAND_C, BATCH2_C);
+
 export const EXAM_LEXIQUE_FLASHCARDS: Flashcard[] = [
-  ...bandCards("a", BAND_A),
-  ...bandCards("b", BAND_B),
-  ...bandCards("c", BAND_C),
+  ...bandCards("a", FULL_BAND_A),
+  ...bandCards("b", FULL_BAND_B),
+  ...bandCards("c", FULL_BAND_C),
 ];
 
 export function getExamLemmaFlashcards(band?: TcfExamBand): Flashcard[] {
@@ -275,6 +292,51 @@ export const TCF_CONTEXT_PACKS: TcfContextPack[] = [
       { fr: "les opposants", en: "opponents", example: { fr: "Les opposants brandissent le coût.", en: "Opponents raise the cost." } },
     ],
   },
+  {
+    id: "p8-daycare-waitlist",
+    title: "Liste d'attente en garderie",
+    subtitle: "Paper 8 · famille",
+    band: "b",
+    excerptFr:
+      "Les parents déposent une demande en ligne et reçoivent un numéro de priorité. La place en garderie subventionnée peut prendre plusieurs mois.",
+    items: [
+      { fr: "la garderie subventionnée", en: "subsidized daycare", example: { fr: "La garderie subventionnée coûte moins cher.", en: "Subsidized daycare costs less." } },
+      { fr: "le congé parental", en: "parental leave", example: { fr: "Le congé parental dure douze mois.", en: "Parental leave lasts twelve months." } },
+      { fr: "la place en garderie", en: "daycare spot", example: { fr: "Une place en garderie s'est libérée.", en: "A daycare spot opened up." } },
+      { fr: "le numéro de priorité", en: "priority number", example: { fr: "Votre numéro de priorité est affiché en ligne.", en: "Your priority number is shown online." } },
+      { fr: "déposer une demande", en: "to submit an application", example: { fr: "Déposez une demande avant la rentrée.", en: "Submit an application before the school year." } },
+    ],
+  },
+  {
+    id: "p9-transit-pass",
+    title: "Abonnement transport",
+    subtitle: "Paper 9 · mobilité",
+    band: "a",
+    excerptFr:
+      "Pour obtenir la carte mensuelle, présentez une pièce d'identité et une photo. La correspondance vers la ligne orange est indiquée au quai.",
+    items: [
+      { fr: "l'abonnement mensuel", en: "monthly pass", example: { fr: "L'abonnement mensuel coûte cent vingt dollars.", en: "The monthly pass costs one hundred twenty dollars." } },
+      { fr: "la ligne de métro", en: "metro line", example: { fr: "Prenez la ligne de métro orange.", en: "Take the orange metro line." } },
+      { fr: "un retard de service", en: "a service delay", example: { fr: "Un retard de service est annoncé.", en: "A service delay has been announced." } },
+      { fr: "le billet électronique", en: "electronic ticket", example: { fr: "Scannez le billet électronique à l'entrée.", en: "Scan the electronic ticket at the gate." } },
+      { fr: "le quai", en: "platform", example: { fr: "Attendez sur le quai numéro deux.", en: "Wait on platform number two." } },
+    ],
+  },
+  {
+    id: "p10-winter-festival",
+    title: "Festival d'hiver",
+    subtitle: "Paper 10 · culture",
+    band: "b",
+    excerptFr:
+      "Le festival propose des sculptures de glace, des concerts en plein air et des activités pour familles. Portez des vêtements chauds et des bottes.",
+    items: [
+      { fr: "en plein air", en: "outdoors", example: { fr: "Le concert en plein air commence à dix-neuf heures.", en: "The outdoor concert starts at seven p.m." } },
+      { fr: "le bénévolat", en: "volunteering", example: { fr: "Le bénévolat renforce le lien social.", en: "Volunteering strengthens social ties." } },
+      { fr: "la sculpture de glace", en: "ice sculpture", example: { fr: "La sculpture de glace est éclairée le soir.", en: "The ice sculpture is lit up at night." } },
+      { fr: "les vêtements chauds", en: "warm clothing", example: { fr: "Apportez des vêtements chauds.", en: "Bring warm clothing." } },
+      { fr: "l'intégration sociale", en: "social integration", example: { fr: "L'intégration sociale passe par la participation.", en: "Social integration comes through participation." } },
+    ],
+  },
 ];
 
 const PACK_FLASHCARDS = TCF_CONTEXT_PACKS.flatMap(packToFlashcards);
@@ -294,7 +356,7 @@ export function contextPackMatchPairs(pack: TcfContextPack): MatchPair[] {
 export const ALL_TCF_LEXIQUE_FLASHCARDS: Flashcard[] = [...EXAM_LEXIQUE_FLASHCARDS, ...PACK_FLASHCARDS];
 
 export const EXAM_BAND_META: { id: TcfExamBand; title: string; cefr: string; blurb: string; count: number }[] = [
-  { id: "a", title: "Bande A — repères du quotidien", cefr: "A1–A2", blurb: "Horaires, formulaires, transports, consignes d'examen (Q1–10).", count: BAND_A.length },
-  { id: "b", title: "Bande B — vie au Canada", cefr: "B1–B2", blurb: "Travail, logement, santé, société (Q11–29).", count: BAND_B.length },
-  { id: "c", title: "Bande C — argumentation", cefr: "C1–C2", blurb: "Opinion, nuance, registre formel (Q30–39).", count: BAND_C.length },
+  { id: "a", title: "Bande A — repères du quotidien", cefr: "A1–A2", blurb: "Horaires, formulaires, transports, consignes d'examen (Q1–10).", count: FULL_BAND_A.length },
+  { id: "b", title: "Bande B — vie au Canada", cefr: "B1–B2", blurb: "Travail, logement, santé, société (Q11–29).", count: FULL_BAND_B.length },
+  { id: "c", title: "Bande C — argumentation", cefr: "C1–C2", blurb: "Opinion, nuance, registre formel (Q30–39).", count: FULL_BAND_C.length },
 ];
