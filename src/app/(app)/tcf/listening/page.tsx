@@ -20,6 +20,8 @@ import {
 import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
 import { TcfMockBanner, TcfMockCompleteBar } from "@/components/tcf/TcfMockUI";
 import { TcfLexiqueNextStep } from "@/components/tcf/TcfLexiqueNextStep";
+import { TcfPracticeTextHelp } from "@/components/tcf/TcfPracticeTextHelp";
+import { practiceTranslationKey } from "@/lib/tcf-program/practice-translation-keys";
 
 const LEVEL_COLOR: Record<string, string> = {
   A1: "#22c55e", A2: "#84cc16",
@@ -1012,6 +1014,13 @@ export default function TCFListeningPage() {
             </div>
           </div>
 
+          <TcfPracticeTextHelp
+            enabled={!examMode}
+            skill="listening"
+            cacheKey={practiceTranslationKey("listening", q.sourcePaper, q.sourceQuestionIndex)}
+            frenchText={q.audioScript}
+          />
+
           {/* Question */}
           <p
             style={{
@@ -1109,14 +1118,6 @@ export default function TCFListeningPage() {
               <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.55, margin: 0 }}>
                 {q.explanation}
               </p>
-              <details style={{ marginTop: 10 }}>
-                <summary style={{ fontSize: 11, color: "var(--text-tertiary)", cursor: "pointer", userSelect: "none" }}>
-                  Voir la transcription audio
-                </summary>
-                <p style={{ marginTop: 8, fontSize: 12, color: "var(--text-secondary)", fontStyle: "italic", lineHeight: 1.6 }}>
-                  {q.audioScript}
-                </p>
-              </details>
             </div>
           )}
         </div>

@@ -15,6 +15,8 @@ import { resolveExamSection } from "@/lib/tcf-program/exam-draw";
 import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
 import { TcfMockBanner, TcfMockCompleteBar } from "@/components/tcf/TcfMockUI";
 import { TcfLexiqueNextStep } from "@/components/tcf/TcfLexiqueNextStep";
+import { TcfPracticeTextHelp } from "@/components/tcf/TcfPracticeTextHelp";
+import { practiceTranslationKey } from "@/lib/tcf-program/practice-translation-keys";
 
 const LEVEL_COLOR: Record<string, string> = {
   A1: "#22c55e", A2: "#84cc16",
@@ -638,6 +640,12 @@ export default function TCFReadingPage() {
             >
               {q.passage}
             </div>
+            <TcfPracticeTextHelp
+              enabled={!examMode}
+              skill="reading"
+              cacheKey={practiceTranslationKey("reading", q.sourcePaper, q.sourceQuestionIndex)}
+              frenchText={q.passage}
+            />
           </div>
 
           {/* Question + options panel */}

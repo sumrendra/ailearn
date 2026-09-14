@@ -16,7 +16,8 @@
     "tcf:verify-draw": "tsx scripts/tcf/verify-exam-draw.mts",
     "tcf:vocab-gap": "tsx scripts/report-vocab-gap.mts",
     "tcf:mine-vocab": "tsx scripts/mine-tcf-mock-vocab.mts",
-    "tcf:build-batch3": "tsx scripts/build-batch3-lexique.mts"
+    "tcf:build-batch3": "tsx scripts/build-batch3-lexique.mts",
+    "tcf:gen-practice-translations": "tsx scripts/generate-practice-translations.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.97.1",
