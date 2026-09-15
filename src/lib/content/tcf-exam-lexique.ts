@@ -4,6 +4,7 @@ import type { MatchPair } from "@/components/french/MatchQuiz";
 import { BATCH2_A, BATCH2_B, BATCH2_C } from "./tcf-exam-lexique-batch2";
 import { BATCH3_A, BATCH3_B, BATCH3_C } from "./tcf-exam-lexique-batch3";
 import { BATCH4_A, BATCH4_B, BATCH4_C } from "./tcf-exam-lexique-batch4";
+import { BATCH5_A, BATCH5_B, BATCH5_C } from "./tcf-exam-lexique-batch5";
 import {
   CORE_VOCAB_TOPIC_TAG,
   coreTopicTagsForLemma,
@@ -168,9 +169,18 @@ const BAND_C: LemmaRow[] = [
   ["Subtlety", "la subtilité", "La subtilité du texte échappe au lecteur pressé."],
 ];
 
-const FULL_BAND_A = mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_A, BATCH2_A), BATCH3_A), BATCH4_A);
-const FULL_BAND_B = mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_B, BATCH2_B), BATCH3_B), BATCH4_B);
-const FULL_BAND_C = mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_C, BATCH2_C), BATCH3_C), BATCH4_C);
+const FULL_BAND_A = mergeLemmaRows(
+  mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_A, BATCH2_A), BATCH3_A), BATCH4_A),
+  BATCH5_A,
+);
+const FULL_BAND_B = mergeLemmaRows(
+  mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_B, BATCH2_B), BATCH3_B), BATCH4_B),
+  BATCH5_B,
+);
+const FULL_BAND_C = mergeLemmaRows(
+  mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_C, BATCH2_C), BATCH3_C), BATCH4_C),
+  BATCH5_C,
+);
 
 export const EXAM_LEXIQUE_FLASHCARDS: Flashcard[] = [
   ...bandCards("a", FULL_BAND_A),

@@ -7,6 +7,9 @@ import { TcfSubnav } from "@/components/tcf/TcfSubnav";
 import { TcfVocabQuizSession } from "@/components/tcf/TcfVocabQuizSession";
 import { collectVocabPairs, scopeLabel, type VocabQuizScope } from "@/lib/tcf-program/vocab-quiz";
 import { EXAM_BAND_META } from "@/lib/content/tcf-exam-lexique";
+import { getCoreExamWordCountInApp } from "@/lib/tcf-program/vocab-catalog";
+
+const ALL_CORE_HINT = () => `${getCoreExamWordCountInApp()} words across A + B + C`;
 
 const COUNT_OPTIONS = [10, 15, 20, 30] as const;
 
@@ -45,7 +48,7 @@ export default function TcfVocabQuizPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
               {(
                 [
-                  { id: "all" as const, hint: "450 words across A + B + C" },
+                  { id: "all" as const, hint: ALL_CORE_HINT() },
                   ...EXAM_BAND_META.map((b) => ({ id: b.id as VocabQuizScope, hint: `${b.count} words · ${b.cefr}` })),
                 ] as { id: VocabQuizScope; hint: string }[]
               ).map((opt) => (

@@ -209,7 +209,8 @@ export function TcfVocabularyHub() {
   const catalog = dash?.vocabCatalog;
   const progress = dash?.vocabProgress;
   const coreInApp = catalog?.coreInApp ?? EXAM_BAND_META.reduce((s, b) => s + b.count, 0);
-  const coreTarget = catalog?.coreTarget ?? 450;
+  const coreTarget = catalog?.coreTarget ?? 1000;
+  const stillToAuthor = catalog?.stillToAuthor ?? Math.max(0, coreTarget - coreInApp);
   const mastered = progress?.mastered ?? 0;
   const coreTotal = progress?.total ?? coreInApp;
   const coreRemaining = Math.max(0, coreTotal - mastered);
@@ -269,8 +270,15 @@ export function TcfVocabularyHub() {
             <div style={{ height: "100%", width: `${corePct}%`, background: "#be185d", borderRadius: 999 }} />
           </div>
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 12, lineHeight: 1.5 }}>
-            The core list has <strong>{coreInApp}</strong> exam words (target <strong>{coreTarget}</strong>). NCLC 7 also
-            requires strong scores in listening, reading, writing, and speaking — use mocks alongside vocabulary.
+            <strong>{coreInApp}</strong> high-yield exam words live now (building toward{" "}
+            <strong>{coreTarget}</strong>
+            {stillToAuthor > 0 ? (
+              <>
+                {" "}
+                · about <strong>{stillToAuthor}</strong> still being added
+              </>
+            ) : null}
+            ). CLB/NCLC 7 is a <em>score</em> in all four skills — keep doing mocks, not only flashcards.
           </p>
         </div>
       </section>

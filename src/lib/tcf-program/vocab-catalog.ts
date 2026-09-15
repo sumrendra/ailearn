@@ -1,8 +1,8 @@
 import { EXAM_BAND_META, TCF_CONTEXT_PACKS } from "@/lib/content/tcf-exam-lexique";
 import { VOCAB_THEMES } from "@/lib/tcf-program/vocab-themes";
 
-/** Words we plan to ship for TCF reading/listening prep (internal content target). */
-export const CORE_EXAM_WORD_TARGET = 450;
+/** Exam-priority lexique in-app (high-yield TCF themes — not full B2 lexicon). */
+export const CORE_EXAM_WORD_TARGET = 1000;
 
 export function getCoreExamWordCountInApp(): number {
   return EXAM_BAND_META.reduce((sum, b) => sum + b.count, 0);

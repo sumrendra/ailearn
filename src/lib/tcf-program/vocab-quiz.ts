@@ -1,6 +1,7 @@
 import type { Flashcard } from "@/lib/content/types";
 import { extractFrenchLemma } from "@/lib/tcf-program/flashcard-display";
 import { getExamLemmaFlashcards, type TcfExamBand } from "@/lib/content/tcf-exam-lexique";
+import { getCoreExamWordCountInApp } from "@/lib/tcf-program/vocab-catalog";
 
 export type VocabQuizScope = "all" | TcfExamBand;
 
@@ -110,7 +111,7 @@ export function scoreVocabQuiz(answers: (number | null)[], questions: VocabMcqQu
 }
 
 export function scopeLabel(scope: VocabQuizScope): string {
-  if (scope === "all") return "All core words (450)";
+  if (scope === "all") return `All core words (${getCoreExamWordCountInApp()})`;
   if (scope === "a") return "Band A (easier exam words)";
   if (scope === "b") return "Band B (main exam words)";
   return "Band C (harder exam words)";
