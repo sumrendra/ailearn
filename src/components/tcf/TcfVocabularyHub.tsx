@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Headphones, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
-import { EXAM_BAND_META, TCF_CONTEXT_PACKS } from "@/lib/content/tcf-exam-lexique";
+import { EXAM_BAND_META, TCF_CONTEXT_PACKS, getCoreTopicCardCounts } from "@/lib/content/tcf-exam-lexique";
+import { CORE_VOCAB_TOPICS } from "@/lib/tcf-program/vocab-core-topics";
 import { VOCAB_THEMES } from "@/lib/tcf-program/vocab-themes";
 import { readVocabPile } from "@/lib/tcf-program/vocab-pile";
 import { getFirstContextPackId } from "@/lib/tcf-program/vocab-catalog";
-import { VocabThemeGrid } from "@/components/tcf/GrammarMap";
+import { VocabCoreTopicGrid, VocabThemeGrid } from "@/components/tcf/GrammarMap";
 
 type BandId = "a" | "b" | "c";
 
@@ -209,13 +210,17 @@ export function TcfVocabularyHub() {
   const progress = dash?.vocabProgress;
   const coreInApp = catalog?.coreInApp ?? EXAM_BAND_META.reduce((s, b) => s + b.count, 0);
   const coreTarget = catalog?.coreTarget ?? 450;
-  const stillToAuthor = catalog?.stillToAuthor ?? Math.max(0, coreTarget - coreInApp);
   const mastered = progress?.mastered ?? 0;
   const coreTotal = progress?.total ?? coreInApp;
   const coreRemaining = Math.max(0, coreTotal - mastered);
   const corePct = coreTotal ? Math.round((mastered / coreTotal) * 100) : 0;
 
   const firstPackId = getFirstContextPackId();
+  const coreTopicCounts = getCoreTopicCardCounts();
+  const coreTopicsForGrid = CORE_VOCAB_TOPICS.map((t) => ({
+    ...t,
+    cardCount: coreTopicCounts[t.id],
+  })).filter((t) => t.cardCount > 0);
 
   const themes = VOCAB_THEMES.map((t) => {
     const remote = dash?.vocabThemes?.find((v) => v.id === t.id);
@@ -264,15 +269,8 @@ export function TcfVocabularyHub() {
             <div style={{ height: "100%", width: `${corePct}%`, background: "#be185d", borderRadius: 999 }} />
           </div>
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 12, lineHeight: 1.5 }}>
-            This site ships <strong>{coreInApp}</strong> core exam words (target <strong>{coreTarget}</strong>
-            {stillToAuthor > 0 ? (
-              <>
-                , about <strong>{stillToAuthor}</strong> still to add
-              </>
-            ) : (
-              <> · core list complete</>
-            )}
-            . NCLC 7 also requires full mock exams in all four skills.
+            The core list has <strong>{coreInApp}</strong> exam words (target <strong>{coreTarget}</strong>). NCLC 7 also
+            requires strong scores in listening, reading, writing, and speaking — use mocks alongside vocabulary.
           </p>
         </div>
       </section>
@@ -376,6 +374,17 @@ export function TcfVocabularyHub() {
         </div>
       </section>
 
+      <section aria-labelledby="vocab-topics-heading">
+        <h2 id="vocab-topics-heading" style={{ fontSize: 18, fontWeight: 700, margin: "0 0 6px" }}>
+          Browse core words by topic
+        </h2>
+        <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 14px", lineHeight: 1.5 }}>
+          Same main-path list, grouped like major exam-prep sites — everyday French for listening and reading, not
+          immigration admin jargon.
+        </p>
+        <VocabCoreTopicGrid topics={coreTopicsForGrid} />
+      </section>
+
       <section aria-labelledby="vocab-context-heading">
         <h2 id="vocab-context-heading" style={{ fontSize: 18, fontWeight: 700, margin: "0 0 6px" }}>
           Learn in a short text
@@ -472,12 +481,6 @@ export function TcfVocabularyHub() {
           </div>
         </div>
       </section>
-
-      <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
-        <Link href="/tcf/vocabulary/content-status" style={{ color: "var(--text-muted)" }}>
-          Content status (admin)
-        </Link>
-      </p>
     </div>
   );
 }

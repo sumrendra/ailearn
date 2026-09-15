@@ -80,13 +80,8 @@ export const BATCH3_A: LemmaRow[] = [
 ];
 
 export const BATCH3_B: LemmaRow[] = [
-  ["Express Entry", "Entrée express", "Entrée express regroupe plusieurs programmes fédéraux."],
-  ["Provincial nomination", "la nomination provinciale", "La nomination provinciale ajoute des points au profil."],
-  ["Language test result", "le résultat de test linguistique", "Joignez votre résultat de test linguistique valide."],
-  ["Educational credential", "le diplôme reconnu", "Faites évaluer votre diplôme reconnu au Canada."],
   ["Settlement services", "les services d'établissement", "Les services d'établissement aident les nouveaux arrivants."],
   ["Orientation session", "la séance d'orientation", "La séance d'orientation explique les démarches locales."],
-  ["Language benchmark", "le niveau de compétence linguistique", "Votre niveau de compétence linguistique doit être documenté."],
   ["Bridging program", "le programme passerelle", "Le programme passerelle prépare la reconnaissance professionnelle."],
   ["Professional order", "l'ordre professionnel", "L'ordre professionnel délivre le permis d'exercice."],
   ["Apprenticeship", "l'apprentissage", "L'apprentissage combine cours et travail rémunéré."],

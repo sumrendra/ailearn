@@ -3,6 +3,13 @@ import type { VocabItem } from "@/components/french/VocabList";
 import type { MatchPair } from "@/components/french/MatchQuiz";
 import { BATCH2_A, BATCH2_B, BATCH2_C } from "./tcf-exam-lexique-batch2";
 import { BATCH3_A, BATCH3_B, BATCH3_C } from "./tcf-exam-lexique-batch3";
+import { BATCH4_A, BATCH4_B, BATCH4_C } from "./tcf-exam-lexique-batch4";
+import {
+  CORE_VOCAB_TOPIC_TAG,
+  coreTopicTagsForLemma,
+  isCoreVocabTopicId,
+  type CoreVocabTopicId,
+} from "@/lib/tcf-program/vocab-core-topics";
 
 export type TcfExamBand = "a" | "b" | "c";
 
@@ -26,7 +33,7 @@ function bandCards(band: TcfExamBand, rows: LemmaRow[]): Flashcard[] {
     key: `tcf-lemma-${band}:${i + 1}`,
     front,
     back: `**${fr}** — *${exampleFr}*`,
-    tags: ["TCF Canada", "Lexique", band],
+    tags: ["TCF Canada", "Lexique", band, ...coreTopicTagsForLemma(front, fr, band)],
   }));
 }
 
@@ -161,9 +168,9 @@ const BAND_C: LemmaRow[] = [
   ["Subtlety", "la subtilité", "La subtilité du texte échappe au lecteur pressé."],
 ];
 
-const FULL_BAND_A = mergeLemmaRows(mergeLemmaRows(BAND_A, BATCH2_A), BATCH3_A);
-const FULL_BAND_B = mergeLemmaRows(mergeLemmaRows(BAND_B, BATCH2_B), BATCH3_B);
-const FULL_BAND_C = mergeLemmaRows(mergeLemmaRows(BAND_C, BATCH2_C), BATCH3_C);
+const FULL_BAND_A = mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_A, BATCH2_A), BATCH3_A), BATCH4_A);
+const FULL_BAND_B = mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_B, BATCH2_B), BATCH3_B), BATCH4_B);
+const FULL_BAND_C = mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_C, BATCH2_C), BATCH3_C), BATCH4_C);
 
 export const EXAM_LEXIQUE_FLASHCARDS: Flashcard[] = [
   ...bandCards("a", FULL_BAND_A),
@@ -175,6 +182,38 @@ export function getExamLemmaFlashcards(band?: TcfExamBand): Flashcard[] {
   if (!band) return EXAM_LEXIQUE_FLASHCARDS;
   return EXAM_LEXIQUE_FLASHCARDS.filter((c) => c.tags.includes(band));
 }
+
+export function getExamLemmaFlashcardsForCoreTopic(topicId: CoreVocabTopicId): Flashcard[] {
+  const needle = `${CORE_VOCAB_TOPIC_TAG}${topicId}`;
+  return EXAM_LEXIQUE_FLASHCARDS.filter((c) => c.tags.includes(needle));
+}
+
+export function getCoreTopicCardCounts(): Record<CoreVocabTopicId, number> {
+  const ids = [
+    "daily-services",
+    "transport",
+    "housing",
+    "work",
+    "health",
+    "education",
+    "community",
+    "environment",
+    "media-society",
+    "argumentation",
+  ] as const;
+  const counts = Object.fromEntries(ids.map((id) => [id, 0])) as Record<CoreVocabTopicId, number>;
+  for (const card of EXAM_LEXIQUE_FLASHCARDS) {
+    for (const tag of card.tags) {
+      if (!tag.startsWith(CORE_VOCAB_TOPIC_TAG)) continue;
+      const id = tag.slice(CORE_VOCAB_TOPIC_TAG.length);
+      if (isCoreVocabTopicId(id)) counts[id] += 1;
+    }
+  }
+  return counts;
+}
+
+export type { CoreVocabTopicId };
+export { isCoreVocabTopicId };
 
 export interface TcfContextPack {
   id: string;

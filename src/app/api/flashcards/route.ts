@@ -3,13 +3,15 @@ import { auth } from "@/auth";
 import {
   getAllFlashcards,
   getFlashcardsForBand,
+  getFlashcardsForCoreTopic,
   getFlashcardsForLesson,
   getFlashcardsForPack,
   getFlashcardsForTheme,
   getFlashcardByKey,
   getLessonBySlug,
 } from "@/lib/content";
-import type { TcfExamBand } from "@/lib/content/tcf-exam-lexique";
+import type { TcfExamBand, CoreVocabTopicId } from "@/lib/content/tcf-exam-lexique";
+import { isCoreVocabTopicId } from "@/lib/tcf-program/vocab-core-topics";
 import { loadUserCardReviews } from "@/lib/tcf-program/vocab-progress";
 import { toComprehensionDisplay } from "@/lib/tcf-program/flashcard-display";
 
@@ -34,6 +36,7 @@ export async function GET(req: NextRequest) {
   const lessonSlug = req.nextUrl.searchParams.get("lesson");
   const theme = req.nextUrl.searchParams.get("theme");
   const band = req.nextUrl.searchParams.get("band") as TcfExamBand | null;
+  const coreTopic = req.nextUrl.searchParams.get("coreTopic");
   const pack = req.nextUrl.searchParams.get("pack");
   const keysParam = req.nextUrl.searchParams.get("keys");
 
@@ -41,29 +44,31 @@ export async function GET(req: NextRequest) {
     ? getFlashcardsForLesson(lessonSlug)
     : theme
       ? getFlashcardsForTheme(theme)
-      : band && ["a", "b", "c"].includes(band)
-        ? getFlashcardsForBand(band)
-        : pack
-          ? getFlashcardsForPack(pack)
-          : keysParam
-            ? keysParam
-                .split(",")
-                .map((k) => k.trim())
-                .filter(Boolean)
-                .map((k) => getFlashcardByKey(k))
-                .filter((c): c is NonNullable<typeof c> => Boolean(c))
-            : getAllFlashcards().slice(0, 50);
+      : coreTopic && isCoreVocabTopicId(coreTopic)
+        ? getFlashcardsForCoreTopic(coreTopic as CoreVocabTopicId)
+        : band && ["a", "b", "c"].includes(band)
+          ? getFlashcardsForBand(band)
+          : pack
+            ? getFlashcardsForPack(pack)
+            : keysParam
+              ? keysParam
+                  .split(",")
+                  .map((k) => k.trim())
+                  .filter(Boolean)
+                  .map((k) => getFlashcardByKey(k))
+                  .filter((c): c is NonNullable<typeof c> => Boolean(c))
+              : getAllFlashcards().slice(0, 50);
 
   const session = await auth();
   let reviews = new Map<string, { nextReview: Date; interval: number; rating: number }>();
   if (session?.user?.id) {
     reviews = await loadUserCardReviews(session.user.id);
-    if (theme || band || pack || lessonSlug || keysParam) {
+    if (theme || band || pack || lessonSlug || keysParam || coreTopic) {
       cards = sortByDue(cards, reviews);
     }
   }
 
-  const limit = theme || lessonSlug || band || pack || keysParam ? 400 : 50;
+  const limit = theme || lessonSlug || band || pack || keysParam || coreTopic ? 400 : 50;
   const result = cards.slice(0, limit).map((c) => {
     const lesson = getLessonBySlug(c.lessonSlug);
     const rev = reviews.get(c.key);

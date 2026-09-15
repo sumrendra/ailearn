@@ -72,6 +72,39 @@ export function GrammarMap({ topics }: { topics: GrammarCell[] }) {
   );
 }
 
+export function VocabCoreTopicGrid({
+  topics,
+}: {
+  topics: { id: string; titleEn: string; titleFr: string; emoji: string; blurbEn: string; cardCount: number }[];
+}) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+      {topics.map((t) => (
+        <Link
+          key={t.id}
+          href={`/tcf/vocabulary/topic/${t.id}`}
+          style={{
+            padding: 14,
+            borderRadius: 12,
+            border: "1px solid var(--border-subtle)",
+            background: "var(--bg-card)",
+            textDecoration: "none",
+            color: "inherit",
+            position: "relative",
+            zIndex: 2,
+          }}
+        >
+          <div style={{ fontSize: 22, marginBottom: 6 }}>{t.emoji}</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{t.titleEn}</div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>{t.titleFr}</div>
+          <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.4 }}>{t.blurbEn}</div>
+          <div style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: "#0f766e" }}>{t.cardCount} core words</div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 export function VocabThemeGrid({
   themes,
 }: {

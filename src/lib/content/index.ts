@@ -17,8 +17,10 @@ import { TCF_VOCAB_FLASHCARDS, getTcfVocabFlashcardsForTheme } from "./tcf-vocab
 import {
   ALL_TCF_LEXIQUE_FLASHCARDS,
   getExamLemmaFlashcards,
+  getExamLemmaFlashcardsForCoreTopic,
   getPackFlashcards,
   type TcfExamBand,
+  type CoreVocabTopicId,
 } from "./tcf-exam-lexique";
 import { QUIZ_QUESTIONS } from "./quizzes";
 import { ACHIEVEMENTS } from "./achievements";
@@ -74,6 +76,10 @@ export function getFlashcardsForTheme(themeId: string): Flashcard[] {
 
 export function getFlashcardsForBand(band: TcfExamBand): Flashcard[] {
   return getExamLemmaFlashcards(band);
+}
+
+export function getFlashcardsForCoreTopic(topicId: CoreVocabTopicId): Flashcard[] {
+  return getExamLemmaFlashcardsForCoreTopic(topicId);
 }
 
 export function getFlashcardsForPack(packId: string): Flashcard[] {
