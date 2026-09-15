@@ -2,7 +2,7 @@
 
 Curated vocabulary in `src/lib/content/tcf-exam-lexique.ts` is **not** copied from commercial prep lists or leaked exams.
 
-**Core inventory (2026):** Target **1,000** exam-priority lemmas (high-yield TCF themes). Currently merged from base lists plus `tcf-exam-lexique-batch2.ts` through `batch5.ts`. IRCC does not publish a word count for NCLC 7 — that level is defined by TCF score thresholds (~B2). Full B2 proficiency is often estimated at **~3,000–4,000+ active words** in the wild; our deck is a focused subset, not your entire lexicon. Browse by topic on `/tcf/vocabulary`.
+**Core inventory (2026):** Target **1,000** exam-priority lemmas (high-yield TCF themes). See **[TCF vocabulary research](./tcf-vocab-research.md)** for B2 vs exam-priority vs NCLC 7. Coverage vs mocks: `npx tsx scripts/analyze-tcf-vocab-coverage.mts`.
 
 | Source | Use |
 |--------|-----|
