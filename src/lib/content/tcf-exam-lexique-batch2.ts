@@ -76,12 +76,9 @@ export const BATCH2_B: LemmaRow[] = [
 ];
 
 export const BATCH2_C: LemmaRow[] = [
-  ["Nevertheless", "n\u00e9anmoins", "N\u00e9anmoins, la r\u00e9forme suscite des r\u00e9serves."],
   ["Conversely", "\u00e0 l'inverse", "\u00c0 l'inverse, d'autres estiment que le co\u00fbt est acceptable."],
   ["Insofar as", "dans la mesure o\u00f9", "Dans la mesure o\u00f9 les donn\u00e9es le confirment, la mesure est justifi\u00e9e."],
   ["Notwithstanding", "nonobstant", "Nonobstant ces avanc\u00e9es, des in\u00e9galit\u00e9s persistent."],
-  ["To call into question", "remettre en question", "L'\u00e9tude remet en question l'hypoth\u00e8se initiale."],
-  ["To highlight", "souligner", "L'auteur souligne l'importance de la transparence."],
   ["To underscore", "mettre en exergue", "Le rapport met en exergue des \u00e9carts r\u00e9gionaux."],
   ["To contend", "soutenir", "Les chercheurs soutiennent que la politique est inefficace."],
   ["To acknowledge", "reconna\u00eetre", "Il reconna\u00eet les limites de son analyse."],

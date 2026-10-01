@@ -16,7 +16,7 @@
 
 export const VOCAB_INCLUSION_RULES_VERSION = "2026-10-02-v2";
 
-export const TCF_LEXICON_TARGET_LEMMAS = 3200;
+export const TCF_LEXICON_TARGET_LEMMAS = 2500;
 
 /** Approximate receptive vocabulary by CEFR (pedagogical estimates, not FEI policy). */
 export const CEFR_RECEPTIVE_LEXICON_ESTIMATES = {

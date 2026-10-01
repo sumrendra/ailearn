@@ -8,8 +8,8 @@
 |---------|------|------|
 | General French dictionary | ~50k+ lemmas | Not flashcard-able |
 | CEFR B2 receptive estimate | ~3k–3.7k lemmas | Full proficiency band |
-| **AILearn core path (`EXAM_LEXIQUE_FLASHCARDS`)** | **3,241** cards | High-probability TCF/NCLC 7 lexicon |
-| Product target | **3,200** | `TCF_LEXICON_TARGET_LEMMAS` |
+| **AILearn core path (`EXAM_LEXIQUE_FLASHCARDS`)** | **~2,500** cards (see live count in app) | Curated TCF/NCLC 7 lexicon |
+| Product target | **2,500** | `TCF_LEXICON_TARGET_LEMMAS` |
 
 **NCLC 7** still requires **exam scores in four skills**; this deck is the structured lexicon spine, plus lessons, mocks, tutor, grammar.
 
