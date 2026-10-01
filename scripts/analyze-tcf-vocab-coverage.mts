@@ -1,6 +1,7 @@
 #!/usr/bin/env npx tsx
 /**
- * Compare core exam lexique to mock reading/listening corpus.
+ * Compare core exam lexique to mock reading/listening corpus (sanity check only —
+ * core list is NOT limited to these mocks; see docs/tcf-lexicon-inventory.md).
  * Run: npx tsx scripts/analyze-tcf-vocab-coverage.mts
  */
 import fs from "node:fs";

@@ -1,8 +1,9 @@
 import { EXAM_BAND_META, TCF_CONTEXT_PACKS } from "@/lib/content/tcf-exam-lexique";
 import { VOCAB_THEMES } from "@/lib/tcf-program/vocab-themes";
+import { TCF_LEXICON_TARGET_LEMMAS } from "@/lib/tcf-program/vocab-inclusion-rules";
 
-/** Exam-priority lexique in-app (high-yield TCF themes — not full B2 lexicon). */
-export const CORE_EXAM_WORD_TARGET = 1500;
+/** High-probability TCF/NCLC lexicon (DELF B2 themes + CEFR FLE — not mock-limited). */
+export const CORE_EXAM_WORD_TARGET = TCF_LEXICON_TARGET_LEMMAS;
 
 export function getCoreExamWordCountInApp(): number {
   return EXAM_BAND_META.reduce((sum, b) => sum + b.count, 0);

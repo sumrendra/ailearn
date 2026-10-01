@@ -7,6 +7,9 @@ import { BATCH4_A, BATCH4_B, BATCH4_C } from "./tcf-exam-lexique-batch4";
 import { BATCH5_A, BATCH5_B, BATCH5_C } from "./tcf-exam-lexique-batch5";
 import { BATCH6_A, BATCH6_B, BATCH6_C } from "./tcf-exam-lexique-batch6";
 import { BATCH7_A, BATCH7_B, BATCH7_C } from "./tcf-exam-lexique-batch7";
+import { MASTER_A } from "./tcf-exam-lexique-master-a";
+import { MASTER_B } from "./tcf-exam-lexique-master-b";
+import { MASTER_C } from "./tcf-exam-lexique-master-c";
 import {
   CORE_VOCAB_TOPIC_TAG,
   coreTopicTagsForLemma,
@@ -200,7 +203,7 @@ const MERGED_A = mergeLemmaRows(
     ),
     BATCH6_A,
   ),
-  BATCH7_A,
+  mergeLemmaRows(BATCH7_A, MASTER_A),
 );
 const MERGED_B = mergeLemmaRows(
   mergeLemmaRows(
@@ -210,7 +213,7 @@ const MERGED_B = mergeLemmaRows(
     ),
     BATCH6_B,
   ),
-  BATCH7_B,
+  mergeLemmaRows(BATCH7_B, MASTER_B),
 );
 const MERGED_C = mergeLemmaRows(
   mergeLemmaRows(
@@ -220,7 +223,7 @@ const MERGED_C = mergeLemmaRows(
     ),
     BATCH6_C,
   ),
-  BATCH7_C,
+  mergeLemmaRows(BATCH7_C, MASTER_C),
 );
 const { a: FULL_BAND_A, b: FULL_BAND_B, c: FULL_BAND_C } = mergeBandsWithoutEnDupes(MERGED_A, MERGED_B, MERGED_C);
 

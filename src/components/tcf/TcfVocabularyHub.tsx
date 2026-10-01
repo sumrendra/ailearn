@@ -220,7 +220,7 @@ export function TcfVocabularyHub() {
   const catalog = dash?.vocabCatalog;
   const progress = dash?.vocabProgress;
   const coreInApp = catalog?.coreInApp ?? EXAM_BAND_META.reduce((s, b) => s + b.count, 0);
-  const coreTarget = catalog?.coreTarget ?? 1500;
+  const coreTarget = catalog?.coreTarget ?? 3200;
   const stillToAuthor = catalog?.stillToAuthor ?? Math.max(0, coreTarget - coreInApp);
   const mastered = progress?.mastered ?? 0;
   const coreTotal = progress?.total ?? coreInApp;
