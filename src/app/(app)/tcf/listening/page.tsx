@@ -924,7 +924,7 @@ export default function TCFListeningPage() {
           accent="#5b6af0"
         />
 
-        <div className="glass-pane" style={{ borderRadius: 20, padding: "28px 32px 28px", display: "flex", flexDirection: "column", gap: 0 }}>
+        <div className="tcf-exam-panel" style={{ borderRadius: 20, padding: "28px 32px 28px", display: "flex", flexDirection: "column", gap: 0 }}>
           {/* Level badge + topic */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
             <span

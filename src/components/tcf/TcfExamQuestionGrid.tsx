@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { TCFLevel } from "@/lib/content/tcf-listening";
 
 export const TCF_LEVEL_COLOR: Record<string, string> = {
@@ -41,16 +42,21 @@ export function TcfExamQuestionGrid({
   accent: string;
 }) {
   const sections = levelSections(questions);
+  const currentRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    currentRef.current?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  }, [currentIdx]);
 
   return (
     <nav
       aria-label="Navigation des questions"
-      className="glass-pane"
+      className="tcf-exam-panel"
       style={{
         borderRadius: 14,
-        padding: "14px 16px 12px",
-        marginBottom: 20,
-        border: `1px solid ${accent}22`,
+        padding: "12px 14px 10px",
+        marginBottom: 16,
+        border: `1px solid ${accent}33`,
       }}
     >
       <div
@@ -60,78 +66,81 @@ export function TcfExamQuestionGrid({
           alignItems: "baseline",
           justifyContent: "space-between",
           gap: 8,
-          marginBottom: 12,
+          marginBottom: 10,
         }}
       >
         <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
-          All questions (1–39)
+          Questions 1–39 · jump to any
         </span>
-        <span style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.4 }}>
-          Jump to any item · A1→C2 order · exam-style navigation
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+          Current: <strong style={{ color: accent }}>{currentIdx + 1}</strong>
         </span>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {sections.map((section) => {
-          const levelColor = TCF_LEVEL_COLOR[section.level] ?? accent;
-          return (
-            <div key={`${section.level}-${section.indices[0]}`}>
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: levelColor,
-                  marginBottom: 8,
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
-                {section.level}
+      <div style={{ maxHeight: 152, overflowY: "auto", paddingRight: 4 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {sections.map((section) => {
+            const levelColor = TCF_LEVEL_COLOR[section.level] ?? accent;
+            return (
+              <div key={`${section.level}-${section.indices[0]}`}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: levelColor,
+                    marginBottom: 6,
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  {section.level}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {section.indices.map((qi) => {
+                    const qNum = qi + 1;
+                    const isCurrent = qi === currentIdx;
+                    const answered = answers[qi] !== null;
+                    return (
+                      <button
+                        key={qi}
+                        ref={isCurrent ? currentRef : undefined}
+                        type="button"
+                        onClick={() => onSelect(qi)}
+                        aria-current={isCurrent ? "step" : undefined}
+                        aria-label={`Question ${qNum}, level ${questions[qi]?.level ?? section.level}`}
+                        title={`Question ${qNum} · ${questions[qi]?.level ?? section.level}`}
+                        style={{
+                          minWidth: 34,
+                          height: 34,
+                          padding: "0 6px",
+                          borderRadius: 8,
+                          border: isCurrent
+                            ? `2px solid ${accent}`
+                            : answered
+                              ? `1.5px solid ${levelColor}`
+                              : "1px solid var(--border-subtle)",
+                          background: isCurrent
+                            ? `${accent}22`
+                            : answered
+                              ? `${levelColor}18`
+                              : "var(--bg-overlay)",
+                          color: isCurrent ? accent : answered ? levelColor : "var(--text-secondary)",
+                          fontSize: 12,
+                          fontWeight: isCurrent ? 800 : 600,
+                          fontFamily: "var(--font-mono)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {qNum}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {section.indices.map((qi) => {
-                  const qNum = qi + 1;
-                  const isCurrent = qi === currentIdx;
-                  const answered = answers[qi] !== null;
-                  return (
-                    <button
-                      key={qi}
-                      type="button"
-                      onClick={() => onSelect(qi)}
-                      aria-current={isCurrent ? "step" : undefined}
-                      title={`Question ${qNum} · ${questions[qi]?.level ?? section.level}`}
-                      style={{
-                        minWidth: 36,
-                        height: 36,
-                        padding: "0 6px",
-                        borderRadius: 8,
-                        border: isCurrent
-                          ? `2px solid ${accent}`
-                          : answered
-                            ? `1.5px solid ${levelColor}`
-                            : "1px solid var(--border-subtle)",
-                        background: isCurrent
-                          ? `${accent}22`
-                          : answered
-                            ? `${levelColor}18`
-                            : "var(--bg-overlay)",
-                        color: isCurrent ? accent : answered ? levelColor : "var(--text-secondary)",
-                        fontSize: 12,
-                        fontWeight: isCurrent ? 800 : 600,
-                        fontFamily: "var(--font-mono)",
-                        cursor: "pointer",
-                        boxShadow: isCurrent ? `0 0 0 1px ${accent}33` : undefined,
-                      }}
-                    >
-                      {qNum}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </nav>
   );

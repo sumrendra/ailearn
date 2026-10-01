@@ -108,6 +108,11 @@ export default function TCFReadingPage() {
   function jumpToQuestion(newIdx: number) {
     if (newIdx < 0 || newIdx > 38 || newIdx === idx) return;
     setIdx(newIdx);
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        document.getElementById("tcf-reading-question-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   }
 
   function startPaper(p: number) {
@@ -558,7 +563,7 @@ export default function TCFReadingPage() {
   // ── Quiz ───────────────────────────────────────────────────────
   const levelColor = LEVEL_COLOR[q.level] ?? "var(--accent)";
   const band = bandOf(q.id);
-  const isLongPassage = q.passage.length > 400;
+  const questionKey = `${q.sourcePaper}-${q.sourceQuestionIndex}-${idx}`;
 
   return (
     <>
@@ -613,22 +618,14 @@ export default function TCFReadingPage() {
           accent="#10b981"
         />
 
-        <div
-          style={{
-            display: isLongPassage ? "grid" : "block",
-            gridTemplateColumns: isLongPassage ? "minmax(0, 1.1fr) minmax(0, 0.9fr)" : undefined,
-            gap: 16,
-            alignItems: "start",
-          }}
-        >
+        <div key={questionKey} className="tcf-reading-columns">
           {/* Passage panel */}
           <div
-            className="glass-pane"
+            className="tcf-exam-panel"
             style={{
               borderRadius: 16,
               padding: "20px 24px",
-              marginBottom: isLongPassage ? 0 : 16,
-              border: "1px solid #10b98122",
+              border: "1px solid #10b98133",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
@@ -646,13 +643,13 @@ export default function TCFReadingPage() {
             </div>
             <div
               style={{
-                fontSize: isLongPassage ? 14 : 15,
+                fontSize: 15,
                 color: "var(--text-primary)",
                 lineHeight: 1.7,
                 whiteSpace: "pre-line",
-                maxHeight: isLongPassage ? 520 : "none",
-                overflowY: isLongPassage ? "auto" : "visible",
-                paddingRight: isLongPassage ? 4 : 0,
+                maxHeight: "min(520px, 55vh)",
+                overflowY: "auto",
+                paddingRight: 4,
               }}
             >
               {q.passage}
@@ -666,14 +663,29 @@ export default function TCFReadingPage() {
           </div>
 
           {/* Question + options panel */}
-          <div className="glass-pane" style={{ borderRadius: 16, padding: "20px 24px" }}>
+          <div
+            id="tcf-reading-question-panel"
+            className="tcf-exam-panel"
+            style={{ borderRadius: 16, padding: "20px 24px", border: "1px solid var(--border-subtle)" }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
               <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--text-tertiary)" }}>
-                {idx + 1} / 39
+                Question {idx + 1} / 39
               </span>
+              <span style={{ fontSize: 11, color: levelColor, fontWeight: 700 }}>{q.level}</span>
             </div>
 
-            <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.5, marginBottom: 20 }}>
+            <p
+              key={`stem-${questionKey}`}
+              style={{
+                fontSize: 16,
+                fontWeight: 600,
+                color: "var(--text-primary)",
+                lineHeight: 1.55,
+                marginBottom: 20,
+                minHeight: "2.5em",
+              }}
+            >
               {q.question}
             </p>
 
