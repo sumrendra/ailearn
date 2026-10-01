@@ -14,6 +14,8 @@ import { describeComprehensionScore, scoreComprehension } from "@/lib/tcf-progra
 import { resolveExamSection } from "@/lib/tcf-program/exam-draw";
 import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
 import { TcfMockBanner, TcfMockCompleteBar } from "@/components/tcf/TcfMockUI";
+import { TcfExamQuestionGrid } from "@/components/tcf/TcfExamQuestionGrid";
+import { tcfComprehensionShellStyle } from "@/components/tcf/tcf-exam-layout";
 import { TcfLexiqueNextStep } from "@/components/tcf/TcfLexiqueNextStep";
 import { TcfPracticeTextHelp } from "@/components/tcf/TcfPracticeTextHelp";
 import { practiceTranslationKey } from "@/lib/tcf-program/practice-translation-keys";
@@ -101,6 +103,11 @@ export default function TCFReadingPage() {
 
   function goPrev() {
     if (idx > 0) setIdx(idx - 1);
+  }
+
+  function jumpToQuestion(newIdx: number) {
+    if (newIdx < 0 || newIdx > 38 || newIdx === idx) return;
+    setIdx(newIdx);
   }
 
   function startPaper(p: number) {
@@ -583,15 +590,10 @@ export default function TCFReadingPage() {
         }
       />
 
-      <div
-        style={{
-          maxWidth: isLongPassage ? 1100 : 760,
-          margin: "0 auto",
-          padding: "28px 20px 80px",
-        }}
-      >
+      <TcfMockBanner module="reading" />
+      <div style={tcfComprehensionShellStyle}>
         {/* Progress */}
-        <div style={{ height: 3, background: "var(--bg-overlay)", borderRadius: 2, overflow: "hidden", marginBottom: 24 }}>
+        <div style={{ height: 3, background: "var(--bg-overlay)", borderRadius: 2, overflow: "hidden", marginBottom: 16 }}>
           <div
             style={{
               height: "100%",
@@ -603,7 +605,22 @@ export default function TCFReadingPage() {
           />
         </div>
 
-        <div style={{ display: isLongPassage ? "grid" : "block", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
+        <TcfExamQuestionGrid
+          questions={questions}
+          currentIdx={idx}
+          answers={answers}
+          onSelect={jumpToQuestion}
+          accent="#10b981"
+        />
+
+        <div
+          style={{
+            display: isLongPassage ? "grid" : "block",
+            gridTemplateColumns: isLongPassage ? "minmax(0, 1.1fr) minmax(0, 0.9fr)" : undefined,
+            gap: 16,
+            alignItems: "start",
+          }}
+        >
           {/* Passage panel */}
           <div
             className="glass-pane"

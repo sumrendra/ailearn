@@ -2,7 +2,8 @@
 
 import type { MockModule, MockModuleScore } from "@/lib/tcf-program/mock-session";
 import { MOCK_MODULE_LABELS } from "@/lib/tcf-program/mock-session";
-import { useTcfMockFlow } from "./useTcfMockFlow";
+import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
+import { TCF_COMPREHENSION_MAX_WIDTH } from "@/components/tcf/tcf-exam-layout";
 
 const NEXT_LABEL: Partial<Record<MockModule, string>> = {
   listening: "Reading",
@@ -67,9 +68,10 @@ export function TcfMockBanner({ module }: { module: MockModule }) {
   return (
     <div
       style={{
-        maxWidth: 620,
+        maxWidth: TCF_COMPREHENSION_MAX_WIDTH,
+        width: "100%",
         margin: "0 auto 16px",
-        padding: "10px 16px",
+        padding: "10px clamp(16px, 2.5vw, 40px)",
         borderRadius: 8,
         background: "#be185d10",
         border: "1px solid #be185d33",

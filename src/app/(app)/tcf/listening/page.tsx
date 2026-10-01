@@ -19,6 +19,8 @@ import {
 } from "@/lib/tcf-program/exam-draw";
 import { useTcfMockFlow } from "@/components/tcf/useTcfMockFlow";
 import { TcfMockBanner, TcfMockCompleteBar } from "@/components/tcf/TcfMockUI";
+import { TcfExamQuestionGrid } from "@/components/tcf/TcfExamQuestionGrid";
+import { tcfComprehensionShellStyle } from "@/components/tcf/tcf-exam-layout";
 import { TcfLexiqueNextStep } from "@/components/tcf/TcfLexiqueNextStep";
 import { TcfPracticeTextHelp } from "@/components/tcf/TcfPracticeTextHelp";
 import { practiceTranslationKey } from "@/lib/tcf-program/practice-translation-keys";
@@ -899,9 +901,10 @@ export default function TCFListeningPage() {
         }
       />
 
-      <div style={{ maxWidth: 660, margin: "0 auto", padding: "32px 20px 80px" }}>
+      <TcfMockBanner module="listening" />
+      <div style={tcfComprehensionShellStyle}>
         {/* Progress bar */}
-        <div style={{ height: 3, background: "var(--bg-overlay)", borderRadius: 2, overflow: "hidden", marginBottom: 28 }}>
+        <div style={{ height: 3, background: "var(--bg-overlay)", borderRadius: 2, overflow: "hidden", marginBottom: 16 }}>
           <div
             style={{
               height: "100%",
@@ -912,6 +915,14 @@ export default function TCFListeningPage() {
             }}
           />
         </div>
+
+        <TcfExamQuestionGrid
+          questions={questions}
+          currentIdx={idx}
+          answers={answers}
+          onSelect={goToIdx}
+          accent="#5b6af0"
+        />
 
         <div className="glass-pane" style={{ borderRadius: 20, padding: "28px 32px 28px", display: "flex", flexDirection: "column", gap: 0 }}>
           {/* Level badge + topic */}
@@ -1126,8 +1137,8 @@ export default function TCFListeningPage() {
         <div style={{ display: "flex", gap: 10, marginTop: 16, justifyContent: "space-between" }}>
           <button
             onClick={goPrev}
-            disabled={idx === 0 || examMode}
-            title={examMode ? "Retour désactivé en mode examen" : undefined}
+            disabled={idx === 0}
+            title={idx === 0 ? undefined : "Question précédente"}
             style={{
               display: "flex",
               alignItems: "center",
@@ -1137,9 +1148,9 @@ export default function TCFListeningPage() {
               border: "1px solid var(--border-subtle)",
               borderRadius: 10,
               fontSize: 13,
-              color: (idx === 0 || examMode) ? "var(--text-tertiary)" : "var(--text-primary)",
-              cursor: (idx === 0 || examMode) ? "not-allowed" : "pointer",
-              opacity: (idx === 0 || examMode) ? 0.4 : 1,
+              color: idx === 0 ? "var(--text-tertiary)" : "var(--text-primary)",
+              cursor: idx === 0 ? "not-allowed" : "pointer",
+              opacity: idx === 0 ? 0.4 : 1,
             }}
           >
             <ChevronLeft size={14} /> Précédent
