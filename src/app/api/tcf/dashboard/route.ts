@@ -6,6 +6,7 @@ import { VOCAB_THEMES } from "@/lib/tcf-program/vocab-themes";
 import { scoreToNclcListening, scoreToNclcProduction, scoreToNclcReading, weakestNclc } from "@/lib/tcf-program/nclc";
 import { PAPER_COUNT } from "@/lib/content/tcf-papers";
 import { countDueFlashcards, getCoreVocabProgress, getExamBandPercents, getVocabThemePercents } from "@/lib/tcf-program/vocab-progress";
+import { buildCoreStudyQueue, getCoreVocabSrsBreakdown } from "@/lib/tcf-program/vocab-study-queue";
 import { EXAM_BAND_META } from "@/lib/content/tcf-exam-lexique";
 import {
   CORE_EXAM_WORD_TARGET,
@@ -97,11 +98,13 @@ export async function GET() {
     ? Math.ceil((stats.totalHours * (1 - programPercent / 100)) / profile.weeklyHours)
     : null;
 
-  const [vocabPercents, bandPercents, vocabDue, coreVocab] = await Promise.all([
+  const [vocabPercents, bandPercents, vocabDue, coreVocab, vocabSrs, studyPreview] = await Promise.all([
     getVocabThemePercents(userId),
     getExamBandPercents(userId),
     countDueFlashcards(userId),
     getCoreVocabProgress(userId),
+    getCoreVocabSrsBreakdown(userId),
+    buildCoreStudyQueue(userId),
   ]);
 
   const optional = getOptionalWordCounts();
@@ -140,6 +143,8 @@ export async function GET() {
       due: coreVocab.due,
       byBand: coreVocab.byBand,
     },
+    vocabSrs,
+    studyQueueSize: studyPreview.cardKeys.length,
     profile: profile ?? {
       targetNclc: 7,
       placementCefr: "A0",

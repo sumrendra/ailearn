@@ -10,12 +10,9 @@ export function TcfVocabMissionCard({
   vocabDue: number;
   weakestSkill: string;
 }) {
-  const band =
-    weakestSkill === "reading" || weakestSkill === "listening" ? "b" : weakestSkill === "writing" ? "c" : "b";
-
   return (
     <Link
-      href={`/tcf/vocabulary/band/${band}`}
+      href="/tcf/vocabulary/study"
       style={{
         display: "flex",
         alignItems: "center",
@@ -35,8 +32,8 @@ export function TcfVocabMissionCard({
         <div style={{ fontWeight: 700, fontSize: 14, color: "#be185d" }}>Lexique TCF</div>
         <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
           {vocabDue > 0
-            ? `${vocabDue} cartes à réviser · cible bande ${band.toUpperCase()} (${weakestSkill})`
-            : `Renforcer le vocabulaire — focus ${weakestSkill}`}
+            ? `${vocabDue} cartes à réviser · file d'étude du jour`
+            : `Renforcer le vocabulaire — étude quotidienne (focus ${weakestSkill})`}
         </div>
       </div>
       <span style={{ fontSize: 12, fontWeight: 600, color: "#be185d" }}>Ouvrir →</span>

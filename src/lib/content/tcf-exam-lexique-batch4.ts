@@ -3,7 +3,6 @@ import type { LemmaRow } from "./tcf-exam-lexique-batch2";
 /** Replacements for removed IRCC/admin English headwords — mock-style exam lexique. */
 export const BATCH4_A: LemmaRow[] = [
   ["Public library", "la bibliothèque municipale", "La bibliothèque municipale prête des livres gratuitement."],
-  ["Recycling bin", "le bac de recyclage", "Déposez le verre dans le bac de recyclage."],
   ["Lost and found", "le service des objets trouvés", "Demandez au service des objets trouvés."],
   ["Customer service", "le service à la clientèle", "Le service à la clientèle répond en moins de vingt-quatre heures."],
   ["Appointment slot", "le créneau de rendez-vous", "Choisissez un créneau de rendez-vous en ligne."],

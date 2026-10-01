@@ -60,8 +60,6 @@ export const BATCH2_B: LemmaRow[] = [
   ["School registration", "l'inscription scolaire", "L'inscription scolaire se fait en ligne."],
   ["Report card", "le bulletin scolaire", "Le bulletin scolaire sera envoy\u00e9 vendredi."],
   ["Parent-teacher meeting", "la rencontre parents-enseignants", "La rencontre parents-enseignants est jeudi soir."],
-  ["Recycling bin", "le bac de recyclage", "Sortez le bac de recyclage le mardi matin."],
-  ["Heat wave", "la vague de chaleur", "La vague de chaleur dure trois jours."],
   ["Flood", "l'inondation", "L'inondation a forc\u00e9 l'\u00e9vacuation du quartier."],
   ["Artificial intelligence", "l'intelligence artificielle", "L'intelligence artificielle transforme certains emplois."],
   ["Automation", "l'automatisation", "L'automatisation r\u00e9duit les t\u00e2ches r\u00e9p\u00e9titives."],

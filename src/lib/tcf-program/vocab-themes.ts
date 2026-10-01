@@ -1,7 +1,7 @@
 import type { VocabTheme } from "./types";
 
 export const VOCAB_THEMES: VocabTheme[] = [
-  { id: "immigration", title: "Immigration & integration", titleFr: "Immigration et intégration", description: "Visa, citizenship, adaptation, multiculturalism", emoji: "🛂", cefr: "A2", cardCount: 15 },
+  { id: "immigration", title: "Life in Canada (optional)", titleFr: "Vie au Canada", description: "Community, settlement, integration — everyday French, not admin labels", emoji: "🤝", cefr: "A2", cardCount: 15 },
   { id: "work", title: "Work & employment", titleFr: "Travail et emploi", description: "CV, interview, workplace, skills", emoji: "💼", cefr: "B1", cardCount: 15 },
   { id: "housing", title: "Housing & daily life", titleFr: "Logement et vie quotidienne", description: "Rent, landlord, utilities, neighbourhood", emoji: "🏠", cefr: "A2", cardCount: 15 },
   { id: "health", title: "Health & wellbeing", titleFr: "Santé et bien-être", description: "Doctor, symptoms, insurance, mental health", emoji: "🏥", cefr: "B1", cardCount: 15 },

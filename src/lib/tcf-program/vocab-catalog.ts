@@ -2,7 +2,7 @@ import { EXAM_BAND_META, TCF_CONTEXT_PACKS } from "@/lib/content/tcf-exam-lexiqu
 import { VOCAB_THEMES } from "@/lib/tcf-program/vocab-themes";
 
 /** Exam-priority lexique in-app (high-yield TCF themes — not full B2 lexicon). */
-export const CORE_EXAM_WORD_TARGET = 1000;
+export const CORE_EXAM_WORD_TARGET = 1500;
 
 export function getCoreExamWordCountInApp(): number {
   return EXAM_BAND_META.reduce((sum, b) => sum + b.count, 0);

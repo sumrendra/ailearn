@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getFlashcardByKey } from "@/lib/content";
 import { sm2Next, type SrsRating } from "@/lib/flashcard-srs";
+import { getCoreExamCardKeys } from "@/lib/tcf-program/vocab-progress";
+import { recordNewCardIntroduced } from "@/lib/tcf-program/vocab-study-queue";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +68,9 @@ export async function POST(req: NextRequest) {
         nextReview: next.nextReview,
       },
     });
+    if (getCoreExamCardKeys().includes(cardKey)) {
+      await recordNewCardIntroduced(userId);
+    }
   }
 
   return Response.json({

@@ -2,7 +2,6 @@ import type { LemmaRow } from "./tcf-exam-lexique-batch2";
 
 /** Mock-aligned expansion — everyday + exam-theme lexique (not IRCC admin). */
 export const BATCH5_A: LemmaRow[] = [
-  ["Weather forecast", "les prévisions météo", "Consultez les prévisions météo avant de sortir."],
   ["Heat wave", "la vague de chaleur", "La vague de chaleur dure trois jours."],
   ["Snowstorm", "la tempête de neige", "La tempête de neige ferme plusieurs routes."],
   ["Umbrella", "le parapluie", "N'oubliez pas votre parapluie cet après-midi."],
@@ -22,7 +21,6 @@ export const BATCH5_A: LemmaRow[] = [
   ["Driver's licence", "le permis de conduire", "Renouvelez votre permis de conduire en ligne."],
   ["Insurance claim", "la réclamation d'assurance", "Déposez une réclamation d'assurance après l'accident."],
   ["Appointment reminder", "le rappel de rendez-vous", "Vous recevrez un rappel de rendez-vous par texto."],
-  ["Waiting list", "la liste d'attente", "Votre nom est sur la liste d'attente."],
   ["Public holiday", "le jour férié", "Le jour férié tombe un lundi cette année."],
   ["Opening ceremony", "la cérémonie d'ouverture", "La cérémonie d'ouverture commence à dix heures."],
   ["Ticket office", "la billetterie", "La billetterie ferme trente minutes avant le spectacle."],
@@ -41,7 +39,6 @@ export const BATCH5_A: LemmaRow[] = [
 export const BATCH5_B: LemmaRow[] = [
   ["Remote work", "le télétravail", "Le télétravail est autorisé deux jours par semaine."],
   ["Team meeting", "la réunion d'équipe", "La réunion d'équipe est reportée à jeudi."],
-  ["Deadline", "la date limite", "La date limite est fixée au vendredi."],
   ["Job posting", "l'offre d'emploi", "L'offre d'emploi est publiée en ligne."],
   ["Salary range", "la fourchette salariale", "La fourchette salariale est indiquée dans l'annonce."],
   ["Work schedule", "l'horaire de travail", "L'horaire de travail change chaque mois."],

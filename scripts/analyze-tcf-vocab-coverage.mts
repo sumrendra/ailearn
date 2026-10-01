@@ -8,6 +8,7 @@ import path from "node:path";
 import { extractFrenchLemma } from "../src/lib/tcf-program/flashcard-display";
 import { getExamLemmaFlashcards } from "../src/lib/content/tcf-exam-lexique";
 import { CORE_VOCAB_TOPICS } from "../src/lib/tcf-program/vocab-core-topics";
+import { getCoreTopicCardCounts } from "../src/lib/content/tcf-exam-lexique";
 
 const ROOT = path.join(process.cwd(), "src/lib/content");
 const FILE_RE = /^tcf-(reading|listening)(-p\d+)?\.ts$/;
@@ -102,9 +103,9 @@ for (const [word, count] of missing.slice(0, 40)) {
 }
 
 console.log("\n## FEI-aligned themes — core tag counts (cards can have multiple tags)\n");
-console.log("(Run app import for live counts; see vocab-core-topics.ts)\n");
+const counts = getCoreTopicCardCounts();
 for (const t of CORE_VOCAB_TOPICS) {
-  console.log(`- ${t.id}: ${t.titleEn}`);
+  console.log(`- ${t.id}: ${counts[t.id]} — ${t.titleEn}`);
 }
 
 console.log("\n## Notes");

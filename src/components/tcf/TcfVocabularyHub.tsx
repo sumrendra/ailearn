@@ -16,6 +16,17 @@ type BandId = "a" | "b" | "c";
 interface VocabDashboard {
   authed?: boolean;
   vocabDue?: number;
+  studyQueueSize?: number;
+  vocabSrs?: {
+    total: number;
+    new: number;
+    dueReview: number;
+    learning: number;
+    mastered: number;
+    newIntroducedToday: number;
+    newRemainingToday: number;
+    newDailyCap: number;
+  };
   vocabCatalog?: {
     coreInApp: number;
     coreTarget: number;
@@ -209,7 +220,7 @@ export function TcfVocabularyHub() {
   const catalog = dash?.vocabCatalog;
   const progress = dash?.vocabProgress;
   const coreInApp = catalog?.coreInApp ?? EXAM_BAND_META.reduce((s, b) => s + b.count, 0);
-  const coreTarget = catalog?.coreTarget ?? 1000;
+  const coreTarget = catalog?.coreTarget ?? 1500;
   const stillToAuthor = catalog?.stillToAuthor ?? Math.max(0, coreTarget - coreInApp);
   const mastered = progress?.mastered ?? 0;
   const coreTotal = progress?.total ?? coreInApp;
@@ -228,8 +239,91 @@ export function TcfVocabularyHub() {
     return { ...t, percent: remote?.percent ?? 0 };
   });
 
+  const srs = dash?.vocabSrs;
+  const queueSize = dash?.studyQueueSize ?? 0;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+      <section aria-labelledby="vocab-study-heading">
+        <h2 id="vocab-study-heading" style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: "var(--text-muted)" }}>
+          Study today (Anki-style)
+        </h2>
+        <div
+          style={{
+            padding: 18,
+            borderRadius: 14,
+            border: "1px solid rgba(190,24,93,0.35)",
+            background: "rgba(190,24,93,0.06)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+          }}
+        >
+          <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+            Reviews first, then new words — up to{" "}
+            <strong>{srs?.newRemainingToday ?? 15}</strong> new left today
+            {srs ? ` (${srs.newDailyCap}/day cap)` : ""}.
+          </p>
+          {srs && dash?.authed !== false && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(72px, 1fr))",
+                gap: 8,
+                fontSize: 12,
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              {[
+                { label: "New", value: srs.new, color: "#6366f1" },
+                { label: "Due", value: srs.dueReview, color: "#be185d" },
+                { label: "Learning", value: srs.learning, color: "#f59e0b" },
+                { label: "Mastered", value: srs.mastered, color: "#22c55e" },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  style={{
+                    padding: "10px 8px",
+                    borderRadius: 10,
+                    border: "1px solid var(--border-subtle)",
+                    background: "var(--bg-card)",
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: 18, color: s.color }}>{s.value}</div>
+                  <div style={{ color: "var(--text-muted)", marginTop: 4, fontSize: 10, letterSpacing: "0.06em" }}>
+                    {s.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <Link
+            href="/tcf/vocabulary/study"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              padding: "12px 18px",
+              borderRadius: 12,
+              background: "#be185d",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 14,
+              textDecoration: "none",
+              width: "fit-content",
+            }}
+          >
+            {dash?.authed === false
+              ? "Sign in to study →"
+              : queueSize > 0
+                ? `Study ${queueSize} cards now →`
+                : "Open study session →"}
+          </Link>
+        </div>
+      </section>
+
       <section aria-labelledby="vocab-progress-heading">
         <h2 id="vocab-progress-heading" style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: "var(--text-muted)" }}>
           Your progress (core exam words)
@@ -283,9 +377,9 @@ export function TcfVocabularyHub() {
         </div>
       </section>
 
-      {dash?.vocabDue != null && dash.vocabDue > 0 && (
+      {(dash?.vocabDue != null && dash.vocabDue > 0) || queueSize > 0 ? (
         <Link
-          href="/flashcards?band=b"
+          href="/tcf/vocabulary/study"
           style={{
             display: "flex",
             alignItems: "center",
@@ -302,11 +396,13 @@ export function TcfVocabularyHub() {
           }}
         >
           <span style={{ fontSize: 14, fontWeight: 600 }}>
-            {dash.vocabDue} flashcards due for review today
+            {queueSize > 0
+              ? `${queueSize} cards in today's study queue`
+              : `${dash?.vocabDue ?? 0} flashcards due for review`}
           </span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#be185d" }}>Review →</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#be185d" }}>Study →</span>
         </Link>
-      )}
+      ) : null}
 
       {pileSize > 0 && (
         <Link

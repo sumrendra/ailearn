@@ -5,6 +5,8 @@ import { BATCH2_A, BATCH2_B, BATCH2_C } from "./tcf-exam-lexique-batch2";
 import { BATCH3_A, BATCH3_B, BATCH3_C } from "./tcf-exam-lexique-batch3";
 import { BATCH4_A, BATCH4_B, BATCH4_C } from "./tcf-exam-lexique-batch4";
 import { BATCH5_A, BATCH5_B, BATCH5_C } from "./tcf-exam-lexique-batch5";
+import { BATCH6_A, BATCH6_B, BATCH6_C } from "./tcf-exam-lexique-batch6";
+import { BATCH7_A, BATCH7_B, BATCH7_C } from "./tcf-exam-lexique-batch7";
 import {
   CORE_VOCAB_TOPIC_TAG,
   coreTopicTagsForLemma,
@@ -28,13 +30,26 @@ function mergeLemmaRows(base: LemmaRow[], extra: LemmaRow[]): LemmaRow[] {
   return out;
 }
 
+/** One English headword → one card in the core path (Band A wins, then B, then C). */
+function mergeBandsWithoutEnDupes(a: LemmaRow[], b: LemmaRow[], c: LemmaRow[]): { a: LemmaRow[]; b: LemmaRow[]; c: LemmaRow[] } {
+  const seen = new Set<string>();
+  const take = (rows: LemmaRow[]) =>
+    rows.filter(([en]) => {
+      const key = en.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  return { a: take(a), b: take(b), c: take(c) };
+}
+
 function bandCards(band: TcfExamBand, rows: LemmaRow[]): Flashcard[] {
-  return rows.map(([front, fr, exampleFr], i) => ({
+  return rows.map(([enHint, fr, exampleFr], i) => ({
     lessonSlug: `tcf-lexique-${band}`,
     key: `tcf-lemma-${band}:${i + 1}`,
-    front,
-    back: `**${fr}** — *${exampleFr}*`,
-    tags: ["TCF Canada", "Lexique", band, ...coreTopicTagsForLemma(front, fr, band)],
+    front: enHint,
+    back: `**${fr}**\n\n*${exampleFr}*`,
+    tags: ["TCF Canada", "Lexique", band, ...coreTopicTagsForLemma(enHint, fr, band)],
   }));
 }
 
@@ -164,23 +179,50 @@ const BAND_C: LemmaRow[] = [
   ["Sustainability", "la durabilité", "La durabilité guide les investissements."],
   ["Intergenerational equity", "l'équité intergénérationnelle", "L'équité intergénérationnelle est au cœur du débat."],
   ["Systemic bias", "le biais systémique", "Le biais systémique demande des correctifs structurels."],
-  ["Epistemological", "épistémologique", "La question épistémologique sous-tend la polémique."],
   ["Rhetoric", "la rhétorique", "Sa rhétorique persuade sans convaincre."],
   ["Subtlety", "la subtilité", "La subtilité du texte échappe au lecteur pressé."],
+  ["Nevertheless", "néanmoins", "Néanmoins, la réforme reste nécessaire."],
+  ["However", "cependant", "Cependant, les résultats demeurent mitigés."],
+  ["On the other hand", "en revanche", "En revanche, les coûts augmentent."],
+  ["Therefore", "par conséquent", "Par conséquent, il faut revoir la stratégie."],
+  ["Furthermore", "en outre", "En outre, les délais ne sont pas tenus."],
+  ["Although", "bien que", "Bien que coûteux, le projet est utile."],
+  ["While (contrast)", "tandis que", "Tandis que l'un progresse, l'autre recule."],
+  ["To highlight", "souligner", "L'auteur souligne l'importance du dialogue."],
+  ["To question (assumptions)", "remettre en question", "Il remet en question une hypothèse reçue."],
 ];
 
-const FULL_BAND_A = mergeLemmaRows(
-  mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_A, BATCH2_A), BATCH3_A), BATCH4_A),
-  BATCH5_A,
+const MERGED_A = mergeLemmaRows(
+  mergeLemmaRows(
+    mergeLemmaRows(
+      mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_A, BATCH2_A), BATCH3_A), BATCH4_A),
+      BATCH5_A,
+    ),
+    BATCH6_A,
+  ),
+  BATCH7_A,
 );
-const FULL_BAND_B = mergeLemmaRows(
-  mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_B, BATCH2_B), BATCH3_B), BATCH4_B),
-  BATCH5_B,
+const MERGED_B = mergeLemmaRows(
+  mergeLemmaRows(
+    mergeLemmaRows(
+      mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_B, BATCH2_B), BATCH3_B), BATCH4_B),
+      BATCH5_B,
+    ),
+    BATCH6_B,
+  ),
+  BATCH7_B,
 );
-const FULL_BAND_C = mergeLemmaRows(
-  mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_C, BATCH2_C), BATCH3_C), BATCH4_C),
-  BATCH5_C,
+const MERGED_C = mergeLemmaRows(
+  mergeLemmaRows(
+    mergeLemmaRows(
+      mergeLemmaRows(mergeLemmaRows(mergeLemmaRows(BAND_C, BATCH2_C), BATCH3_C), BATCH4_C),
+      BATCH5_C,
+    ),
+    BATCH6_C,
+  ),
+  BATCH7_C,
 );
+const { a: FULL_BAND_A, b: FULL_BAND_B, c: FULL_BAND_C } = mergeBandsWithoutEnDupes(MERGED_A, MERGED_B, MERGED_C);
 
 export const EXAM_LEXIQUE_FLASHCARDS: Flashcard[] = [
   ...bandCards("a", FULL_BAND_A),

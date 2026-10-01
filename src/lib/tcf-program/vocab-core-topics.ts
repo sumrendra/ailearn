@@ -106,11 +106,11 @@ const KEYWORD_TOPICS: { topic: CoreVocabTopicId; re: RegExp }[] = [
   { topic: "health", re: /médic|santé|symptôme|ordonnance|clinique|pharmac|allerg|dosage|dossier médical|référence médicale|effet secondaire/i },
   { topic: "education", re: /école|diplôme|formation|cours|université|garderie|parental|enfant|étud/i },
   { topic: "work", re: /emploi|travail|salaire|employeur|convention collective|grief|licenci|embauche|curriculum|apprentissage|métier|harcèlement|normes d'emploi|assurance-emploi|heures supplémentaires|congé/i },
-  { topic: "environment", re: /environnement|climat|recycl|pollution|durabilit|carbone|biodivers/i },
-  { topic: "media-society", re: /média|presse|débat public|citoyen|droits de la personne|discrimin/i },
-  { topic: "community", re: /communaut|bénévol|orientation|établissement|intégration|centre communautaire/i },
+  { topic: "environment", re: /environnement|climat|recycl|pollution|durabilit|carbone|biodivers|espèce|insecte|palme|écosyst/i },
+  { topic: "media-society", re: /média|presse|débat public|citoyen|droits de la personne|discrimin|culture|festival|spectacle|concert|théâtre|documentaire|sondage|électoral/i },
+  { topic: "community", re: /communaut|bénévol|orientation|établissement|intégration|centre communautaire|nouvel arrivant|voisin|jumelage|patinoire|hockey|ski de fond/i },
   { topic: "daily-services", re: /heure|ouverture|guichet|file d'attente|comptoir|facture|solde|retrait|épicerie|remboursement|copie|formulaire|rendez-vous|accueil|bibliothèque|clientèle|objets trouvés/i },
-  { topic: "argumentation", re: /argument|rhétorique|nuance|épistém|biais|présupposition|compromis|subtilité|registre|polémique/i },
+  { topic: "argumentation", re: /argument|rhétorique|nuance|biais|présupposition|compromis|subtilité|registre|polémique|néanmoins|cependant|revanche|conséquent|remettre en question|souligner/i },
 ];
 
 const MANUAL: Record<string, CoreVocabTopicId[]> = {
@@ -133,7 +133,7 @@ export function coreTopicTagsForLemma(en: string, fr: string, band: TcfExamBand)
 
   if (band === "c" && matched.size === 0) matched.add("argumentation");
   if (band === "a" && matched.size === 0) matched.add("daily-services");
-  if (band === "b" && matched.size === 0) matched.add("work");
+  if (band === "b" && matched.size === 0) matched.add("community");
 
   return [...matched].map((t) => `${CORE_VOCAB_TOPIC_TAG}${t}`);
 }

@@ -64,7 +64,28 @@ interface Props {
   coreTopicId?: string;
   cardKeys?: string;
   deckName?: string;
+  /** Load `/api/flashcards/study-queue` — core path daily new + review mix */
+  studySession?: boolean;
 }
+
+type StudySessionMeta = {
+  newInSession: number;
+  reviewInSession: number;
+  newDailyCap: number;
+  reviewCap: number;
+  remainingNew: number;
+  remainingDueReview: number;
+  breakdown: {
+    total: number;
+    new: number;
+    dueReview: number;
+    learning: number;
+    mastered: number;
+    newIntroducedToday: number;
+    newRemainingToday: number;
+    newDailyCap: number;
+  };
+};
 
 export function FlashcardDeck({
   lessonSlug,
@@ -74,11 +95,13 @@ export function FlashcardDeck({
   coreTopicId,
   cardKeys,
   deckName = "All flashcards",
+  studySession = false,
 }: Props) {
   type DeckState =
     | { status: "loading" }
     | { status: "error"; message: string }
-    | { status: "ready"; cards: Card[] };
+    | { status: "unauthorized" }
+    | { status: "ready"; cards: Card[]; cardPhases?: ("new" | "review")[]; meta?: StudySessionMeta };
 
   const [deck, setDeck] = useState<DeckState>({ status: "loading" });
   const [idx, setIdx] = useState(0);
@@ -87,6 +110,8 @@ export function FlashcardDeck({
   const [stats, setStats] = useState({ again: 0, hard: 0, good: 0, easy: 0 });
   const [streak, setStreak] = useState(0); // consecutive Good/Easy in this session
   const [showEnHint, setShowEnHint] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [ratingBusy, setRatingBusy] = useState(false);
 
   const reducedMotion = usePrefersReducedMotion();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -96,17 +121,39 @@ export function FlashcardDeck({
   // react-hooks/set-state-in-effect lint guard.
   useEffect(() => {
     let cancelled = false;
-    const params = new URLSearchParams();
-    if (lessonSlug) params.set("lesson", lessonSlug);
-    if (themeId) params.set("theme", themeId);
-    if (bandId) params.set("band", bandId);
-    if (packId) params.set("pack", packId);
-    if (coreTopicId) params.set("coreTopic", coreTopicId);
-    if (cardKeys) params.set("keys", cardKeys);
-    const url = params.size ? `/api/flashcards?${params}` : "/api/flashcards";
 
     const load = async () => {
       try {
+        if (studySession) {
+          const res = await fetch("/api/flashcards/study-queue");
+          if (cancelled) return;
+          if (res.status === 401) {
+            setDeck({ status: "unauthorized" });
+            return;
+          }
+          if (!res.ok) {
+            setDeck({ status: "error", message: "Couldn't load today's study queue. Refresh to try again." });
+            return;
+          }
+          const data = await res.json();
+          setDeck({
+            status: "ready",
+            cards: data.cards ?? [],
+            cardPhases: data.cardPhases ?? [],
+            meta: data.meta,
+          });
+          return;
+        }
+
+        const params = new URLSearchParams();
+        if (lessonSlug) params.set("lesson", lessonSlug);
+        if (themeId) params.set("theme", themeId);
+        if (bandId) params.set("band", bandId);
+        if (packId) params.set("pack", packId);
+        if (coreTopicId) params.set("coreTopic", coreTopicId);
+        if (cardKeys) params.set("keys", cardKeys);
+        const url = params.size ? `/api/flashcards?${params}` : "/api/flashcards";
+
         const res = await fetch(url);
         const data = await res.json();
         if (cancelled) return;
@@ -117,38 +164,83 @@ export function FlashcardDeck({
       }
     };
 
+    setDeck({ status: "loading" });
+    setIdx(0);
+    setFlipped(false);
+    setDone(false);
+    setSaveError(null);
     void load();
-    return () => { cancelled = true; };
-  }, [lessonSlug, themeId, bandId, packId, coreTopicId, cardKeys]);
+    return () => {
+      cancelled = true;
+    };
+  }, [lessonSlug, themeId, bandId, packId, coreTopicId, cardKeys, studySession]);
 
   const loading = deck.status === "loading";
   const error = deck.status === "error" ? deck.message : null;
+  const unauthorized = deck.status === "unauthorized";
   const cards = deck.status === "ready" ? deck.cards : [];
+  const cardPhases = deck.status === "ready" ? deck.cardPhases : undefined;
+  const sessionMeta = deck.status === "ready" ? deck.meta : undefined;
 
   const card = cards[idx];
+  const cardPhase = cardPhases?.[idx];
 
-  const rate = useCallback((rating: Rating) => {
-    const cardKey = cards[idx]?.id;
-    if (cardKey) {
-      void fetch("/api/flashcards/review", {
-        method: "POST",
+  const rate = useCallback(
+    async (rating: Rating) => {
+      const cardKey = cards[idx]?.id;
+      if (!cardKey) return;
+
+      setStats((prev) => ({ ...prev, [rating.toLowerCase()]: prev[rating.toLowerCase() as keyof typeof prev] + 1 }));
+      setStreak((s) => (rating === "Good" || rating === "Easy" ? s + 1 : 0));
+
+      const payload = {
+        method: "POST" as const,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cardKey,
           rating: { Again: 1, Hard: 2, Good: 3, Easy: 4 }[rating],
         }),
-      }).catch(() => {});
-    }
-    setStats((prev) => ({ ...prev, [rating.toLowerCase()]: prev[rating.toLowerCase() as keyof typeof prev] + 1 }));
-    setStreak((s) => (rating === "Good" || rating === "Easy" ? s + 1 : 0));
-    if (idx >= cards.length - 1) {
-      setDone(true);
-    } else {
-      setIdx((i) => i + 1);
-      setFlipped(false);
-      setShowEnHint(false);
-    }
-  }, [idx, cards.length, cards]);
+      };
+
+      if (studySession) {
+        setRatingBusy(true);
+        setSaveError(null);
+        try {
+          const res = await fetch("/api/flashcards/review", payload);
+          if (!res.ok) {
+            const data = (await res.json().catch(() => ({}))) as { error?: string };
+            setSaveError(data.error ?? "Couldn't save progress. Try again.");
+            setStats((prev) => ({
+              ...prev,
+              [rating.toLowerCase()]: Math.max(0, prev[rating.toLowerCase() as keyof typeof prev] - 1),
+            }));
+            setStreak((s) => (rating === "Good" || rating === "Easy" ? Math.max(0, s - 1) : s));
+            return;
+          }
+        } catch {
+          setSaveError("Network error — progress not saved.");
+          setStats((prev) => ({
+            ...prev,
+            [rating.toLowerCase()]: Math.max(0, prev[rating.toLowerCase() as keyof typeof prev] - 1),
+          }));
+          return;
+        } finally {
+          setRatingBusy(false);
+        }
+      } else {
+        void fetch("/api/flashcards/review", payload).catch(() => {});
+      }
+
+      if (idx >= cards.length - 1) {
+        setDone(true);
+      } else {
+        setIdx((i) => i + 1);
+        setFlipped(false);
+        setShowEnHint(false);
+      }
+    },
+    [idx, cards, studySession],
+  );
 
   const reset = useCallback(() => {
     setIdx(0);
@@ -156,7 +248,26 @@ export function FlashcardDeck({
     setDone(false);
     setStats({ again: 0, hard: 0, good: 0, easy: 0 });
     setStreak(0);
-  }, []);
+    setSaveError(null);
+    if (studySession) {
+      setDeck({ status: "loading" });
+      void fetch("/api/flashcards/study-queue")
+        .then(async (res) => {
+          if (res.status === 401) {
+            setDeck({ status: "unauthorized" });
+            return;
+          }
+          const data = await res.json();
+          setDeck({
+            status: "ready",
+            cards: data.cards ?? [],
+            cardPhases: data.cardPhases ?? [],
+            meta: data.meta,
+          });
+        })
+        .catch(() => setDeck({ status: "error", message: "Couldn't reload queue." }));
+    }
+  }, [studySession]);
 
   // Global keyboard map for the deck. Active only while a card is loaded
   // and we haven't hit the end-of-session screen.
@@ -182,16 +293,16 @@ export function FlashcardDeck({
         setFlipped(false);
         return;
       }
-      if (flipped) {
-        if (e.key === "1") { e.preventDefault(); rate("Again"); }
-        else if (e.key === "2") { e.preventDefault(); rate("Hard"); }
-        else if (e.key === "3") { e.preventDefault(); rate("Good"); }
-        else if (e.key === "4") { e.preventDefault(); rate("Easy"); }
+      if (flipped && !ratingBusy) {
+        if (e.key === "1") { e.preventDefault(); void rate("Again"); }
+        else if (e.key === "2") { e.preventDefault(); void rate("Hard"); }
+        else if (e.key === "3") { e.preventDefault(); void rate("Good"); }
+        else if (e.key === "4") { e.preventDefault(); void rate("Easy"); }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [flipped, rate, loading, done, card]);
+  }, [flipped, rate, loading, done, card, ratingBusy]);
 
   // Compute a coarse next-review date for the end card. SM-2 is server-side
   // for persisted decks; this is purely an in-session hint.
@@ -223,6 +334,36 @@ export function FlashcardDeck({
     );
   }
 
+  if (unauthorized) {
+    return (
+      <PracticeStage variant="quiz">
+        <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 400, margin: 0 }}>
+            Sign in to study
+          </h1>
+          <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0, maxWidth: 360 }}>
+            Daily new + review queues and SM-2 progress are saved to your account.
+          </p>
+          <Link
+            href="/login"
+            style={{
+              display: "inline-flex",
+              padding: "11px 18px",
+              background: "var(--accent)",
+              color: "#fff",
+              borderRadius: "var(--radius-md)",
+              fontSize: 13,
+              fontWeight: 500,
+              textDecoration: "none",
+            }}
+          >
+            Sign in
+          </Link>
+        </div>
+      </PracticeStage>
+    );
+  }
+
   if (error) {
     return (
       <PracticeStage variant="quiz">
@@ -235,12 +376,27 @@ export function FlashcardDeck({
   }
 
   if (cards.length === 0) {
+    const b = sessionMeta?.breakdown;
+    let title = "No cards due. Come back tomorrow.";
+    let detail = `Next review · ${nextReviewLabel}`;
+    if (studySession && b) {
+      if (b.dueReview === 0 && b.new > 0 && b.newRemainingToday === 0) {
+        title = "Today's new words are done.";
+        detail = `You introduced ${b.newIntroducedToday} new cards today (cap ${sessionMeta?.newDailyCap ?? 15}). Reviews will appear when due.`;
+      } else if (b.dueReview === 0 && b.new === 0 && b.learning > 0) {
+        title = "You're caught up for now.";
+        detail = `${b.learning} cards in learning · ${b.mastered} mastered. Check back when reviews are due.`;
+      } else if (b.dueReview === 0 && b.new === 0) {
+        title = "All core words introduced.";
+        detail = `${b.mastered} mastered · ${b.learning} still learning.`;
+      }
+    }
     return (
       <PracticeStage
         variant="quiz"
         above={
           <div style={{ textAlign: "center" }}>
-            <span className="mono-overline">Flashcards</span>
+            <span className="mono-overline">{studySession ? "Study today" : "Flashcards"}</span>
           </div>
         }
       >
@@ -256,7 +412,7 @@ export function FlashcardDeck({
               textAlign: "center",
             }}
           >
-            No cards due. Come back tomorrow.
+            {title}
           </h1>
           <p
             style={{
@@ -267,12 +423,14 @@ export function FlashcardDeck({
               fontFamily: "var(--font-mono)",
               fontVariantNumeric: "tabular-nums",
               letterSpacing: "0.02em",
+              maxWidth: 420,
+              lineHeight: 1.5,
             }}
           >
-            Next review · {nextReviewLabel}
+            {detail}
           </p>
           <Link
-            href="/learn"
+            href={studySession ? "/tcf/vocabulary" : "/learn"}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -287,7 +445,7 @@ export function FlashcardDeck({
               marginTop: 4,
             }}
           >
-            <BookOpen size={14} /> Browse decks
+            <BookOpen size={14} /> {studySession ? "Vocabulary hub" : "Browse decks"}
           </Link>
         </div>
       </PracticeStage>
@@ -368,7 +526,7 @@ export function FlashcardDeck({
 
         <div
           className="hairline-t"
-          style={{ paddingTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}
+          style={{ paddingTop: 14, display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 16 }}
         >
           <span
             style={{
@@ -395,8 +553,23 @@ export function FlashcardDeck({
               cursor: "pointer",
             }}
           >
-            Review again
+            {studySession ? "Load next queue" : "Review again"}
           </button>
+          {studySession && (
+            <Link
+              href="/tcf/vocabulary"
+              style={{
+                padding: "11px 18px",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-md)",
+                fontSize: 13,
+                textDecoration: "none",
+                color: "var(--text-primary)",
+              }}
+            >
+              Hub
+            </Link>
+          )}
         </div>
       </PracticeStage>
     );
@@ -419,12 +592,17 @@ export function FlashcardDeck({
         WebkitBackdropFilter: "none",
       }}
       above={
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <span
             className="mono-overline"
             style={{ fontVariantNumeric: "tabular-nums" }}
           >
             {idx + 1} / {cards.length} · {deckName}
+            {cardPhase ? (
+              <span style={{ marginLeft: 8, opacity: 0.85 }}>
+                · {cardPhase === "new" ? "New" : "Review"}
+              </span>
+            ) : null}
           </span>
           <span
             style={{
@@ -442,12 +620,16 @@ export function FlashcardDeck({
       }
       below={
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {saveError && (
+            <p style={{ margin: 0, fontSize: 13, color: "var(--danger)", textAlign: "center" }}>{saveError}</p>
+          )}
           {flipped ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
               {RATINGS.map((r) => (
                 <button
                   key={r.label}
-                  onClick={() => rate(r.label)}
+                  onClick={() => void rate(r.label)}
+                  disabled={ratingBusy}
                   className="glow-ring"
                   style={{
                     display: "flex",

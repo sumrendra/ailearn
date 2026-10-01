@@ -73,9 +73,9 @@ Examples of **B2/C1 vocabulary with low TCF ROI** if they never appear in exam-s
 
 | Metric | Value |
 |--------|------:|
-| Core lemmas in app | **528** (bands A/B/C merged) |
-| Product target | **1,000** exam-priority |
-| Gap to target | **472** to author |
+| Core lemmas in app | **~1,500** (bands A/B/C merged) |
+| Product target | **1,500** exam-priority (TCF/NCLC 7 path — not full ~3k B2) |
+| Gap to target | **0** at target; grow with mock corpus (p11–p40) via mining scripts |
 | Optional packs + theme decks | +200 (separate from core path) |
 | Mock papers in repo | Reading/listening **p1–p10** (partial corpus) |
 
